@@ -41,7 +41,7 @@ public class NotificationCallbackController {
                 .evenement((String) payload.get("evenement"))
                 .evenementDescription((String) payload.get("evenementDescription"))
                 .evenementDate((String) payload.get("evenementDate"))
-                .messageType("ADMI_004")
+                .messageType(IsoMessageType.ADMI_004)
                 .build();
         notificationRepository.save(notification);
 
@@ -61,7 +61,7 @@ public class NotificationCallbackController {
                 .msgIdDemande((String) payload.get("msgIdDemande"))
                 .direction(MessageDirection.INBOUND)
                 .evenement((String) payload.get("evenement"))
-                .messageType("ADMI_011")
+                .messageType(IsoMessageType.ADMI_011)
                 .build();
         notificationRepository.save(notification);
 
@@ -78,7 +78,7 @@ public class NotificationCallbackController {
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
                     .msgId(msgId)
-                    .sourceMessageType("REDA_017")
+                    .sourceMessageType(IsoMessageType.REDA_017)
                     .montantGarantiePlafond(payload.get("montantGarantiePlafond") != null ?
                             new BigDecimal(String.valueOf(payload.get("montantGarantiePlafond"))) : null)
                     .dateDebut((String) payload.get("dateDebut"))

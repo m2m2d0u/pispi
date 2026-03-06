@@ -46,7 +46,7 @@ public class ReportCallbackController {
                     .pageCourante(payload.get("pageCourante") != null ? (Integer) payload.get("pageCourante") : null)
                     .dernierePage(payload.get("dernierePage") != null ? (Boolean) payload.get("dernierePage") : null)
                     .nbreTotalTransaction(payload.get("nbreTotalTransaction") != null ? (Integer) payload.get("nbreTotalTransaction") : null)
-                    .indicateurSolde((String) payload.get("indicateurSolde"))
+                    .indicateurSolde(payload.get("indicateurSolde") != null ? IndicateurSolde.valueOf((String) payload.get("indicateurSolde")) : null)
                     .transactions(objectMapper.writeValueAsString(payload.get("transactions")))
                     .build();
             transactionReportRepository.save(report);
@@ -74,9 +74,9 @@ public class ReportCallbackController {
                         .soldeId((String) solde.get("id"))
                         .participant((String) solde.get("participant"))
                         .participantSponsor((String) solde.get("participantSponsor"))
-                        .balanceType((String) solde.get("balanceType"))
+                        .balanceType(solde.get("balanceType") != null ? TypeBalanceCompense.valueOf((String) solde.get("balanceType")) : null)
                         .montant(solde.get("montant") != null ? new BigDecimal(String.valueOf(solde.get("montant"))) : null)
-                        .operationType((String) solde.get("operationType"))
+                        .operationType(solde.get("operationType") != null ? IndicateurSolde.valueOf((String) solde.get("operationType")) : null)
                         .dateBalance((String) solde.get("dateBalance"))
                         .build();
                 compensationRepository.save(compensation);
@@ -97,12 +97,12 @@ public class ReportCallbackController {
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
                     .msgId(msgId)
-                    .sourceMessageType("CAMT_010")
+                    .sourceMessageType(IsoMessageType.CAMT_010)
                     .montantGarantie(payload.get("montantGarantie") != null ?
                             new BigDecimal(String.valueOf(payload.get("montantGarantie"))) : null)
                     .montantRestantGarantie(payload.get("montantRestantGarantie") != null ?
                             new BigDecimal(String.valueOf(payload.get("montantRestantGarantie"))) : null)
-                    .typeOperationGarantie((String) payload.get("typeOperationGarantie"))
+                    .typeOperationGarantie(payload.get("typeOperationGarantie") != null ? TypeOperationGarantie.valueOf((String) payload.get("typeOperationGarantie")) : null)
                     .payload(objectMapper.writeValueAsString(payload))
                     .build();
             guaranteeRepository.save(guarantee);

@@ -48,7 +48,7 @@ public class NotificationService {
                 .evenement("PING")
                 .evenementDescription("Connectivity test")
                 .evenementDate(DateTimeUtil.nowIso())
-                .messageType("ADMI_004")
+                .messageType(IsoMessageType.ADMI_004)
                 .build();
         repository.save(notification);
 
@@ -63,7 +63,7 @@ public class NotificationService {
         return NotificationDto.builder()
                 .msgId(n.getMsgId())
                 .msgIdDemande(n.getMsgIdDemande())
-                .direction(n.getDirection().name())
+                .direction(n.getDirection())
                 .evenement(n.getEvenement())
                 .evenementDescription(n.getEvenementDescription())
                 .evenementDate(n.getEvenementDate())

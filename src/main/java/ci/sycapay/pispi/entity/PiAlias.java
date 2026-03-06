@@ -1,6 +1,6 @@
 package ci.sycapay.pispi.entity;
 
-import ci.sycapay.pispi.enums.AliasStatus;
+import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,11 +23,13 @@ public class PiAlias {
     @Column(name = "alias_value", nullable = false, length = 50)
     private String aliasValue;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_alias", nullable = false, length = 10)
-    private String typeAlias;
+    private TypeAlias typeAlias;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_client", length = 5)
-    private String typeClient;
+    private TypeClient typeClient;
 
     @Column(name = "nom", length = 140)
     private String nom;
@@ -38,8 +40,9 @@ public class PiAlias {
     @Column(name = "raison_sociale", length = 140)
     private String raisonSociale;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_identifiant", length = 10)
-    private String typeIdentifiant;
+    private CodeSystemeIdentification typeIdentifiant;
 
     @Column(name = "identifiant", length = 35)
     private String identifiant;
@@ -62,8 +65,9 @@ public class PiAlias {
     @Column(name = "numero_compte", length = 34)
     private String numeroCompte;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte", length = 10)
-    private String typeCompte;
+    private TypeCompte typeCompte;
 
     @Column(name = "code_membre_participant", length = 6)
     private String codeMembreParticipant;

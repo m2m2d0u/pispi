@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.IndicateurSolde;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -40,8 +41,9 @@ public class PiTransactionReport {
     @Column(name = "montant_total_compensation", precision = 18, scale = 2)
     private BigDecimal montantTotalCompensation;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "indicateur_solde", length = 10)
-    private String indicateurSolde;
+    private IndicateurSolde indicateurSolde;
 
     @Column(name = "page_courante")
     private Integer pageCourante;

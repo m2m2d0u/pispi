@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.dto.returnfunds;
 
+import ci.sycapay.pispi.enums.CodeRaisonDemandeRetourFonds;
+import ci.sycapay.pispi.enums.CodeRaisonRejetDemandeRetourFonds;
 import ci.sycapay.pispi.enums.ReturnRequestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,8 +19,8 @@ public class ReturnFundsResponse {
     private String identifiantDemande;
     private String endToEndId;
     private ReturnRequestStatus statut;
-    private String raison;
-    private String raisonRejet;
+    private CodeRaisonDemandeRetourFonds raison;
+    private CodeRaisonRejetDemandeRetourFonds raisonRejet;
     private BigDecimal montantRetourne;
     private String createdAt;
 }

@@ -65,8 +65,8 @@ public class ParticipantService {
                     .orElse(PiParticipant.builder().codeMembre(code).build());
 
             entity.setNom(String.valueOf(p.get("nomParticipant")));
-            entity.setEtat(String.valueOf(p.get("etatParticipant")));
-            entity.setTypeParticipant(String.valueOf(p.get("typeParticipant")));
+            entity.setEtat(EtatParticipant.valueOf(String.valueOf(p.get("etatParticipant"))));
+            entity.setTypeParticipant(TypeParticipant.valueOf(String.valueOf(p.get("typeParticipant"))));
             entity.setPays(String.valueOf(p.get("paysParticipant")));
             entity.setParticipantSponsor((String) p.get("participantSponsor"));
             entity.setLastSyncedAt(LocalDateTime.now());
@@ -78,8 +78,8 @@ public class ParticipantService {
         return ParticipantDto.builder()
                 .codeMembreParticipant(p.getCodeMembre())
                 .nomParticipant(p.getNom())
-                .etatParticipant(p.getEtat() != null ? EtatParticipant.valueOf(p.getEtat()) : null)
-                .typeParticipant(p.getTypeParticipant() != null ? TypeParticipant.valueOf(p.getTypeParticipant()) : null)
+                .etatParticipant(p.getEtat())
+                .typeParticipant(p.getTypeParticipant())
                 .paysParticipant(p.getPays())
                 .participantSponsor(p.getParticipantSponsor())
                 .build();

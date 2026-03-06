@@ -38,7 +38,7 @@ public class ReturnFundsCallbackController {
                 .identifiantDemande(identifiantDemande)
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.INBOUND)
-                .raison((String) payload.get("raison"))
+                .raison(CodeRaisonDemandeRetourFonds.valueOf((String) payload.get("raison")))
                 .statut(ReturnRequestStatus.PENDING)
                 .build();
         returnRequestRepository.save(req);
@@ -57,7 +57,7 @@ public class ReturnFundsCallbackController {
 
         returnRequestRepository.findByIdentifiantDemande(identifiantDemande).ifPresent(req -> {
             req.setStatut(ReturnRequestStatus.RJCR);
-            req.setRaisonRejet((String) payload.get("raison"));
+            req.setRaisonRejet(CodeRaisonRejetDemandeRetourFonds.valueOf((String) payload.get("raison")));
             req.setMsgIdRejet(msgId);
             returnRequestRepository.save(req);
         });
@@ -80,7 +80,7 @@ public class ReturnFundsCallbackController {
                 .direction(MessageDirection.INBOUND)
                 .montantRetourne(payload.get("montantRetourne") != null ?
                         new BigDecimal(String.valueOf(payload.get("montantRetourne"))) : null)
-                .raisonRetour((String) payload.get("raisonRetour"))
+                .raisonRetour(CodeRaisonRetourFonds.valueOf((String) payload.get("raisonRetour")))
                 .build();
         returnExecutionRepository.save(execution);
 

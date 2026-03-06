@@ -2,6 +2,7 @@ package ci.sycapay.pispi.controller.outbound;
 
 import ci.sycapay.pispi.dto.alias.AliasCreationRequest;
 import ci.sycapay.pispi.dto.alias.AliasResponse;
+import ci.sycapay.pispi.enums.TypeAlias;
 import ci.sycapay.pispi.service.alias.AliasService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,12 +30,12 @@ public class AliasController {
     }
 
     @DeleteMapping("/{typeAlias}/{aliasValue}")
-    public AliasResponse deleteAlias(@PathVariable String typeAlias, @PathVariable String aliasValue) {
+    public AliasResponse deleteAlias(@PathVariable TypeAlias typeAlias, @PathVariable String aliasValue) {
         return aliasService.deleteAlias(typeAlias, aliasValue);
     }
 
     @GetMapping("/search")
-    public Map<String, Object> searchAlias(@RequestParam String typeAlias, @RequestParam String alias) {
+    public Map<String, Object> searchAlias(@RequestParam TypeAlias typeAlias, @RequestParam String alias) {
         return aliasService.searchAlias(typeAlias, alias);
     }
 

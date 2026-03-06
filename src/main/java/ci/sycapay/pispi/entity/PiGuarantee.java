@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.IsoMessageType;
+import ci.sycapay.pispi.enums.TypeOperationGarantie;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -22,8 +24,9 @@ public class PiGuarantee {
     @Column(name = "msg_id", length = 35)
     private String msgId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "source_message_type", length = 20)
-    private String sourceMessageType;
+    private IsoMessageType sourceMessageType;
 
     @Column(name = "participant_sponsor", length = 6)
     private String participantSponsor;
@@ -34,8 +37,9 @@ public class PiGuarantee {
     @Column(name = "montant_restant_garantie", precision = 18, scale = 2)
     private BigDecimal montantRestantGarantie;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_operation_garantie", length = 10)
-    private String typeOperationGarantie;
+    private TypeOperationGarantie typeOperationGarantie;
 
     @Column(name = "date_effective_garantie")
     private String dateEffectiveGarantie;

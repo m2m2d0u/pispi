@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.CodeRaisonRetourFonds;
 import ci.sycapay.pispi.enums.MessageDirection;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,8 +32,9 @@ public class PiReturnExecution {
     @Column(name = "montant_retourne", precision = 18, scale = 2)
     private BigDecimal montantRetourne;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "raison_retour", length = 10)
-    private String raisonRetour;
+    private CodeRaisonRetourFonds raisonRetour;
 
     @Column(name = "return_request_id")
     private Long returnRequestId;

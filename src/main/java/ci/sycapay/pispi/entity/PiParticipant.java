@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.EtatParticipant;
+import ci.sycapay.pispi.enums.TypeParticipant;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,11 +24,13 @@ public class PiParticipant {
     @Column(name = "nom", length = 140)
     private String nom;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "etat", length = 10)
-    private String etat;
+    private EtatParticipant etat;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_participant", length = 5)
-    private String typeParticipant;
+    private TypeParticipant typeParticipant;
 
     @Column(name = "pays", length = 2)
     private String pays;

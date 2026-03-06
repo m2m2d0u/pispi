@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.dto.report;
 
+import ci.sycapay.pispi.enums.IsoMessageType;
+import ci.sycapay.pispi.enums.TypeOperationGarantie;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,11 +16,11 @@ import java.math.BigDecimal;
 public class GuaranteeDto {
 
     private String msgId;
-    private String sourceMessageType;
+    private IsoMessageType sourceMessageType;
     private String participantSponsor;
     private BigDecimal montantGarantie;
     private BigDecimal montantRestantGarantie;
-    private String typeOperationGarantie;
+    private TypeOperationGarantie typeOperationGarantie;
     private String dateEffectiveGarantie;
     private BigDecimal montantGarantiePlafond;
     private String dateDebut;

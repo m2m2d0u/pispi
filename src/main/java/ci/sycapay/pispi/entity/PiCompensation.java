@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.IndicateurSolde;
+import ci.sycapay.pispi.enums.TypeBalanceCompense;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,14 +37,16 @@ public class PiCompensation {
     @Column(name = "participant_sponsor", length = 6)
     private String participantSponsor;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "balance_type", length = 10)
-    private String balanceType;
+    private TypeBalanceCompense balanceType;
 
     @Column(name = "montant", precision = 18, scale = 2)
     private BigDecimal montant;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "operation_type", length = 10)
-    private String operationType;
+    private IndicateurSolde operationType;
 
     @Column(name = "date_balance")
     private String dateBalance;

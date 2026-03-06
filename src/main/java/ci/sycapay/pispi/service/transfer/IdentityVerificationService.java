@@ -54,7 +54,7 @@ public class IdentityVerificationService {
                 .codeMembrePayeur(codeMembre)
                 .codeMembrePaye(request.getCodeMembreParticipantPaye())
                 .numeroComptePaye(request.getNumeroCompteClientPaye())
-                .typeComptePaye(request.getTypeCompteClientPaye().name())
+                .typeComptePaye(request.getTypeCompteClientPaye())
                 .nomClientPaye(request.getNomClientPaye())
                 .prenomClientPaye(request.getPrenomClientPaye())
                 .statut(VerificationStatus.PENDING)

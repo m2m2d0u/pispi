@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.entity;
 
+import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,8 +37,9 @@ public class PiNotification {
     @Column(name = "evenement_date")
     private String evenementDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "message_type", length = 20)
-    private String messageType;
+    private IsoMessageType messageType;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -35,7 +35,7 @@ public class VerificationCallbackController {
                 .codeMembrePayeur((String) payload.get("codeMembreParticipantPayeur"))
                 .codeMembrePaye((String) payload.get("codeMembreParticipantPaye"))
                 .numeroComptePaye((String) payload.get("numeroCompteClientPaye"))
-                .typeComptePaye((String) payload.get("typeCompteClientPaye"))
+                .typeComptePaye(TypeCompte.valueOf((String) payload.get("typeCompteClientPaye")))
                 .nomClientPaye((String) payload.get("nomClientPaye"))
                 .prenomClientPaye((String) payload.get("prenomClientPaye"))
                 .statut(VerificationStatus.PENDING)

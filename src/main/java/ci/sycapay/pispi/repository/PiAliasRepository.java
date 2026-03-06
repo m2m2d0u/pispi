@@ -2,6 +2,7 @@ package ci.sycapay.pispi.repository;
 
 import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.enums.AliasStatus;
+import ci.sycapay.pispi.enums.TypeAlias;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,7 +11,7 @@ import java.util.Optional;
 
 public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
 
-    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatut(String aliasValue, String typeAlias, AliasStatus statut);
+    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatut(String aliasValue, TypeAlias typeAlias, AliasStatus statut);
 
     Page<PiAlias> findByCodeMembreParticipantAndStatut(String codeMembre, AliasStatus statut, Pageable pageable);
 

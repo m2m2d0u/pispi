@@ -1,7 +1,6 @@
 package ci.sycapay.pispi.entity;
 
-import ci.sycapay.pispi.enums.MessageDirection;
-import ci.sycapay.pispi.enums.TransferStatus;
+import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -29,11 +28,12 @@ public class PiTransfer {
     @Column(name = "direction", nullable = false)
     private MessageDirection direction;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_transaction", length = 10)
-    private String typeTransaction;
+    private TypeTransaction typeTransaction;
 
     @Column(name = "canal_communication", length = 10)
-    private String canalCommunication;
+    private CanalCommunication canalCommunication;
 
     @Column(name = "montant", precision = 18, scale = 2)
     private BigDecimal montant;
@@ -47,8 +47,9 @@ public class PiTransfer {
     @Column(name = "numero_compte_payeur", length = 34)
     private String numeroComptePayeur;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_payeur", length = 10)
-    private String typeComptePayeur;
+    private TypeCompte typeComptePayeur;
 
     @Column(name = "nom_client_payeur", length = 140)
     private String nomClientPayeur;
@@ -56,8 +57,9 @@ public class PiTransfer {
     @Column(name = "prenom_client_payeur", length = 140)
     private String prenomClientPayeur;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_client_payeur", length = 5)
-    private String typeClientPayeur;
+    private TypeClient typeClientPayeur;
 
     @Column(name = "telephone_payeur", length = 20)
     private String telephonePayeur;
@@ -68,8 +70,9 @@ public class PiTransfer {
     @Column(name = "numero_compte_paye", length = 34)
     private String numeroComptePaye;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_paye", length = 10)
-    private String typeComptePaye;
+    private TypeCompte typeComptePaye;
 
     @Column(name = "nom_client_paye", length = 140)
     private String nomClientPaye;
@@ -77,8 +80,9 @@ public class PiTransfer {
     @Column(name = "prenom_client_paye", length = 140)
     private String prenomClientPaye;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_client_paye", length = 5)
-    private String typeClientPaye;
+    private TypeClient typeClientPaye;
 
     @Column(name = "telephone_paye", length = 20)
     private String telephonePaye;

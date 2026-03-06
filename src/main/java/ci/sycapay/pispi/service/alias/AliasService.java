@@ -5,10 +5,7 @@ import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.alias.AliasCreationRequest;
 import ci.sycapay.pispi.dto.alias.AliasResponse;
 import ci.sycapay.pispi.entity.PiAlias;
-import ci.sycapay.pispi.enums.AliasStatus;
-import ci.sycapay.pispi.enums.IsoMessageType;
-import ci.sycapay.pispi.enums.MessageDirection;
-import ci.sycapay.pispi.enums.StatutOperationAlias;
+import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -46,14 +43,14 @@ public class AliasService {
         PiAlias alias = PiAlias.builder()
                 .endToEndId(endToEndId)
                 .aliasValue(request.getAlias())
-                .typeAlias(request.getTypeAlias().name())
-                .typeClient(request.getClient().getTypeClient().name())
+                .typeAlias(request.getTypeAlias())
+                .typeClient(request.getClient().getTypeClient())
                 .nom(request.getClient().getNom())
                 .prenom(request.getClient().getPrenom())
                 .telephone(request.getClient().getTelephone())
                 .email(request.getClient().getEmail())
                 .numeroCompte(request.getNumeroCompte())
-                .typeCompte(request.getTypeCompte().name())
+                .typeCompte(request.getTypeCompte())
                 .codeMembreParticipant(codeMembre)
                 .statut(AliasStatus.ACTIVE)
                 .dateCreationRac(response != null ? String.valueOf(response.get("dateCreation")) : null)
@@ -87,13 +84,13 @@ public class AliasService {
         Map<String, Object> response = aipClient.put("/api/rac/v{version}/alias", payload);
 
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
-                request.getAlias(), request.getTypeAlias().name(), AliasStatus.ACTIVE)
+                request.getAlias(), request.getTypeAlias(), AliasStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Alias", request.getAlias()));
 
         alias.setNom(request.getClient().getNom());
         alias.setPrenom(request.getClient().getPrenom());
         alias.setNumeroCompte(request.getNumeroCompte());
-        alias.setTypeCompte(request.getTypeCompte().name());
+        alias.setTypeCompte(request.getTypeCompte());
         alias.setStatut(AliasStatus.MODIFIED);
         alias.setDateModificationRac(response != null ? String.valueOf(response.get("dateModification")) : null);
         aliasRepository.save(alias);
@@ -108,14 +105,14 @@ public class AliasService {
     }
 
     @Transactional
-    public AliasResponse deleteAlias(String typeAlias, String aliasValue) {
+    public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", aliasValue);
-        payload.put("typeAlias", typeAlias);
+        payload.put("typeAlias", typeAlias.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
         aipClient.delete("/api/rac/v{version}/alias", payload);
@@ -133,14 +130,14 @@ public class AliasService {
                 .build();
     }
 
-    public Map<String, Object> searchAlias(String typeAlias, String alias) {
+    public Map<String, Object> searchAlias(TypeAlias typeAlias, String alias) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", alias);
-        payload.put("typeAlias", typeAlias);
+        payload.put("typeAlias", typeAlias.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.OUTBOUND, payload, null, null);
         return aipClient.post("/api/rac/v{version}/alias/search", payload);

@@ -1,5 +1,7 @@
 package ci.sycapay.pispi.dto.notification;
 
+import ci.sycapay.pispi.enums.IsoMessageType;
+import ci.sycapay.pispi.enums.MessageDirection;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,10 +15,10 @@ public class NotificationDto {
 
     private String msgId;
     private String msgIdDemande;
-    private String direction;
+    private MessageDirection direction;
     private String evenement;
     private String evenementDescription;
     private String evenementDate;
-    private String messageType;
+    private IsoMessageType messageType;
     private String createdAt;
 }

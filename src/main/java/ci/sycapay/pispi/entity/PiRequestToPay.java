@@ -1,7 +1,6 @@
 package ci.sycapay.pispi.entity;
 
-import ci.sycapay.pispi.enums.MessageDirection;
-import ci.sycapay.pispi.enums.RtpStatus;
+import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -35,11 +34,12 @@ public class PiRequestToPay {
     @Column(name = "direction", nullable = false)
     private MessageDirection direction;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_transaction", length = 10)
-    private String typeTransaction;
+    private TypeTransaction typeTransaction;
 
     @Column(name = "canal_communication", length = 10)
-    private String canalCommunication;
+    private CanalCommunicationRtp canalCommunication;
 
     @Column(name = "montant", precision = 18, scale = 2)
     private BigDecimal montant;
@@ -59,8 +59,9 @@ public class PiRequestToPay {
     @Column(name = "numero_compte_payeur", length = 34)
     private String numeroComptePayeur;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_payeur", length = 10)
-    private String typeComptePayeur;
+    private TypeCompte typeComptePayeur;
 
     @Column(name = "nom_client_payeur", length = 140)
     private String nomClientPayeur;
@@ -74,8 +75,9 @@ public class PiRequestToPay {
     @Column(name = "numero_compte_paye", length = 34)
     private String numeroComptePaye;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_paye", length = 10)
-    private String typeComptePaye;
+    private TypeCompteRtpPaye typeComptePaye;
 
     @Column(name = "nom_client_paye", length = 140)
     private String nomClientPaye;

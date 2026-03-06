@@ -53,7 +53,7 @@ public class ReturnFundsService {
                 .endToEndId(request.getEndToEndId())
                 .direction(MessageDirection.OUTBOUND)
                 .codeMembrePayeur(codeMembre)
-                .raison(request.getRaison().name())
+                .raison(request.getRaison())
                 .statut(ReturnRequestStatus.PENDING)
                 .build();
         returnRequestRepository.save(returnReq);
@@ -88,7 +88,7 @@ public class ReturnFundsService {
         aipClient.post("/api/spi/v{version}/retour-fonds/rejet", camt029);
 
         returnReq.setStatut(ReturnRequestStatus.RJCR);
-        returnReq.setRaisonRejet(request.getRaison().name());
+        returnReq.setRaisonRejet(request.getRaison());
         returnReq.setMsgIdRejet(msgId);
         returnRequestRepository.save(returnReq);
 
@@ -118,7 +118,7 @@ public class ReturnFundsService {
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.OUTBOUND)
                 .montantRetourne(request.getMontantRetourne())
-                .raisonRetour(request.getRaisonRetour().name())
+                .raisonRetour(request.getRaisonRetour())
                 .returnRequestId(returnReq.getId())
                 .build();
         returnExecutionRepository.save(execution);

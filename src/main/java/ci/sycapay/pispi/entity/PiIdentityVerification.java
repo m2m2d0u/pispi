@@ -1,6 +1,7 @@
 package ci.sycapay.pispi.entity;
 
 import ci.sycapay.pispi.enums.MessageDirection;
+import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.enums.VerificationStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,8 +38,9 @@ public class PiIdentityVerification {
     @Column(name = "numero_compte_paye", length = 34)
     private String numeroComptePaye;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_paye", length = 10)
-    private String typeComptePaye;
+    private TypeCompte typeComptePaye;
 
     @Column(name = "nom_client_paye", length = 140)
     private String nomClientPaye;
