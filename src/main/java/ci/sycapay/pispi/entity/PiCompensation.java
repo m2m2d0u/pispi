@@ -1,0 +1,57 @@
+package ci.sycapay.pispi.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pi_compensation")
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
+@Builder
+public class PiCompensation {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "msg_id", length = 35)
+    private String msgId;
+
+    @Column(name = "solde_id", length = 50)
+    private String soldeId;
+
+    @Column(name = "date_debut_compense")
+    private String dateDebutCompense;
+
+    @Column(name = "date_fin_compense")
+    private String dateFinCompense;
+
+    @Column(name = "participant", length = 6)
+    private String participant;
+
+    @Column(name = "participant_sponsor", length = 6)
+    private String participantSponsor;
+
+    @Column(name = "balance_type", length = 10)
+    private String balanceType;
+
+    @Column(name = "montant", precision = 18, scale = 2)
+    private BigDecimal montant;
+
+    @Column(name = "operation_type", length = 10)
+    private String operationType;
+
+    @Column(name = "date_balance")
+    private String dateBalance;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
+}
