@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.outbound;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.transfer.TransferAcceptRejectRequest;
 import ci.sycapay.pispi.dto.transfer.TransferRequest;
 import ci.sycapay.pispi.dto.transfer.TransferResponse;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,38 +21,38 @@ public class TransferController {
     private final TransferService transferService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public TransferResponse initiateTransfer(@Valid @RequestBody TransferRequest request) {
-        return transferService.initiateTransfer(request);
+    public ResponseEntity<ApiResponse<TransferResponse>> initiateTransfer(@Valid @RequestBody TransferRequest request) {
+        TransferResponse data = transferService.initiateTransfer(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted(data));
     }
 
     @GetMapping("/{endToEndId}")
-    public TransferResponse getTransfer(@PathVariable String endToEndId) {
-        return transferService.getTransfer(endToEndId);
+    public ApiResponse<TransferResponse> getTransfer(@PathVariable String endToEndId) {
+        return ApiResponse.ok(transferService.getTransfer(endToEndId));
     }
 
     @GetMapping
-    public Page<TransferResponse> listTransfers(Pageable pageable) {
-        return transferService.listTransfers(pageable);
+    public ApiResponse<Page<TransferResponse>> listTransfers(Pageable pageable) {
+        return ApiResponse.ok(transferService.listTransfers(pageable));
     }
 
     @PostMapping("/{endToEndId}/status")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void queryStatus(@PathVariable String endToEndId) {
+    public ResponseEntity<ApiResponse<Void>> queryStatus(@PathVariable String endToEndId) {
         transferService.queryStatus(endToEndId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());
     }
 
     @PostMapping("/incoming/{endToEndId}/accept")
-    public TransferResponse acceptIncoming(@PathVariable String endToEndId) {
+    public ApiResponse<TransferResponse> acceptIncoming(@PathVariable String endToEndId) {
         TransferAcceptRejectRequest req = TransferAcceptRejectRequest.builder()
                 .statutTransaction(ci.sycapay.pispi.enums.StatutTransaction.ACCC)
                 .build();
-        return transferService.acceptOrReject(endToEndId, req);
+        return ApiResponse.ok(transferService.acceptOrReject(endToEndId, req));
     }
 
     @PostMapping("/incoming/{endToEndId}/reject")
-    public TransferResponse rejectIncoming(@PathVariable String endToEndId,
-                                           @Valid @RequestBody TransferAcceptRejectRequest request) {
-        return transferService.acceptOrReject(endToEndId, request);
+    public ApiResponse<TransferResponse> rejectIncoming(@PathVariable String endToEndId,
+                                                         @Valid @RequestBody TransferAcceptRejectRequest request) {
+        return ApiResponse.ok(transferService.acceptOrReject(endToEndId, request));
     }
 }

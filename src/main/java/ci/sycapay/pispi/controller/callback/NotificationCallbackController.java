@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiGuarantee;
 import ci.sycapay.pispi.entity.PiNotification;
 import ci.sycapay.pispi.enums.*;
@@ -10,7 +11,6 @@ import ci.sycapay.pispi.service.WebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -29,10 +29,10 @@ public class NotificationCallbackController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/notification")
-    public ResponseEntity<Void> receiveNotification(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveNotification(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 200, null);
 
         PiNotification notification = PiNotification.builder()
@@ -46,14 +46,14 @@ public class NotificationCallbackController {
         notificationRepository.save(notification);
 
         webhookService.notify(WebhookEventType.PI_NOTIFICATION, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/notification/accuse")
-    public ResponseEntity<Void> receiveAcknowledgment(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveAcknowledgment(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 200, null);
 
         PiNotification notification = PiNotification.builder()
@@ -65,14 +65,14 @@ public class NotificationCallbackController {
                 .build();
         notificationRepository.save(notification);
 
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/relation")
-    public ResponseEntity<Void> receiveRelation(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveRelation(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.REDA_017, MessageDirection.INBOUND, payload, 200, null);
 
         try {
@@ -91,6 +91,6 @@ public class NotificationCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 }

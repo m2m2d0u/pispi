@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.outbound;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.rtp.RequestToPayRequest;
 import ci.sycapay.pispi.dto.rtp.RequestToPayResponse;
 import ci.sycapay.pispi.dto.rtp.RtpRejectRequest;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,30 +21,31 @@ public class RequestToPayController {
     private final RequestToPayService rtpService;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public RequestToPayResponse createRtp(@Valid @RequestBody RequestToPayRequest request) {
-        return rtpService.createRtp(request);
+    public ResponseEntity<ApiResponse<RequestToPayResponse>> createRtp(
+            @Valid @RequestBody RequestToPayRequest request) {
+        RequestToPayResponse data = rtpService.createRtp(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted(data));
     }
 
     @GetMapping("/{endToEndId}")
-    public RequestToPayResponse getRtp(@PathVariable String endToEndId) {
-        return rtpService.getRtp(endToEndId);
+    public ApiResponse<RequestToPayResponse> getRtp(@PathVariable String endToEndId) {
+        return ApiResponse.ok(rtpService.getRtp(endToEndId));
     }
 
     @GetMapping
-    public Page<RequestToPayResponse> listRtps(Pageable pageable) {
-        return rtpService.listRtps(pageable);
+    public ApiResponse<Page<RequestToPayResponse>> listRtps(Pageable pageable) {
+        return ApiResponse.ok(rtpService.listRtps(pageable));
     }
 
     @PostMapping("/incoming/{endToEndId}/reject")
-    public RequestToPayResponse rejectRtp(@PathVariable String endToEndId,
-                                          @Valid @RequestBody RtpRejectRequest request) {
-        return rtpService.rejectRtp(endToEndId, request.getCodeRaison());
+    public ApiResponse<RequestToPayResponse> rejectRtp(
+            @PathVariable String endToEndId,
+            @Valid @RequestBody RtpRejectRequest request) {
+        return ApiResponse.ok(rtpService.rejectRtp(endToEndId, request.getCodeRaison()));
     }
 
     @PostMapping("/incoming/{endToEndId}/accept")
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public void acceptRtp(@PathVariable String endToEndId) {
-        // Accept = Payer initiates PACS.008 transfer, handled by TransferController
+    public ResponseEntity<ApiResponse<Void>> acceptRtp(@PathVariable String endToEndId) {
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());
     }
 }

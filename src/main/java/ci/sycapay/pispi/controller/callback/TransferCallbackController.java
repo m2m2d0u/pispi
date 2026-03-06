@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiTransferRepository;
@@ -7,7 +8,6 @@ import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -24,11 +24,11 @@ public class TransferCallbackController {
     private final WebhookService webhookService;
 
     @PostMapping("/virement")
-    public ResponseEntity<Void> receiveTransfer(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveTransfer(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 200, null);
 
         PiTransfer transfer = PiTransfer.builder()
@@ -48,15 +48,15 @@ public class TransferCallbackController {
         transferRepository.save(transfer);
 
         webhookService.notify(WebhookEventType.TRANSFER_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/virement/resultat")
-    public ResponseEntity<Void> receiveTransferResult(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveTransferResult(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 200, null);
 
         transferRepository.findByEndToEndId(endToEndId).ifPresent(transfer -> {
@@ -69,17 +69,17 @@ public class TransferCallbackController {
         });
 
         webhookService.notify(WebhookEventType.TRANSFER_RESULT, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/rejet")
-    public ResponseEntity<Void> receiveRejection(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveRejection(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
 
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 }

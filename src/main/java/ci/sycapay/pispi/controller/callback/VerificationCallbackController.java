@@ -1,12 +1,12 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiIdentityVerification;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -21,11 +21,11 @@ public class VerificationCallbackController {
     private final WebhookService webhookService;
 
     @PostMapping("/verification")
-    public ResponseEntity<Void> receiveVerification(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveVerification(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.INBOUND, payload, 200, null);
 
         PiIdentityVerification verification = PiIdentityVerification.builder()
@@ -43,15 +43,15 @@ public class VerificationCallbackController {
         repository.save(verification);
 
         webhookService.notify(WebhookEventType.VERIFICATION_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/verification/resultat")
-    public ResponseEntity<Void> receiveVerificationResult(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveVerificationResult(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.INBOUND, payload, 200, null);
 
         repository.findByEndToEndId(endToEndId).ifPresent(v -> {
@@ -64,6 +64,6 @@ public class VerificationCallbackController {
         });
 
         webhookService.notify(WebhookEventType.VERIFICATION_RESULT, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 }

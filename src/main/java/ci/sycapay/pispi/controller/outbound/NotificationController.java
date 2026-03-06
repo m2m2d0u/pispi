@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.outbound;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.notification.NotificationDto;
 import ci.sycapay.pispi.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +16,12 @@ public class NotificationController {
     private final NotificationService service;
 
     @PostMapping("/ping")
-    public NotificationDto sendPing() {
-        return service.sendPing();
+    public ApiResponse<NotificationDto> sendPing() {
+        return ApiResponse.ok(service.sendPing());
     }
 
     @GetMapping
-    public Page<NotificationDto> listNotifications(Pageable pageable) {
-        return service.listNotifications(pageable);
+    public ApiResponse<Page<NotificationDto>> listNotifications(Pageable pageable) {
+        return ApiResponse.ok(service.listNotifications(pageable));
     }
 }

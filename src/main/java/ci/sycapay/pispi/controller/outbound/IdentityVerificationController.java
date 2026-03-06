@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.outbound;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationRespondRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationResponse;
@@ -7,6 +8,7 @@ import ci.sycapay.pispi.service.transfer.IdentityVerificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,19 +19,21 @@ public class IdentityVerificationController {
     private final IdentityVerificationService service;
 
     @PostMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public IdentityVerificationResponse requestVerification(@Valid @RequestBody IdentityVerificationRequest request) {
-        return service.requestVerification(request);
+    public ResponseEntity<ApiResponse<IdentityVerificationResponse>> requestVerification(
+            @Valid @RequestBody IdentityVerificationRequest request) {
+        IdentityVerificationResponse data = service.requestVerification(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted(data));
     }
 
     @GetMapping("/{endToEndId}")
-    public IdentityVerificationResponse getVerification(@PathVariable String endToEndId) {
-        return service.getVerification(endToEndId);
+    public ApiResponse<IdentityVerificationResponse> getVerification(@PathVariable String endToEndId) {
+        return ApiResponse.ok(service.getVerification(endToEndId));
     }
 
     @PostMapping("/incoming/{endToEndId}/respond")
-    public IdentityVerificationResponse respond(@PathVariable String endToEndId,
-                                                 @Valid @RequestBody IdentityVerificationRespondRequest request) {
-        return service.respond(endToEndId, request);
+    public ApiResponse<IdentityVerificationResponse> respond(
+            @PathVariable String endToEndId,
+            @Valid @RequestBody IdentityVerificationRespondRequest request) {
+        return ApiResponse.ok(service.respond(endToEndId, request));
     }
 }

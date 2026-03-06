@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiReturnExecution;
 import ci.sycapay.pispi.entity.PiReturnRequest;
 import ci.sycapay.pispi.enums.*;
@@ -8,7 +9,6 @@ import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -25,12 +25,12 @@ public class ReturnFundsCallbackController {
     private final WebhookService webhookService;
 
     @PostMapping("/retour-fonds/demande")
-    public ResponseEntity<Void> receiveReturnRequest(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnRequest(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056, MessageDirection.INBOUND, payload, 200, null);
 
         PiReturnRequest req = PiReturnRequest.builder()
@@ -44,15 +44,15 @@ public class ReturnFundsCallbackController {
         returnRequestRepository.save(req);
 
         webhookService.notify(WebhookEventType.RETURN_REQUEST_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/retour-fonds/rejet")
-    public ResponseEntity<Void> receiveReturnRejection(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnRejection(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.CAMT_029, MessageDirection.INBOUND, payload, 200, null);
 
         returnRequestRepository.findByIdentifiantDemande(identifiantDemande).ifPresent(req -> {
@@ -63,15 +63,15 @@ public class ReturnFundsCallbackController {
         });
 
         webhookService.notify(WebhookEventType.RETURN_RESULT, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/retour-fonds")
-    public ResponseEntity<Void> receiveReturnExecution(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnExecution(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_004, MessageDirection.INBOUND, payload, 200, null);
 
         PiReturnExecution execution = PiReturnExecution.builder()
@@ -85,6 +85,6 @@ public class ReturnFundsCallbackController {
         returnExecutionRepository.save(execution);
 
         webhookService.notify(WebhookEventType.RETURN_EXECUTED, endToEndId, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 }

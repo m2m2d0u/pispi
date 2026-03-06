@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiCompensation;
 import ci.sycapay.pispi.entity.PiGuarantee;
 import ci.sycapay.pispi.entity.PiInvoice;
@@ -11,7 +12,6 @@ import ci.sycapay.pispi.service.WebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,10 +33,10 @@ public class ReportCallbackController {
     private final ObjectMapper objectMapper;
 
     @PostMapping("/releve")
-    public ResponseEntity<Void> receiveTransactionReport(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveTransactionReport(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.CAMT_052, MessageDirection.INBOUND, payload, 200, null);
 
         try {
@@ -55,15 +55,15 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.TRANSACTION_REPORT, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/compensation")
     @SuppressWarnings("unchecked")
-    public ResponseEntity<Void> receiveCompensation(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveCompensation(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.CAMT_053, MessageDirection.INBOUND, payload, 200, null);
 
         List<Map<String, Object>> soldes = (List<Map<String, Object>>) payload.get("soldes");
@@ -84,14 +84,14 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.COMPENSATION_REPORT, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/garantie")
-    public ResponseEntity<Void> receiveGuarantee(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveGuarantee(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.CAMT_010, MessageDirection.INBOUND, payload, 200, null);
 
         try {
@@ -111,15 +111,15 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 
     @PostMapping("/facture")
     @SuppressWarnings("unchecked")
-    public ResponseEntity<Void> receiveInvoice(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveInvoice(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.ok().build();
+        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.CAMT_086, MessageDirection.INBOUND, payload, 200, null);
 
         try {
@@ -152,6 +152,6 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.INVOICE_RECEIVED, null, msgId, payload);
-        return ResponseEntity.ok().build();
+        return ApiResponse.ok("Callback received", null);
     }
 }
