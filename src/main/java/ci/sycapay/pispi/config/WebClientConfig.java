@@ -8,6 +8,11 @@ import org.springframework.web.client.RestClient;
 public class WebClientConfig {
 
     @Bean
+    public RestClient.Builder restClientBuilder() {
+        return RestClient.builder();
+    }
+
+    @Bean
     public RestClient aipRestClient(PiSpiProperties properties) {
         return RestClient.builder()
                 .baseUrl(properties.getAipBaseUrl())

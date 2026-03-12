@@ -46,7 +46,7 @@ public class NotificationCallbackController {
                 .direction(MessageDirection.INBOUND)
                 .evenement((String) payload.get("evenement"))
                 .evenementDescription((String) payload.get("evenementDescription"))
-                .evenementDate((String) payload.get("evenementDate"))
+                .evenementDate(parseDateTime(payload.get("evenementDate")))
                 .messageType(IsoMessageType.ADMI_004)
                 .build();
         notificationRepository.save(notification);

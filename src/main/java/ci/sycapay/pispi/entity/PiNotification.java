@@ -35,7 +35,7 @@ public class PiNotification {
     private String evenementDescription;
 
     @Column(name = "evenement_date")
-    private String evenementDate;
+    private LocalDateTime evenementDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type", length = 20)

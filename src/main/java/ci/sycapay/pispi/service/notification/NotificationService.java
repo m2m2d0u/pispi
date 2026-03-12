@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,7 +48,7 @@ public class NotificationService {
                 .direction(MessageDirection.OUTBOUND)
                 .evenement("PING")
                 .evenementDescription("Connectivity test")
-                .evenementDate(DateTimeUtil.nowIso())
+                .evenementDate(LocalDateTime.now())
                 .messageType(IsoMessageType.ADMI_004)
                 .build();
         repository.save(notification);
@@ -66,7 +67,7 @@ public class NotificationService {
                 .direction(n.getDirection())
                 .evenement(n.getEvenement())
                 .evenementDescription(n.getEvenementDescription())
-                .evenementDate(n.getEvenementDate())
+                .evenementDate(DateTimeUtil.formatDateTime(n.getEvenementDate()))
                 .messageType(n.getMessageType())
                 .createdAt(n.getCreatedAt() != null ? n.getCreatedAt().toString() : null)
                 .build();

@@ -47,7 +47,7 @@ public class PiInvoice {
     private LocalDate dateFinFacture;
 
     @Column(name = "date_creation")
-    private LocalDate dateCreation;
+    private LocalDateTime dateCreation;
 
     @Column(name = "devise_compte", length = 3)
     private String deviseCompte;
