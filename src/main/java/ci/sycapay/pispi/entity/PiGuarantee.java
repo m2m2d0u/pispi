@@ -8,6 +8,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -42,16 +43,16 @@ public class PiGuarantee {
     private TypeOperationGarantie typeOperationGarantie;
 
     @Column(name = "date_effective_garantie")
-    private String dateEffectiveGarantie;
+    private LocalDateTime dateEffectiveGarantie;
 
     @Column(name = "montant_garantie_plafond", precision = 18, scale = 2)
     private BigDecimal montantGarantiePlafond;
 
     @Column(name = "date_debut")
-    private String dateDebut;
+    private LocalDate dateDebut;
 
     @Column(name = "date_fin")
-    private String dateFin;
+    private LocalDate dateFin;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "payload", columnDefinition = "jsonb")

@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -151,7 +153,7 @@ public class TransferService {
                 .montant(t.getMontant())
                 .codeMembreParticipantPayeur(t.getCodeMembrePayeur())
                 .codeMembreParticipantPaye(t.getCodeMembrePaye())
-                .dateHeureIrrevocabilite(t.getDateHeureIrrevocabilite())
+                .dateHeureIrrevocabilite(formatDateTime(t.getDateHeureIrrevocabilite()))
                 .createdAt(t.getCreatedAt() != null ? t.getCreatedAt().toString() : null)
                 .build();
     }

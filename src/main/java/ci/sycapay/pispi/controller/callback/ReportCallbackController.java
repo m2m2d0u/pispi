@@ -15,8 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDate;
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Slf4j
 @RestController
@@ -77,7 +82,7 @@ public class ReportCallbackController {
                         .balanceType(solde.get("balanceType") != null ? TypeBalanceCompense.valueOf((String) solde.get("balanceType")) : null)
                         .montant(solde.get("montant") != null ? new BigDecimal(String.valueOf(solde.get("montant"))) : null)
                         .operationType(solde.get("operationType") != null ? IndicateurSolde.valueOf((String) solde.get("operationType")) : null)
-                        .dateBalance((String) solde.get("dateBalance"))
+                        .dateBalance(parseDateTime(solde.get("dateBalance")))
                         .build();
                 compensationRepository.save(compensation);
             }
@@ -137,8 +142,8 @@ public class ReportCallbackController {
                                     .senderId((String) groupe.get("senderId"))
                                     .receiverName((String) groupe.get("receiverName"))
                                     .receiverId((String) groupe.get("receiverId"))
-                                    .dateDebutFacture((String) facture.get("dateDebutFacture"))
-                                    .dateFinFacture((String) facture.get("dateFinFacture"))
+                                    .dateDebutFacture(parseDate(facture.get("dateDebutFacture")))
+                                    .dateFinFacture(parseDate(facture.get("dateFinFacture")))
                                     .deviseCompte("XOF")
                                     .serviceLines(objectMapper.writeValueAsString(facture.get("donnees")))
                                     .build();

@@ -10,12 +10,17 @@ import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRevendicationRepository;
 import ci.sycapay.pispi.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RevendicationService {
@@ -64,7 +69,7 @@ public class RevendicationService {
         aipClient.put("/api/rac/v{version}/revendication/accepter", payload);
 
         claim.setStatut(StatutRevendication.ACCEPTEE);
-        claim.setDateAction(DateTimeUtil.nowIso());
+        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
         claim.setAuteurAction("PARTICIPANT");
         repository.save(claim);
 
@@ -82,7 +87,7 @@ public class RevendicationService {
         aipClient.put("/api/rac/v{version}/revendication/rejeter", payload);
 
         claim.setStatut(StatutRevendication.REJETEE);
-        claim.setDateAction(DateTimeUtil.nowIso());
+        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
         repository.save(claim);
 
         return toResponse(claim);
@@ -92,7 +97,7 @@ public class RevendicationService {
         return RevendicationResponse.builder()
                 .identifiantRevendication(c.getIdentifiantRevendication())
                 .statut(c.getStatut())
-                .dateAction(c.getDateAction())
+                .dateAction(formatDateTime(c.getDateAction()))
                 .auteurAction(c.getAuteurAction())
                 .build();
     }

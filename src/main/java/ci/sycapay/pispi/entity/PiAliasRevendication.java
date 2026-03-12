@@ -39,7 +39,7 @@ public class PiAliasRevendication {
     private StatutRevendication statut;
 
     @Column(name = "date_action")
-    private String dateAction;
+    private LocalDateTime dateAction;
 
     @Column(name = "auteur_action", length = 20)
     private String auteurAction;

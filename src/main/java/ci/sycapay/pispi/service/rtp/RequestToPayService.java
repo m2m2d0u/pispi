@@ -13,6 +13,7 @@ import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RequestToPayService {
@@ -60,7 +64,7 @@ public class RequestToPayService {
                 .devise("XOF")
                 .codeMembrePayeur(request.getCodeMembreParticipantPayeur())
                 .codeMembrePaye(codeMembre)
-                .dateHeureLimiteAction(request.getDateHeureLimiteAction())
+                .dateHeureLimiteAction(parseDateTime(request.getDateHeureLimiteAction()))
                 .autorisationModificationMontant(request.getAutorisationModificationMontant())
                 .statut(RtpStatus.PENDING)
                 .build();
@@ -122,4 +126,5 @@ public class RequestToPayService {
                 .createdAt(rtp.getCreatedAt() != null ? rtp.getCreatedAt().toString() : null)
                 .build();
     }
+
 }

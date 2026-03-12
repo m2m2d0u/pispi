@@ -5,6 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -40,13 +41,13 @@ public class PiInvoice {
     private String receiverId;
 
     @Column(name = "date_debut_facture")
-    private String dateDebutFacture;
+    private LocalDate dateDebutFacture;
 
     @Column(name = "date_fin_facture")
-    private String dateFinFacture;
+    private LocalDate dateFinFacture;
 
     @Column(name = "date_creation")
-    private String dateCreation;
+    private LocalDate dateCreation;
 
     @Column(name = "devise_compte", length = 3)
     private String deviseCompte;

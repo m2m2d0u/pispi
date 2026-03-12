@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/pi/callback")
@@ -64,7 +66,7 @@ public class TransferCallbackController {
             transfer.setStatut(TransferStatus.valueOf(statut));
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);
-            transfer.setDateHeureIrrevocabilite((String) payload.get("dateHeureIrrevocabilite"));
+            transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
         });
 

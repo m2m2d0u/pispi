@@ -7,11 +7,15 @@ import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
@@ -39,7 +43,7 @@ public class RtpCallbackController {
                 .canalCommunication(CanalCommunicationRtp.fromCode((String) payload.get("canalCommunication")))
                 .codeMembrePayeur((String) payload.get("codeMembreParticipantPayeur"))
                 .codeMembrePaye((String) payload.get("codeMembreParticipantPaye"))
-                .dateHeureLimiteAction((String) payload.get("dateHeureLimiteAction"))
+                .dateHeureLimiteAction(parseDateTime(payload.get("dateHeureLimiteAction")))
                 .statut(RtpStatus.PENDING)
                 .build();
         rtpRepository.save(rtp);
@@ -66,4 +70,5 @@ public class RtpCallbackController {
         webhookService.notify(WebhookEventType.RTP_RESULT, endToEndId, msgId, payload);
         return ApiResponse.ok("Callback received", null);
     }
+
 }

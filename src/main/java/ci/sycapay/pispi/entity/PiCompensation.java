@@ -26,10 +26,10 @@ public class PiCompensation {
     private String soldeId;
 
     @Column(name = "date_debut_compense")
-    private String dateDebutCompense;
+    private LocalDateTime dateDebutCompense;
 
     @Column(name = "date_fin_compense")
-    private String dateFinCompense;
+    private LocalDateTime dateFinCompense;
 
     @Column(name = "participant", length = 6)
     private String participant;
@@ -49,7 +49,7 @@ public class PiCompensation {
     private IndicateurSolde operationType;
 
     @Column(name = "date_balance")
-    private String dateBalance;
+    private LocalDateTime dateBalance;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

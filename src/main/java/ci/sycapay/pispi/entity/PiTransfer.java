@@ -113,7 +113,7 @@ public class PiTransfer {
     private String msgIdReponse;
 
     @Column(name = "date_heure_irrevocabilite")
-    private String dateHeureIrrevocabilite;
+    private LocalDateTime dateHeureIrrevocabilite;
 
     @Column(name = "rtp_end_to_end_id", length = 35)
     private String rtpEndToEndId;

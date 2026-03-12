@@ -14,7 +14,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
+
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDate;
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Slf4j
 @RestController
@@ -81,8 +87,8 @@ public class NotificationCallbackController {
                     .sourceMessageType(IsoMessageType.REDA_017)
                     .montantGarantiePlafond(payload.get("montantGarantiePlafond") != null ?
                             new BigDecimal(String.valueOf(payload.get("montantGarantiePlafond"))) : null)
-                    .dateDebut((String) payload.get("dateDebut"))
-                    .dateFin((String) payload.get("dateFin"))
+                    .dateDebut(parseDate(payload.get("dateDebut")))
+                    .dateFin(parseDate(payload.get("dateFin")))
                     .payload(objectMapper.writeValueAsString(payload))
                     .build();
             guaranteeRepository.save(guarantee);
@@ -93,4 +99,5 @@ public class NotificationCallbackController {
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
         return ApiResponse.ok("Callback received", null);
     }
+
 }

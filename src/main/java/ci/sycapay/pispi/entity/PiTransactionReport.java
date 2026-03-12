@@ -27,10 +27,10 @@ public class PiTransactionReport {
     private String identifiantReleve;
 
     @Column(name = "date_debut_compense")
-    private String dateDebutCompense;
+    private LocalDateTime dateDebutCompense;
 
     @Column(name = "date_fin_compense")
-    private String dateFinCompense;
+    private LocalDateTime dateFinCompense;
 
     @Column(name = "code_membre_participant", length = 6)
     private String codeMembreParticipant;

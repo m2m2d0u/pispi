@@ -48,10 +48,10 @@ public class PiRequestToPay {
     private String devise;
 
     @Column(name = "date_heure_execution")
-    private String dateHeureExecution;
+    private LocalDateTime dateHeureExecution;
 
     @Column(name = "date_heure_limite_action")
-    private String dateHeureLimiteAction;
+    private LocalDateTime dateHeureLimiteAction;
 
     @Column(name = "code_membre_payeur", length = 6)
     private String codeMembrePayeur;

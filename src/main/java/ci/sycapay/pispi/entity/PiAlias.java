@@ -4,6 +4,7 @@ import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -48,7 +49,7 @@ public class PiAlias {
     private String identifiant;
 
     @Column(name = "date_naissance")
-    private String dateNaissance;
+    private LocalDate dateNaissance;
 
     @Column(name = "nationalite", length = 2)
     private String nationalite;
@@ -86,13 +87,13 @@ public class PiAlias {
     private AliasStatus statut;
 
     @Column(name = "date_creation_rac")
-    private String dateCreationRac;
+    private LocalDateTime dateCreationRac;
 
     @Column(name = "date_modification_rac")
-    private String dateModificationRac;
+    private LocalDateTime dateModificationRac;
 
     @Column(name = "date_suppression_rac")
-    private String dateSuppressionRac;
+    private LocalDateTime dateSuppressionRac;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

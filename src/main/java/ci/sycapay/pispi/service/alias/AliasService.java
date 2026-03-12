@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
+import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -53,7 +56,8 @@ public class AliasService {
                 .typeCompte(request.getTypeCompte())
                 .codeMembreParticipant(codeMembre)
                 .statut(AliasStatus.ACTIVE)
-                .dateCreationRac(response != null ? String.valueOf(response.get("dateCreation")) : null)
+                .dateCreationRac(response != null && response.get("dateCreation") != null
+                        ? parseDateTime(String.valueOf(response.get("dateCreation"))) : null)
                 .build();
 
         if (request.getMarchand() != null) {
@@ -69,7 +73,7 @@ public class AliasService {
                 .statut(StatutOperationAlias.SUCCES)
                 .alias(request.getAlias())
                 .typeAlias(request.getTypeAlias())
-                .dateCreation(alias.getDateCreationRac())
+                .dateCreation(formatDateTime(alias.getDateCreationRac()))
                 .build();
     }
 
@@ -92,7 +96,8 @@ public class AliasService {
         alias.setNumeroCompte(request.getNumeroCompte());
         alias.setTypeCompte(request.getTypeCompte());
         alias.setStatut(AliasStatus.MODIFIED);
-        alias.setDateModificationRac(response != null ? String.valueOf(response.get("dateModification")) : null);
+        alias.setDateModificationRac(response != null && response.get("dateModification") != null
+                ? parseDateTime(String.valueOf(response.get("dateModification"))) : null);
         aliasRepository.save(alias);
 
         return AliasResponse.builder()
@@ -100,7 +105,7 @@ public class AliasService {
                 .statut(StatutOperationAlias.SUCCES)
                 .alias(request.getAlias())
                 .typeAlias(request.getTypeAlias())
-                .dateModification(alias.getDateModificationRac())
+                .dateModification(formatDateTime(alias.getDateModificationRac()))
                 .build();
     }
 
@@ -149,7 +154,7 @@ public class AliasService {
                 .map(a -> AliasResponse.builder()
                         .endToEndId(a.getEndToEndId())
                         .alias(a.getAliasValue())
-                        .dateCreation(a.getDateCreationRac())
+                        .dateCreation(formatDateTime(a.getDateCreationRac()))
                         .build());
     }
 
@@ -169,4 +174,5 @@ public class AliasService {
         payload.put("codeMembreParticipant", properties.getCodeMembre());
         return payload;
     }
+
 }
