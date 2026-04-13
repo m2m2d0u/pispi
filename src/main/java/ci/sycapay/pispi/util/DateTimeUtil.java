@@ -2,9 +2,11 @@ package ci.sycapay.pispi.util;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 
 @Slf4j
 public final class DateTimeUtil {
@@ -16,7 +18,7 @@ public final class DateTimeUtil {
     }
 
     public static String nowIso() {
-        return LocalDateTime.now().format(ISO_DATETIME);
+        return Instant.now().truncatedTo(ChronoUnit.MILLIS).toString();
     }
 
     public static String nowCompact() {

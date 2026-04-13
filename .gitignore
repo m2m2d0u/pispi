@@ -33,5 +33,7 @@ build/
 .vscode/
 .env
 
+*.jar
+
 src/main/resources/client/*
 src/main/resources/truststore/*
