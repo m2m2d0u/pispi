@@ -55,6 +55,14 @@ public class ReportService {
         aipClient.post("/rapports/demandes", camt060);
     }
 
+    public Map<String, Object> downloadReport(String reportId) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", reportId);
+
+        log.info("Downloading report with id: {}", reportId);
+        return aipClient.post("/rapports/telechargements", payload);
+    }
+
     public Page<CompensationDto> listCompensations(Pageable pageable) {
         return compensationRepository.findAllByOrderByCreatedAtDesc(pageable).map(this::toCompensationDto);
     }

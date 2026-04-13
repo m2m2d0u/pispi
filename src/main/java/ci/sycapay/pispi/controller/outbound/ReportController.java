@@ -3,6 +3,7 @@ package ci.sycapay.pispi.controller.outbound;
 import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.report.CompensationDto;
 import ci.sycapay.pispi.dto.report.GuaranteeDto;
+import ci.sycapay.pispi.dto.report.ReportDownloadRequest;
 import ci.sycapay.pispi.dto.report.ReportRequest;
 import ci.sycapay.pispi.enums.TypeRapport;
 import ci.sycapay.pispi.service.report.ReportService;
@@ -16,6 +17,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @Tag(name = "Reports")
 @RestController
 @RequestMapping("/api/v1/reports")
@@ -23,6 +26,14 @@ import org.springframework.web.bind.annotation.*;
 public class ReportController {
 
     private final ReportService service;
+
+    @Operation(summary = "Download a report",
+               description = "Sends a request to the AIP to download a previously generated report by its identifier.")
+    @PostMapping("/download")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> downloadReport(@Valid @RequestBody ReportDownloadRequest request) {
+        Map<String, Object> result = service.downloadReport(request.getId());
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
 
     @Operation(summary = "Request compensation report",
                description = "Sends a CAMT.060 COMP request to the AIP to retrieve the clearing/settlement compensation balances. The AIP delivers the report asynchronously via callback /api/pi/callback/compensation.")
