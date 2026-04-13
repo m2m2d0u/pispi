@@ -20,6 +20,14 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
+import ci.sycapay.pispi.dto.callback.CompensationCallbackPayload;
+import ci.sycapay.pispi.dto.callback.FactureCallbackPayload;
+import ci.sycapay.pispi.dto.callback.GarantieCallbackPayload;
+import ci.sycapay.pispi.dto.callback.ReleveCallbackPayload;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDate;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
@@ -39,8 +47,10 @@ public class ReportCallbackController {
     private final WebhookService webhookService;
     private final ObjectMapper objectMapper;
 
+    @Operation(summary = "Receive transaction statement (CAMT.052)", description = "Called by the AIP to deliver the transaction statement requested via POST /api/v1/reports/transactions. Persists the report and fires a TRANSACTION_REPORT webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ReleveCallbackPayload.class)))
     @PostMapping("/releve")
-    public ApiResponse<Void> receiveTransactionReport(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
@@ -65,9 +75,11 @@ public class ReportCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive compensation report (CAMT.053)", description = "Called by the AIP to deliver clearing/settlement balances requested via POST /api/v1/reports/compensation. Each balance entry is persisted as a PiCompensation record.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CompensationCallbackPayload.class)))
     @PostMapping("/compensation")
     @SuppressWarnings("unchecked")
-    public ApiResponse<Void> receiveCompensation(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
@@ -94,8 +106,10 @@ public class ReportCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive guarantee update (CAMT.010)", description = "Called by the AIP to push an update to this participant's guarantee (collateral) position. Persists a PiGuarantee record and fires a GUARANTEE_UPDATED webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = GarantieCallbackPayload.class)))
     @PostMapping("/garantie")
-    public ApiResponse<Void> receiveGuarantee(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
@@ -121,9 +135,11 @@ public class ReportCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive invoice report (CAMT.086)", description = "Called by the AIP to deliver the billing invoice requested via POST /api/v1/reports/invoices. Each invoice line item is persisted as a PiInvoice record.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = FactureCallbackPayload.class)))
     @PostMapping("/facture")
     @SuppressWarnings("unchecked")
-    public ApiResponse<Void> receiveInvoice(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);

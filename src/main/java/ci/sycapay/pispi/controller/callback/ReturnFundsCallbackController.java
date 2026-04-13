@@ -11,6 +11,13 @@ import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RetourFondsDemandeCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RetourFondsRejetCallbackPayload;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -26,8 +33,10 @@ public class ReturnFundsCallbackController {
     private final PiReturnExecutionRepository returnExecutionRepository;
     private final WebhookService webhookService;
 
+    @Operation(summary = "Receive inbound return-of-funds request (CAMT.056)", description = "Called by the AIP when another participant requests a return of funds for a transfer they sent to this PI. Saves the request locally and fires a RETURN_REQUEST_RECEIVED webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsDemandeCallbackPayload.class)))
     @PostMapping("/retour-fonds/demande")
-    public ApiResponse<Void> receiveReturnRequest(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnRequest(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
         String endToEndId = (String) payload.get("endToEndId");
@@ -49,8 +58,10 @@ public class ReturnFundsCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive return rejection (CAMT.029)", description = "Called by the AIP when the receiving PI rejects a return-of-funds request initiated by this PI. Updates local return request status to RJCR.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsRejetCallbackPayload.class)))
     @PostMapping("/retour-fonds/rejet")
-    public ApiResponse<Void> receiveReturnRejection(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
 
@@ -68,8 +79,10 @@ public class ReturnFundsCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive return execution (PACS.004)", description = "Called by the AIP when the receiving PI accepts a return and transfers funds back. Saves the return execution record locally and fires a RETURN_EXECUTED webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsCallbackPayload.class)))
     @PostMapping("/retour-fonds")
-    public ApiResponse<Void> receiveReturnExecution(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveReturnExecution(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 

@@ -19,6 +19,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import ci.sycapay.pispi.dto.callback.AccuseCallbackPayload;
+import ci.sycapay.pispi.dto.callback.NotificationCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RelationCallbackPayload;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDate;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
@@ -36,8 +43,10 @@ public class NotificationCallbackController {
     private final WebhookService webhookService;
     private final ObjectMapper objectMapper;
 
+    @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally and fires a PI_NOTIFICATION webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notification")
-    public ApiResponse<Void> receiveNotification(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
@@ -57,8 +66,10 @@ public class NotificationCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive acknowledgment (ADMI.011)", description = "Called by the AIP to acknowledge receipt of a notification previously sent by this PI. Saves the acknowledgment record locally.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = AccuseCallbackPayload.class)))
     @PostMapping("/notification/accuse")
-    public ApiResponse<Void> receiveAcknowledgment(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
@@ -76,8 +87,10 @@ public class NotificationCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive sponsor relation update (REDA.017)", description = "Called by the AIP to notify this PI of a change in the sponsor/guarantee relationship (ceiling amount, validity dates). Persists a PiGuarantee record with the new ceiling and fires a GUARANTEE_UPDATED webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RelationCallbackPayload.class)))
     @PostMapping("/relation")
-    public ApiResponse<Void> receiveRelation(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);

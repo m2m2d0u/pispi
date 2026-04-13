@@ -13,6 +13,12 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import ci.sycapay.pispi.dto.callback.DemandePaiementCallbackPayload;
+import ci.sycapay.pispi.dto.callback.DemandePaiementResultatCallbackPayload;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
@@ -27,8 +33,10 @@ public class RtpCallbackController {
     private final PiRequestToPayRepository rtpRepository;
     private final WebhookService webhookService;
 
+    @Operation(summary = "Receive inbound Request-to-Pay (PAIN.013)", description = "Called by the AIP when another participant sends a Request-to-Pay to this PI. Saves the RTP locally and fires an RTP_RECEIVED webhook so the backend can prompt the payer.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = DemandePaiementCallbackPayload.class)))
     @PostMapping("/demande-paiement")
-    public ApiResponse<Void> receiveRtp(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveRtp(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
@@ -54,8 +62,10 @@ public class RtpCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive RTP result (PAIN.014)", description = "Called by the AIP to deliver the payee's reject decision on a Request-to-Pay this PI initiated. Updates local RTP status and fires an RTP_RESULT webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = DemandePaiementResultatCallbackPayload.class)))
     @PostMapping("/demande-paiement/resultat")
-    public ApiResponse<Void> receiveRtpResult(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveRtpResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 

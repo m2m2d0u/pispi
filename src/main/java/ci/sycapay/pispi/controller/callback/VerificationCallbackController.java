@@ -9,6 +9,12 @@ import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import ci.sycapay.pispi.dto.callback.VerificationCallbackPayload;
+import ci.sycapay.pispi.dto.callback.VerificationResultatCallbackPayload;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
 
@@ -22,8 +28,10 @@ public class VerificationCallbackController {
     private final PiIdentityVerificationRepository repository;
     private final WebhookService webhookService;
 
+    @Operation(summary = "Receive inbound verification request (ACMT.023)", description = "Called by the AIP when another participant requests identity verification for an account held at this PI. Saves the request locally and fires a VERIFICATION_RECEIVED webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationCallbackPayload.class)))
     @PostMapping("/verification")
-    public ApiResponse<Void> receiveVerification(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveVerification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
@@ -48,8 +56,10 @@ public class VerificationCallbackController {
         return ApiResponse.ok("Callback received", null);
     }
 
+    @Operation(summary = "Receive verification result (ACMT.024)", description = "Called by the AIP to deliver the result of a verification request this PI initiated. Updates local verification status and fires a VERIFICATION_RESULT webhook.")
+    @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationResultatCallbackPayload.class)))
     @PostMapping("/verification/resultat")
-    public ApiResponse<Void> receiveVerificationResult(@RequestBody Map<String, Object> payload) {
+    public ApiResponse<Void> receiveVerificationResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
