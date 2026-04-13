@@ -24,13 +24,6 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
 
-  # ---- Kafka ----
-#  kafka:
-#    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-#    consumer:
-#      group-id: ${KAFKA_CONSUMER_GROUP:pispi-connector}
-#      auto-offset-reset: earliest
-
 # ---- Sycapay PI-SPI Config ----
 sycapay:
   pi-spi:
@@ -38,21 +31,16 @@ sycapay:
     aip-base-url: ${PISPI_AIP_BASE_URL:https://bceao.symmetry.sn:8081}
     aip-api-key: ${PISPI_AIP_API_KEY:CHANGE_ME}
     api-version: ${PISPI_API_VERSION:1}
-    webhook-url: ${PISPI_WEBHOOK_URL:https://sycapay-backend.local/api/pi-spi/webhook}
+    webhook-url: ${PISPI_WEBHOOK_URL:}
 
     # ---- mTLS ----
     mtls:
       keystore-path: ${PISPI_MTLS_KEYSTORE_PATH:classpath:client/client.p12}
       keystore-password: ${PISPI_MTLS_KEYSTORE_PASSWORD:}
-      truststore-path: ${PISPI_MTLS_TRUSTSTORE_PATH:classpath:client/truststore.p12}
+      truststore-path: ${PISPI_MTLS_TRUSTSTORE_PATH:classpath:truststore/truststore.p12}
       truststore-password: ${PISPI_MTLS_TRUSTSTORE_PASSWORD:}
       keystore-type: ${PISPI_MTLS_KEYSTORE_TYPE:PKCS12}
       trust-all: ${PISPI_MTLS_TRUST_ALL:true}
-
-    # ---- Kafka Topics ----
-    kafka:
-      callback-topic: ${PISPI_KAFKA_CALLBACK_TOPIC:pi-spi-callback}
-      webhook-topic: ${PISPI_KAFKA_WEBHOOK_TOPIC:pi-spi-webhook}
 
 # ---- Resilience4j ----
 resilience4j:
