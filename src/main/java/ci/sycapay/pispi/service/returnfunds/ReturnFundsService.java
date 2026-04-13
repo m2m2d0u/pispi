@@ -58,7 +58,7 @@ public class ReturnFundsService {
                 .build();
         returnRequestRepository.save(returnReq);
 
-        aipClient.post("/api/spi/v{version}/retour-fonds/demande", camt056);
+        aipClient.post("/retours-fonds/demandes", camt056);
 
         return toResponse(returnReq);
     }
@@ -85,7 +85,7 @@ public class ReturnFundsService {
         camt029.put("raison", request.getRaison().name());
 
         messageLogService.log(msgId, returnReq.getEndToEndId(), IsoMessageType.CAMT_029, MessageDirection.OUTBOUND, camt029, null, null);
-        aipClient.post("/api/spi/v{version}/retour-fonds/rejet", camt029);
+        aipClient.post("/retours-fonds/rejets", camt029);
 
         returnReq.setStatut(ReturnRequestStatus.RJCR);
         returnReq.setRaisonRejet(request.getRaison());
@@ -111,7 +111,7 @@ public class ReturnFundsService {
         pacs004.put("raisonRetour", request.getRaisonRetour().name());
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_004, MessageDirection.OUTBOUND, pacs004, null, null);
-        aipClient.post("/api/spi/v{version}/retour-fonds", pacs004);
+        aipClient.post("/retours-fonds", pacs004);
 
         PiReturnExecution execution = PiReturnExecution.builder()
                 .msgId(msgId)

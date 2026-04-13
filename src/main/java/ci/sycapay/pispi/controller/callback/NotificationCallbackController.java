@@ -19,9 +19,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDate;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
+@Tag(name = "Notification Callbacks")
 @Slf4j
 @RestController
 @RequestMapping("/api/pi/callback")

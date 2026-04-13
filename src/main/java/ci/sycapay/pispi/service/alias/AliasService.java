@@ -41,7 +41,7 @@ public class AliasService {
         Map<String, Object> payload = buildAliasPayload(endToEndId, request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE, MessageDirection.OUTBOUND, payload, null, null);
 
-        Map<String, Object> response = aipClient.post("/api/rac/v{version}/alias", payload);
+        Map<String, Object> response = aipClient.post("/alias/creation", payload);
 
         PiAlias alias = PiAlias.builder()
                 .endToEndId(endToEndId)
@@ -85,7 +85,7 @@ public class AliasService {
         Map<String, Object> payload = buildAliasPayload(endToEndId, request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
 
-        Map<String, Object> response = aipClient.put("/api/rac/v{version}/alias", payload);
+        Map<String, Object> response = aipClient.post("/alias/modification", payload);
 
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
                 request.getAlias(), request.getTypeAlias(), AliasStatus.ACTIVE)
@@ -120,7 +120,7 @@ public class AliasService {
         payload.put("typeAlias", typeAlias.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
-        aipClient.delete("/api/rac/v{version}/alias", payload);
+        aipClient.post("/alias/suppression", payload);
 
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(aliasValue, typeAlias, AliasStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Alias", aliasValue));
@@ -145,7 +145,7 @@ public class AliasService {
         payload.put("typeAlias", typeAlias.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.OUTBOUND, payload, null, null);
-        return aipClient.post("/api/rac/v{version}/alias/search", payload);
+        return aipClient.post("/alias/recherche", payload);
     }
 
     public Page<AliasResponse> listAliases(Pageable pageable) {
@@ -165,13 +165,31 @@ public class AliasService {
         payload.put("typeAlias", request.getTypeAlias().name());
         payload.put("typeClient", request.getClient().getTypeClient().name());
         payload.put("nom", request.getClient().getNom());
-        payload.put("prenom", request.getClient().getPrenom());
         payload.put("typeIdentifiant", request.getClient().getTypeIdentifiant().name());
         payload.put("identifiant", request.getClient().getIdentifiant());
         payload.put("telephone", request.getClient().getTelephone());
         payload.put("numeroCompte", request.getNumeroCompte());
         payload.put("typeCompte", request.getTypeCompte().name());
         payload.put("codeMembreParticipant", properties.getCodeMembre());
+        if (request.getClient().getPrenom() != null) payload.put("prenom", request.getClient().getPrenom());
+        if (request.getClient().getAutrePrenom() != null) payload.put("autrePrenom", request.getClient().getAutrePrenom());
+        if (request.getClient().getRaisonSociale() != null) payload.put("raisonSociale", request.getClient().getRaisonSociale());
+        if (request.getClient().getDateNaissance() != null) payload.put("dateNaissance", request.getClient().getDateNaissance());
+        if (request.getClient().getLieuNaissance() != null) payload.put("lieuNaissance", request.getClient().getLieuNaissance());
+        if (request.getClient().getNationalite() != null) payload.put("nationalite", request.getClient().getNationalite());
+        if (request.getClient().getAdresse() != null) payload.put("adresse", request.getClient().getAdresse());
+        if (request.getClient().getVille() != null) payload.put("ville", request.getClient().getVille());
+        if (request.getClient().getPays() != null) payload.put("pays", request.getClient().getPays());
+        if (request.getClient().getEmail() != null) payload.put("email", request.getClient().getEmail());
+        if (request.getCodeAgence() != null) payload.put("codeAgence", request.getCodeAgence());
+        if (request.getNomAgence() != null) payload.put("nomAgence", request.getNomAgence());
+        if (request.getMarchand() != null) {
+            if (request.getMarchand().getCodeMarchand() != null) payload.put("codeMarchand", request.getMarchand().getCodeMarchand());
+            if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("categorieCodeMarchand", request.getMarchand().getCategorieCodeMarchand());
+            if (request.getMarchand().getNomMarchand() != null) payload.put("nomMarchand", request.getMarchand().getNomMarchand());
+            if (request.getMarchand().getVilleMarchand() != null) payload.put("villeMarchand", request.getMarchand().getVilleMarchand());
+            if (request.getMarchand().getPaysMarchand() != null) payload.put("paysMarchand", request.getMarchand().getPaysMarchand());
+        }
         return payload;
     }
 

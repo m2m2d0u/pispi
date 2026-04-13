@@ -6,8 +6,10 @@ import ci.sycapay.pispi.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Notifications")
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor

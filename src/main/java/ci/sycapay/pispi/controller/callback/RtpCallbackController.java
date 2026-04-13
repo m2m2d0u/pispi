@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
+@Tag(name = "RTP Callbacks")
 @Slf4j
 @RestController
 @RequestMapping("/api/pi/callback")

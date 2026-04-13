@@ -11,9 +11,11 @@ import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.util.Map;
 
+@Tag(name = "Return Funds Callbacks")
 @RestController
 @RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor

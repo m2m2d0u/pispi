@@ -61,7 +61,7 @@ public class IdentityVerificationService {
                 .build();
         repository.save(verification);
 
-        aipClient.post("/api/spi/v{version}/verification", acmt023);
+        aipClient.post("/verifications-identites", acmt023);
 
         return toResponse(verification);
     }
@@ -88,7 +88,7 @@ public class IdentityVerificationService {
         if (request.getCodeRaison() != null) acmt024.put("codeRaison", request.getCodeRaison());
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.OUTBOUND, acmt024, null, null);
-        aipClient.post("/api/spi/v{version}/verification/reponse", acmt024);
+        aipClient.post("/verifications-identites/reponses", acmt024);
 
         v.setResultatVerification(request.getResultatVerification());
         v.setCodeRaison(request.getCodeRaison());

@@ -50,7 +50,7 @@ public class ParticipantService {
         camt013.put("requete", "ALLL");
 
         messageLogService.log(msgId, null, IsoMessageType.CAMT_013, MessageDirection.OUTBOUND, camt013, null, null);
-        aipClient.post("/api/spi/v{version}/participant", camt013);
+        aipClient.post("/participants/listes", camt013);
     }
 
     @Transactional
