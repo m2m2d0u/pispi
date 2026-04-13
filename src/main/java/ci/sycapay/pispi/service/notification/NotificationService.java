@@ -41,9 +41,7 @@ public class NotificationService {
         admi004.put("evenementDate", DateTimeUtil.nowIso());
 
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.OUTBOUND, admi004, null, null);
-        // NOTE: the AIP at this deployment does not expose a /notification endpoint.
-        // The connectivity test is initiated by PI toward the AIP automatically.
-        // aipClient.post("/notification", admi004);
+        aipClient.post("/notifications/test-connectivite", admi004);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)

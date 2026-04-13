@@ -32,7 +32,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
+              "application/json": {
                 "schema": {
                   "type": "string",
                   "example": null
@@ -65,7 +65,7 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
+              "application/json": {
                 "schema": {
                   "type": "string",
                   "example": null
@@ -98,7 +98,40 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transferts/statut": {
+      "post": {
+        "tags": [
+          "virement-controller"
+        ],
+        "operationId": "statutVirement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatutVirement"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
                 "schema": {
                   "type": "string",
                   "example": null
@@ -131,7 +164,304 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/rejet": {
+      "post": {
+        "tags": [
+          "revendication-controller"
+        ],
+        "operationId": "rejeterRevendication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejetRevendication"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/recuperation": {
+      "post": {
+        "tags": [
+          "revendication-controller"
+        ],
+        "operationId": "recupererRevendication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecuperationRevendication"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/creation": {
+      "post": {
+        "tags": [
+          "revendication-controller"
+        ],
+        "operationId": "creerRevendication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Revendication"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/acceptation": {
+      "post": {
+        "tags": [
+          "revendication-controller"
+        ],
+        "operationId": "accepterRevendication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptationRevendication"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds": {
+      "post": {
+        "tags": [
+          "retour-fonds-controller"
+        ],
+        "operationId": "retourFonds",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetourFonds"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds/reponses": {
+      "post": {
+        "tags": [
+          "retour-fonds-controller"
+        ],
+        "operationId": "reponseDemandeRetourFonds",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReponseDemandeRetourFonds"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds/demande": {
+      "post": {
+        "tags": [
+          "retour-fonds-controller"
+        ],
+        "operationId": "demandeRetourFonds",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandeRetourFonds"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rapports/telechargements": {
+      "post": {
+        "tags": [
+          "rapport-controller"
+        ],
+        "operationId": "telechargerRapport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelechargementRapport"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rapports/demandes": {
+      "post": {
+        "tags": [
+          "rapport-controller"
+        ],
+        "operationId": "demanderRapport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandeRapport"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
                 "schema": {
                   "type": "string",
                   "example": null
@@ -164,7 +494,106 @@
           "200": {
             "description": "OK",
             "content": {
-              "*/*": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/test-connectivite": {
+      "post": {
+        "tags": [
+          "notification-controller"
+        ],
+        "operationId": "testerConnectivite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notification"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demandes-paiements": {
+      "post": {
+        "tags": [
+          "demande-paiement-controller"
+        ],
+        "operationId": "demandePaiement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandePaiement"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demandes-paiements/reponses": {
+      "post": {
+        "tags": [
+          "demande-paiement-controller"
+        ],
+        "operationId": "reponseDemandePaiement",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReponseDemandePaiement"
+              },
+              "example": null
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
                 "schema": {
                   "type": "string",
                   "example": null
@@ -307,6 +736,39 @@
           }
         }
       }
+    },
+    "/messages/statut/{msId}": {
+      "get": {
+        "tags": [
+          "message-controller"
+        ],
+        "operationId": "verifierStatutMessage",
+        "parameters": [
+          {
+            "name": "msId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": null
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string",
+                  "example": null
+                },
+                "example": null
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -315,23 +777,22 @@
         "required": [
           "codeMembreParticipant",
           "endToEndId",
-          "msgId",
-          "nomParticipant"
+          "msgId"
         ],
         "type": "object",
         "properties": {
           "msgId": {
-            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
             "type": "string",
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[0-9]{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
           "ibanClient": {
-            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)[0-9]{2}[a-zA-Z0-9]{14,30}$",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
             "type": "string",
             "example": null
           },
@@ -340,11 +801,7 @@
             "example": null
           },
           "codeMembreParticipant": {
-            "pattern": "^[A-Z]{3}[0-9]{3}$",
-            "type": "string",
-            "example": null
-          },
-          "nomParticipant": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
             "type": "string",
             "example": null
           }
@@ -353,32 +810,41 @@
       },
       "IdentiteReponse": {
         "required": [
+          "codeMembreParticipant",
           "endToEndId",
           "msgId",
+          "msgIdDemande",
           "resultatVerification"
         ],
         "type": "object",
         "properties": {
           "msgId": {
-            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
             "type": "string",
             "example": null
           },
           "resultatVerification": {
+            "pattern": "true|false",
             "type": "string",
             "example": null
           },
           "codeRaison": {
+            "pattern": "AC01",
             "type": "string",
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[0-9]{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
           "ibanClient": {
-            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)[0-9]{2}[a-zA-Z0-9]{14,30}$",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
             "type": "string",
             "example": null
           },
@@ -386,13 +852,17 @@
             "type": "string",
             "example": null
           },
+          "codeMembreParticipant": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "type": "string",
+            "example": null
+          },
           "typeCompte": {
-            "pattern": "CACC|SVGS|TRAN|TRAL",
+            "pattern": "CACC|SVGS|TRAN|TRAL|TAXE",
             "type": "string",
             "example": null
           },
           "nomClient": {
-            "pattern": "[a-zA-Z0-9]+",
             "type": "string",
             "example": null
           },
@@ -409,7 +879,7 @@
             "example": null
           },
           "systemeIdentification": {
-            "pattern": "([A-Z]{4})*",
+            "pattern": "TXID|CCPT|NIDN",
             "type": "string",
             "example": null
           },
@@ -417,7 +887,12 @@
             "type": "string",
             "example": null
           },
+          "identificationFiscaleCommercant": {
+            "type": "string",
+            "example": null
+          },
           "dateNaissance": {
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
             "type": "string",
             "example": null
           },
@@ -426,6 +901,7 @@
             "example": null
           },
           "paysNaissance": {
+            "pattern": "^[A-Z]{2}",
             "type": "string",
             "example": null
           },
@@ -435,16 +911,12 @@
             "example": null
           },
           "devise": {
-            "pattern": "([A-Z]{3})*",
+            "pattern": "XOF",
             "type": "string",
             "example": null
           },
           "typeClient": {
-            "pattern": "[PBG]",
-            "type": "string",
-            "example": null
-          },
-          "codeGuichet": {
+            "pattern": "[PBGC]",
             "type": "string",
             "example": null
           }
@@ -454,10 +926,8 @@
       "Virement": {
         "required": [
           "canalCommunication",
-          "codeGuichetPaye",
-          "codeGuichetPayeur",
           "codeMembreParticipantPaye",
-          "codeService",
+          "dateHeureAcceptation",
           "deviseCompteClientPaye",
           "deviseCompteClientPayeur",
           "endToEndId",
@@ -465,21 +935,22 @@
           "msgId",
           "nomClientPaye",
           "nomClientPayeur",
-          "nomParticipantPaye",
           "paysClientPaye",
           "paysClientPayeur",
+          "typeClientPaye",
+          "typeClientPayeur",
           "typeCompteClientPaye",
           "typeCompteClientPayeur"
         ],
         "type": "object",
         "properties": {
           "msgId": {
-            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
             "type": "string",
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[0-9]{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -489,21 +960,22 @@
             "example": null
           },
           "paysClientPayeur": {
-            "pattern": "^[A-Z]{2}",
+            "pattern": "CI|SN|ML|GW|BF|NE|BJ|TG",
             "type": "string",
             "example": null
           },
           "typeCompteClientPayeur": {
-            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL",
+            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL|VACC|TAXE",
             "type": "string",
             "example": null
           },
           "deviseCompteClientPayeur": {
+            "pattern": "XOF",
             "type": "string",
             "example": null
           },
           "ibanClientPayeur": {
-            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}[a-zA-Z0-9]{14,30}$",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
             "type": "string",
             "example": null
           },
@@ -511,7 +983,7 @@
             "type": "string",
             "example": null
           },
-          "codeGuichetPayeur": {
+          "aliasClientPayeur": {
             "type": "string",
             "example": null
           },
@@ -519,31 +991,33 @@
             "type": "string",
             "example": null
           },
-          "codeMembreParticipantPaye": {
-            "pattern": "^[A-Z]{3}[0-9]{3}$",
+          "typeClientPayeur": {
+            "pattern": "[PBGC]",
             "type": "string",
             "example": null
           },
-          "nomParticipantPaye": {
+          "codeMembreParticipantPaye": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
             "type": "string",
             "example": null
           },
           "paysClientPaye": {
-            "pattern": "^[A-Z]{2}",
+            "pattern": "CI|SN|ML|GW|BF|NE|BJ|TG",
             "type": "string",
             "example": null
           },
           "typeCompteClientPaye": {
-            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL",
+            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL|VACC|TAXE",
             "type": "string",
             "example": null
           },
           "deviseCompteClientPaye": {
+            "pattern": "XOF",
             "type": "string",
             "example": null
           },
           "ibanClientPaye": {
-            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)[0-9]{2}[a-zA-Z0-9]{14,30}$",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
             "type": "string",
             "example": null
           },
@@ -555,21 +1029,36 @@
             "type": "string",
             "example": null
           },
-          "codeGuichetPaye": {
+          "typeClientPaye": {
+            "pattern": "[PBGC]",
             "type": "string",
             "example": null
           },
           "canalCommunication": {
-            "pattern": "731|633|999|000|400|401|500|520|521|631|300",
-            "type": "string",
-            "example": null
-          },
-          "codeService": {
-            "pattern": "VP2P|VP2B|VP2G|VB2P|VB2G|VB2B|VG2P|VG2B|VG2G|PP2P|PP2B|PP2G|PB2P|PB2G|PB2B|PG2P|PG2B|PG2G",
+            "pattern": "731|633|999|000|400|733|401|500|520|521|631|300",
             "type": "string",
             "example": null
           },
           "dateHeureAcceptation": {
+            "pattern": "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z",
+            "type": "string",
+            "example": null
+          },
+          "numeroIdentificationClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "systemeIdentificationClientPayeur": {
+            "pattern": "TXID|CCPT|NIDN",
+            "type": "string",
+            "example": null
+          },
+          "numeroIdentificationClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "systemeIdentificationClientPaye": {
+            "pattern": "TXID|CCPT|NIDN",
             "type": "string",
             "example": null
           },
@@ -593,10 +1082,6 @@
             "type": "string",
             "example": null
           },
-          "aliasClientPayeur": {
-            "type": "string",
-            "example": null
-          },
           "referenceBulk": {
             "type": "string",
             "example": null
@@ -606,10 +1091,13 @@
             "example": null
           },
           "typeTransaction": {
+            "pattern": "PRMG|DISP",
             "type": "string",
             "example": null
           },
           "motif": {
+            "maxLength": 140,
+            "minLength": 0,
             "type": "string",
             "example": null
           },
@@ -621,15 +1109,495 @@
             "type": "string",
             "example": null
           },
+          "dateNaissanceClientPayeur": {
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "type": "string",
+            "example": null
+          },
+          "villeNaissanceClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "paysNaissanceClientPayeur": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "example": null
+          },
+          "dateNaissanceClientPaye": {
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "type": "string",
+            "example": null
+          },
+          "villeNaissanceClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "paysNaissanceClientPaye": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "example": null
+          },
+          "numeroRCCMClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "identificationFiscaleCommercantPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "numeroRCCMClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "identificationFiscaleCommercantPaye": {
+            "type": "string",
+            "example": null
+          },
+          "typeDocumentReference": {
+            "pattern": "CINV|CMCN|DISP|PUOR",
+            "type": "string",
+            "example": null
+          },
+          "numeroDocumentReference": {
+            "maxLength": 35,
+            "minLength": 0,
+            "type": "string",
+            "example": null
+          },
+          "montantAchat": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "montantRetrait": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "fraisRetrait": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "StatutVirement": {
+        "required": [
+          "endToEndId",
+          "msgId"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "VirementReponse": {
+        "required": [
+          "endToEndId",
+          "msgId",
+          "msgIdDemande",
+          "statutTransaction"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          },
+          "statutTransaction": {
+            "pattern": "ACSP|RJCT",
+            "type": "string",
+            "example": null
+          },
+          "codeRaison": {
+            "pattern": "[A-Z]{2}\\d{2}",
+            "type": "string",
+            "example": null
+          },
+          "informationsAdditionnelles": {
+            "maxLength": 105,
+            "minLength": 0,
+            "type": "string",
+            "example": null
+          },
+          "referenceBulk": {
+            "type": "string",
+            "example": null
+          },
+          "identifiantTransaction": {
+            "type": "string",
+            "example": null
+          },
+          "codeService": {
+            "pattern": "PP2P",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "RejetRevendication": {
+        "required": [
+          "dateAction",
+          "identifiantRevendication"
+        ],
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "type": "string",
+            "example": null
+          },
+          "dateAction": {
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "RecuperationRevendication": {
+        "required": [
+          "identifiantRevendication"
+        ],
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "Revendication": {
+        "required": [
+          "alias"
+        ],
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "AcceptationRevendication": {
+        "required": [
+          "auteurAction",
+          "dateAction",
+          "identifiantRevendication"
+        ],
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "type": "string",
+            "example": null
+          },
+          "dateAction": {
+            "type": "string",
+            "example": null
+          },
+          "auteurAction": {
+            "pattern": "CLIENT|PARTICIPANT",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "RetourFonds": {
+        "required": [
+          "endToEndId",
+          "montantRetourne",
+          "msgId",
+          "raisonRetour"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          },
+          "montantRetourne": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "raisonRetour": {
+            "pattern": "AC06|AC07|FR01|MD06|BE01|RR04|CUST",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "ReponseDemandeRetourFonds": {
+        "required": [
+          "codeMembreParticipantPayeur",
+          "endToEndId",
+          "msgId",
+          "msgIdDemande",
+          "raison",
+          "statut"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "codeMembreParticipantPayeur": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "type": "string",
+            "example": null
+          },
+          "statut": {
+            "pattern": "RJCR",
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          },
+          "raison": {
+            "pattern": "CUST|AC04|ARDT",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "DemandeRetourFonds": {
+        "required": [
+          "codeMembreParticipantPaye",
+          "endToEndId",
+          "msgId",
+          "raison"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "codeMembreParticipantPaye": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          },
+          "raison": {
+            "pattern": "AC03|FRAD|DUPL|AM09|SVNR",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "TelechargementRapport": {
+        "required": [
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "DemandeRapport": {
+        "required": [
+          "dateDebutPeriode",
+          "heureDebutPeriode",
+          "msgId",
+          "typeRapport"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "typeRapport": {
+            "pattern": "COMP|FACT|TRANS",
+            "type": "string",
+            "example": null
+          },
+          "dateDebutPeriode": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "type": "string",
+            "example": null
+          },
+          "heureDebutPeriode": {
+            "pattern": "\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "ListeParticipant": {
+        "required": [
+          "msgId",
+          "requete"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "requete": {
+            "pattern": "ALLL",
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "Notification": {
+        "required": [
+          "evenement",
+          "evenementDate",
+          "msgId"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "evenement": {
+            "pattern": "[a-zA-Z0-9]{1,4}",
+            "type": "string",
+            "example": null
+          },
+          "evenementDescription": {
+            "type": "string",
+            "example": null
+          },
+          "evenementDate": {
+            "type": "string",
+            "example": null
+          }
+        },
+        "example": null
+      },
+      "DemandePaiement": {
+        "required": [
+          "aliasClientPaye",
+          "aliasClientPayeur",
+          "canalCommunication",
+          "codeMembreParticipantPayeur",
+          "deviseCompteClientPaye",
+          "deviseCompteClientPayeur",
+          "endToEndId",
+          "identifiantDemandePaiement",
+          "montant",
+          "msgId",
+          "nomClientPaye",
+          "nomClientPayeur",
+          "numeroIdentificationClientPaye",
+          "paysClientPaye",
+          "paysClientPayeur",
+          "systemeIdentificationClientPaye",
+          "typeClientPaye",
+          "typeClientPayeur",
+          "typeCompteClientPaye",
+          "typeCompteClientPayeur",
+          "villeClientPaye"
+        ],
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "type": "string",
+            "example": null
+          },
+          "clientDemandeur": {
+            "type": "string",
+            "example": null
+          },
+          "identifiantDemandePaiement": {
+            "type": "string",
+            "example": null
+          },
+          "dateHeureExecution": {
+            "type": "string",
+            "example": null
+          },
+          "dateHeureLimiteAction": {
+            "type": "string",
+            "example": null
+          },
+          "nomClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "typeClientPayeur": {
+            "pattern": "[PBGC]",
+            "type": "string",
+            "example": null
+          },
+          "villeClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "adresseClientPayeur": {
+            "type": "string",
+            "example": null
+          },
           "numeroIdentificationClientPayeur": {
             "type": "string",
             "example": null
           },
           "systemeIdentificationClientPayeur": {
-            "type": "string",
-            "example": null
-          },
-          "numeroRCCMClientPayeur": {
+            "pattern": "TXID|CCPT|NIDN",
             "type": "string",
             "example": null
           },
@@ -645,11 +1613,116 @@
             "type": "string",
             "example": null
           },
+          "paysClientPayeur": {
+            "pattern": "BJ|BF|CI|GW|ML|NE|SN|TG",
+            "type": "string",
+            "example": null
+          },
+          "numeroRCCMClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "ibanClientPayeur": {
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "type": "string",
+            "example": null
+          },
+          "otherClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "typeCompteClientPayeur": {
+            "pattern": "CACC|SVGS|TRAN|LLSV|VACC|TRAL|TAXE",
+            "type": "string",
+            "example": null
+          },
+          "deviseCompteClientPayeur": {
+            "pattern": "XOF",
+            "type": "string",
+            "example": null
+          },
+          "aliasClientPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "codeMembreParticipantPayeur": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "type": "string",
+            "example": null
+          },
+          "referenceBulk": {
+            "type": "string",
+            "example": null
+          },
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "example": null
+          },
+          "canalCommunication": {
+            "pattern": "401|500|520|521|631",
+            "type": "string",
+            "example": null
+          },
+          "autorisationModificationMontant": {
+            "pattern": "true|false",
+            "type": "string",
+            "example": null
+          },
+          "montantRemisePaiementImmediat": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "tauxRemisePaiementImmediat": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "montant": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "identifiantMandat": {
+            "type": "string",
+            "example": null
+          },
+          "signatureNumeriqueMandat": {
+            "type": "string",
+            "example": null
+          },
+          "nomClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "typeClientPaye": {
+            "pattern": "[PBGC]",
+            "type": "string",
+            "example": null
+          },
+          "villeClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "latitudeClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "longitudeClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "adresseClientPaye": {
+            "type": "string",
+            "example": null
+          },
           "numeroIdentificationClientPaye": {
             "type": "string",
             "example": null
           },
           "systemeIdentificationClientPaye": {
+            "pattern": "TXID|CCPT|NIDN",
             "type": "string",
             "example": null
           },
@@ -658,6 +1731,7 @@
             "example": null
           },
           "dateNaissanceClientPaye": {
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
             "type": "string",
             "example": null
           },
@@ -666,41 +1740,102 @@
             "example": null
           },
           "paysNaissanceClientPaye": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "example": null
+          },
+          "paysClientPaye": {
+            "pattern": "CI|SN|ML|GW|BF|NE|BJ|TG",
+            "type": "string",
+            "example": null
+          },
+          "ibanClientPaye": {
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "type": "string",
+            "example": null
+          },
+          "otherClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "typeCompteClientPaye": {
+            "pattern": "CACC|SVGS|TRAN|LLSV|VACC|TAXE",
+            "type": "string",
+            "example": null
+          },
+          "deviseCompteClientPaye": {
+            "pattern": "XOF",
+            "type": "string",
+            "example": null
+          },
+          "aliasClientPaye": {
+            "type": "string",
+            "example": null
+          },
+          "motif": {
+            "maxLength": 140,
+            "minLength": 0,
+            "type": "string",
+            "example": null
+          },
+          "typeDocumentReference": {
+            "pattern": "CINV|CMCN|DISP|PUOR",
+            "type": "string",
+            "example": null
+          },
+          "numeroDocumentReference": {
+            "maxLength": 35,
+            "minLength": 0,
+            "type": "string",
+            "example": null
+          },
+          "montantAchat": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "montantRetrait": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "fraisRetrait": {
+            "pattern": "\\d+",
+            "type": "string",
+            "example": null
+          },
+          "identificationFiscaleCommercantPayeur": {
+            "type": "string",
+            "example": null
+          },
+          "identificationFiscaleCommercantPaye": {
             "type": "string",
             "example": null
           }
         },
         "example": null
       },
-      "VirementReponse": {
+      "ReponseDemandePaiement": {
         "required": [
           "endToEndId",
+          "identifiantDemandePaiement",
           "msgId",
-          "statutTransaction"
+          "msgIdDemande",
+          "statut"
         ],
         "type": "object",
         "properties": {
           "msgId": {
-            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
             "type": "string",
             "example": null
           },
-          "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[0-9]{14}[a-zA-Z0-9]{14}$",
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
             "type": "string",
             "example": null
           },
-          "statutTransaction": {
-            "pattern": "ACSP|RJCT",
-            "type": "string",
-            "example": null
-          },
-          "codeRaison": {
-            "pattern": "[A-Z]{2}[0-9]{2}",
-            "type": "string",
-            "example": null
-          },
-          "informationsAdditionnelles": {
+          "identifiantDemandePaiement": {
             "type": "string",
             "example": null
           },
@@ -708,34 +1843,18 @@
             "type": "string",
             "example": null
           },
-          "identifiantTransaction": {
+          "endToEndId": {
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
-          "dateHeureIrrevocabilite": {
+          "statut": {
+            "pattern": "RJCT",
             "type": "string",
             "example": null
           },
-          "codeService": {
-            "type": "string",
-            "example": null
-          }
-        },
-        "example": null
-      },
-      "ListeParticipant": {
-        "required": [
-          "msgId",
-          "requete"
-        ],
-        "type": "object",
-        "properties": {
-          "msgId": {
-            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
-            "type": "string",
-            "example": null
-          },
-          "requete": {
+          "codeRaison": {
+            "pattern": "[A-Z]{2}\\d{2}",
             "type": "string",
             "example": null
           }
@@ -754,7 +1873,7 @@
             "example": null
           },
           "raisonSuppression": {
-            "pattern": "FERMETURE_COMPTE_CLIENT|DEMANDE_CLIENT|MAJ_AGENCE_CLIENT",
+            "pattern": "FERMETURE_COMPTE_CLIENT|DEMANDE_CLIENT",
             "type": "string",
             "example": null
           }
@@ -769,7 +1888,7 @@
         "type": "object",
         "properties": {
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[0-9]{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -782,8 +1901,7 @@
       },
       "ModificationAlias": {
         "required": [
-          "alias",
-          "raisonModification"
+          "alias"
         ],
         "type": "object",
         "properties": {
@@ -792,11 +1910,12 @@
             "example": null
           },
           "paysResidenceClient": {
+            "pattern": "CI|SN|ML|GW|BF|NE|BJ|TG",
             "type": "string",
             "example": null
           },
           "telephoneClient": {
-            "pattern": "^\\+(?:\\d\\s?){9,20}\\d$",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
             "type": "string",
             "example": null
           },
@@ -820,9 +1939,16 @@
             "type": "string",
             "example": null
           },
-          "raisonModification": {
-            "pattern": "MAJ_INFOS_CLIENT",
+          "villeClient": {
             "type": "string",
+            "example": null
+          },
+          "emailClient": {
+            "type": "string",
+            "example": null
+          },
+          "preConfirmation": {
+            "type": "boolean",
             "example": null
           }
         },
@@ -830,7 +1956,6 @@
       },
       "Alias": {
         "required": [
-          "agence",
           "categorieClient",
           "dateOuvertureCompte",
           "idCreationAlias",
@@ -852,19 +1977,22 @@
             "example": null
           },
           "categorieClient": {
-            "pattern": "[PBG]",
+            "pattern": "[PBGC]",
             "type": "string",
             "example": null
           },
           "nationaliteClient": {
+            "pattern": "^[A-Z]{2}",
             "type": "string",
             "example": null
           },
           "paysResidenceClient": {
+            "pattern": "CI|SN|ML|GW|BF|NE|BJ|TG",
             "type": "string",
             "example": null
           },
           "telephoneClient": {
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
             "type": "string",
             "example": null
           },
@@ -914,14 +2042,20 @@
             "example": null
           },
           "dateNaissanceClient": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
             "type": "string",
             "example": null
           },
           "paysNaissanceClient": {
+            "pattern": "^[A-Z]{2}",
             "type": "string",
             "example": null
           },
           "villeNaissanceClient": {
+            "type": "string",
+            "example": null
+          },
+          "villeClient": {
             "type": "string",
             "example": null
           },
@@ -933,12 +2067,17 @@
             "type": "string",
             "example": null
           },
+          "codeActivite": {
+            "type": "string",
+            "example": null
+          },
           "participant": {
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
             "type": "string",
             "example": null
           },
           "iban": {
-            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}[a-zA-Z0-9]{14,30}$",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
             "type": "string",
             "example": null
           },
@@ -947,15 +2086,12 @@
             "example": null
           },
           "typeCompte": {
-            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL",
-            "type": "string",
-            "example": null
-          },
-          "agence": {
+            "pattern": "CACC|SVGS|TRAN|LLSV|TRAL|VACC|TAXE",
             "type": "string",
             "example": null
           },
           "dateOuvertureCompte": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
             "type": "string",
             "example": null
           },
@@ -966,6 +2102,10 @@
           },
           "valeurAlias": {
             "type": "string",
+            "example": null
+          },
+          "preConfirmation": {
+            "type": "boolean",
             "example": null
           }
         },

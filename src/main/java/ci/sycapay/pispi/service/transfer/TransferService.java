@@ -121,7 +121,7 @@ public class TransferService {
         pacs028.put("endToEndId", endToEndId);
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_028, MessageDirection.OUTBOUND, pacs028, null, null);
-        aipClient.post("/transferts/statuts", pacs028);
+        aipClient.post("/transferts/statut", pacs028);
     }
 
     private Map<String, Object> buildPacs008Payload(String msgId, String endToEndId, TransferRequest request) {

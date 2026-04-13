@@ -94,7 +94,7 @@ public class RequestToPayService {
                 .build();
         rtpRepository.save(rtp);
 
-        aipClient.post("/demandes-paiement", pain013);
+        aipClient.post("/demandes-paiements", pain013);
 
         return toResponse(rtp);
     }
@@ -126,7 +126,7 @@ public class RequestToPayService {
         pain014.put("codeRaison", codeRaison);
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014, MessageDirection.OUTBOUND, pain014, null, null);
-        aipClient.post("/demandes-paiement/reponses", pain014);
+        aipClient.post("/demandes-paiements/reponses", pain014);
 
         rtp.setStatut(RtpStatus.RJCT);
         rtp.setCodeRaison(codeRaison);

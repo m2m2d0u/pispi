@@ -34,7 +34,7 @@ public class RevendicationService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("alias", alias);
 
-        Map<String, Object> response = aipClient.post("/revendications", payload);
+        Map<String, Object> response = aipClient.post("/revendications/creation", payload);
 
         String identifiant = response != null ? String.valueOf(response.get("identifiantRevendication")) : null;
 
@@ -51,7 +51,9 @@ public class RevendicationService {
     }
 
     public RevendicationResponse getClaimStatus(String identifiantRevendication) {
-        aipClient.get("/revendications/" + identifiantRevendication);
+        Map<String, Object> recuperationPayload = new HashMap<>();
+        recuperationPayload.put("identifiantRevendication", identifiantRevendication);
+        aipClient.post("/revendications/recuperation", recuperationPayload);
         PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
                 .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
         return toResponse(claim);
@@ -66,7 +68,7 @@ public class RevendicationService {
         payload.put("identifiantRevendication", identifiantRevendication);
         payload.put("dateAction", DateTimeUtil.nowIso());
         payload.put("auteurAction", "PARTICIPANT");
-        aipClient.post("/revendications/acceptations", payload);
+        aipClient.post("/revendications/acceptation", payload);
 
         claim.setStatut(StatutRevendication.ACCEPTEE);
         claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
@@ -84,7 +86,7 @@ public class RevendicationService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
         payload.put("dateAction", DateTimeUtil.nowIso());
-        aipClient.post("/revendications/rejets", payload);
+        aipClient.post("/revendications/rejet", payload);
 
         claim.setStatut(StatutRevendication.REJETEE);
         claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
