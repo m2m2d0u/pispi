@@ -15,5 +15,6 @@ public class ReportRequest {
     @NotBlank
     private String dateDebutPeriode;
 
+    @NotBlank
     private String heureDebutPeriode;
 }

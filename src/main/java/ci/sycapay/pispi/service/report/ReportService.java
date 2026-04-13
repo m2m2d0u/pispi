@@ -49,7 +49,7 @@ public class ReportService {
         camt060.put("msgId", msgId);
         camt060.put("typeRapport", type.name());
         camt060.put("dateDebutPeriode", request.getDateDebutPeriode());
-        if (request.getHeureDebutPeriode() != null) camt060.put("heureDebutPeriode", request.getHeureDebutPeriode());
+        camt060.put("heureDebutPeriode", request.getHeureDebutPeriode());
 
         messageLogService.log(msgId, null, IsoMessageType.CAMT_060, MessageDirection.OUTBOUND, camt060, null, null);
         aipClient.post("/rapports/demandes", camt060);

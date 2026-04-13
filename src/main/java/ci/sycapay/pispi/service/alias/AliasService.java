@@ -110,14 +110,14 @@ public class AliasService {
     }
 
     @Transactional
-    public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue) {
+    public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue, String raisonSuppression) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", aliasValue);
-        payload.put("typeAlias", typeAlias.name());
+        payload.put("raisonSuppression", raisonSuppression);
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
         aipClient.post("/alias/suppression", payload);
@@ -160,6 +160,7 @@ public class AliasService {
 
     private Map<String, Object> buildAliasPayload(String endToEndId, AliasCreationRequest request) {
         Map<String, Object> payload = new HashMap<>();
+        payload.put("idCreationAlias", IdGenerator.generateEndToEndId(properties.getCodeMembre()));
         payload.put("endToEndId", endToEndId);
         payload.put("alias", request.getAlias());
         payload.put("typeAlias", request.getTypeAlias().name());
@@ -170,6 +171,7 @@ public class AliasService {
         payload.put("telephone", request.getClient().getTelephone());
         payload.put("numeroCompte", request.getNumeroCompte());
         payload.put("typeCompte", request.getTypeCompte().name());
+        payload.put("dateOuvertureCompte", request.getDateOuvertureCompte());
         payload.put("codeMembreParticipant", properties.getCodeMembre());
         if (request.getClient().getPrenom() != null) payload.put("prenom", request.getClient().getPrenom());
         if (request.getClient().getAutrePrenom() != null) payload.put("autrePrenom", request.getClient().getAutrePrenom());
@@ -183,6 +185,8 @@ public class AliasService {
         if (request.getClient().getEmail() != null) payload.put("email", request.getClient().getEmail());
         if (request.getCodeAgence() != null) payload.put("codeAgence", request.getCodeAgence());
         if (request.getNomAgence() != null) payload.put("nomAgence", request.getNomAgence());
+        if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
+        if (request.getPreConfirmation() != null) payload.put("preConfirmation", request.getPreConfirmation());
         if (request.getMarchand() != null) {
             if (request.getMarchand().getCodeMarchand() != null) payload.put("codeMarchand", request.getMarchand().getCodeMarchand());
             if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("categorieCodeMarchand", request.getMarchand().getCategorieCodeMarchand());

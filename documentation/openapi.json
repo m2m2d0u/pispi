@@ -1,0 +1,4286 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "x-logo": {
+      "url": "https://bceao.int/themes/medianet/image/png/logo_fr.png"
+    },
+    "title": "API exposée par l'AIP au participant",
+    "version": "2.4.0",
+    "contact": {
+      "email": "pisfn-dev@bceao.int"
+    },
+    "license": {
+      "name": "BCEAO",
+      "url": "https://www.bceao.int"
+    },
+    "description": "L'Application d'Interfaçage (AIP) fournit une interface permettant aux participants d'envoyer des données à la Plateforme Interopérable (PI) sous forme de messages structurés. Cette documentation décrit les différentes APIs disponibles dans l'AIP pour faciliter l'intégration des participants au système PI.\n\n### Fonctionnement général\n\nL'AIP agit comme un point d'entrée pour recevoir les messages des participants. Les participants envoient des données au format JSON via les différentes APIs de l'AIP. L'AIP se charge ensuite de transformer ces données en format XML, de les signer et de les transmettre au système PI.\n\n### Flux de traitement des messages\n\n1. Réception du JSON : Les participants envoient leurs données au format JSON à l'AIP en utilisant les APIs appropriées.\n2. Transformation en XML : L'AIP convertit les données JSON reçues en format XML, en appliquant les règles de transformation définies.\n3. Signature XML : L'AIP signe le message XML avec une clé de signature sécurisée, garantissant l'intégrité et l'authenticité des données.\n4. Envoi au système PI : Le message XML signé est ensuite transmis au système PI pour le traitement ultérieur.\n\n### Sécurité\n\nL'AIP accorde une importance primordiale à la sécurité des données transmises. Les communications entre les participants et l'AIP sont protégées via des protocoles de sécurisation, tels que HTTPS, pour garantir la confidentialité des informations échangées.\n\nVeuillez vous référer à la documentation détaillée de chaque API pour plus d'informations sur les endpoints, les paramètres et les réponses attendues.\n"
+  },
+  "externalDocs": {
+    "description": "Plus d'informations sur PI",
+    "url": "https://pi-bceao.com"
+  },
+  "tags": [
+    {
+      "name": "Participants",
+      "x-displayName": "Référentiel des participants",
+      "description": "Référentiel des participants: \n- Demander la liste des participants, "
+    },
+    {
+      "name": "Verifications",
+      "x-displayName": "Vérifications d'identité",
+      "description": "Vérifier l'existence d'un compte client dans une instituion financière:\n  - Envoyer une demande de vérification d'identité\n  - Envoyer une réponse à une demande de vérification d'identité"
+    },
+    {
+      "name": "Alias",
+      "x-displayName": "Alias interopérable",
+      "description": "Gestion des alias:\n  - Envoyer une demande de recherche d'alias\n  - Envoyer une demande de création d'alias\n  - Envoyer une demande de modification d'alias\n  - Envoyer une demande de suppression d'alias"
+    },
+    {
+      "name": "Transferts",
+      "x-displayName": "Transferts de fonds",
+      "description": "Opérations liées aux transferts de fonds:\n- Envoyer une demande de transfert\n- Envoyer une réponse à une demande de transfert\n- Envoyer une demande de statut de transfert"
+    },
+    {
+      "name": "Demandes de paiement",
+      "x-displayName": "Demandes de paiement",
+      "description": "Opérations liées aux demandes de paiement:\n- Envoyer une demande de paiement\n- Envoyer une réponse à une demande de paiement"
+    },
+    {
+      "name": "Retour de fonds",
+      "x-displayName": "Retour de fonds",
+      "description": "Opérations liées aux retours de fonds:\n- Envoyer une demande de retour de fonds\n- Envoyer un rejet à une demande de retour de fonds\n- Envoyer un retour de fonds"
+    },
+    {
+      "name": "Gestion des réglements",
+      "x-displayName": "Gestion des réglements",
+      "description": "Opérations liées aux réglements:\n- Envoyer une demande de rapport\n- Télécharger le rapport des transactions"
+    },
+    {
+      "name": "Notifications",
+      "x-displayName": "Notifications",
+      "description": "Opérations liées aux notifications:\n- Test de connectivité"
+    },
+    {
+      "name": "Statuts",
+      "x-displayName": "Vérifications de l'état d'un message",
+      "description": "Opérations liées aux vérifications d'état:\n- Vérifications de l'état d'un message dans l'AIP"
+    },
+    {
+      "name": "Revendication",
+      "x-displayName": "Revendication d'alias",
+      "description": "Revendication d'alias:\n  - Revendiquer un alias\n  - Recupérer une revendication\n  - Accepter une revendication\n  - Rejeter une revendication\n  - Annuler une revendication"
+    }
+  ],
+  "paths": {
+    "/transferts": {
+      "post": {
+        "tags": [
+          "Transferts"
+        ],
+        "summary": "Envoyer une demande de transfert",
+        "description": "Ce point de terminaison permet d'envoyer une demande de transfert.\n\nIl nécessite un objet JSON contenant les informations de la demande de transfert.\n\nL'API retourne une réponse HTTP 202 si la demande de transfert est initiée avec succès,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 200 si la demande existe déjà.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Virement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de transfert a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transferts/reponses": {
+      "post": {
+        "tags": [
+          "Transferts"
+        ],
+        "summary": "Envoyer une réponse à une demande de transfert",
+        "description": "Ce point de terminaison permet d'envoyer une réponse à une demande de transfert précédemment reçue,\nidentifiée par un endToEndId.\n\nIl nécessite un objet JSON contenant les informations de la réponse au transfert.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VirementReponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La réponse est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La réponse à la demande de transfert a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transferts/statut": {
+      "post": {
+        "tags": [
+          "Transferts"
+        ],
+        "summary": "Envoyer une demande de statut de transfert",
+        "description": "Ce point de terminaison permet d'envoyer une demande de statut de transfert,\nidentifiée par un endToEndId.\n\nIl nécessite un objet JSON contenant les informations de la demande.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VirementStatut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationStatutTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de staut de virement a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demandes-paiements": {
+      "post": {
+        "tags": [
+          "Demandes de paiement"
+        ],
+        "summary": "Envoyer une demande de paiement",
+        "description": "Ce point de terminaison permet d'envoyer une demande de paiement.\n\nIl nécessite un objet JSON contenant les informations de la demande.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandePaiement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de paiement a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demandes-paiements/reponses": {
+      "post": {
+        "tags": [
+          "Demandes de paiement"
+        ],
+        "summary": "Envoyer une réponse à une demande de paiement",
+        "description": "Ce point de terminaison permet d'envoyer une réponse à une demande de paiement précédemment reçue,\nidentifiée par un endToEndId.\n\nIl nécessite un objet JSON contenant les informations de la réponse à la demande de paiement.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReponseDemandePaiement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La réponse est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La réponse à la demande de paiement a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds/demande": {
+      "post": {
+        "tags": [
+          "Retour de fonds"
+        ],
+        "summary": "Envoyer une demande de retour de fonds",
+        "description": "Ce point de terminaison permet d'envoyer une demande de retour de fonds (annulation de paiement).\n\nIl nécessite un objet JSON contenant les informations de la demande.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandeRetourFonds"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de retour de fonds a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds/reponses": {
+      "post": {
+        "tags": [
+          "Retour de fonds"
+        ],
+        "summary": "Envoyer une réponse à une demande de retour de fonds",
+        "description": "Ce point de terminaison permet d'envoyer une réponse à une demande de retour de fonds précédemment reçue.\n\nIl nécessite un objet JSON contenant les informations de la réponse à la demande de retour de fonds.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReponseRetourFonds"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La réponse est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La réponse à la demande de retour de fonds a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/retour-fonds": {
+      "post": {
+        "tags": [
+          "Retour de fonds"
+        ],
+        "summary": "Envoyer un retour de fonds",
+        "description": "Ce point de terminaison permet d'envoyer un retour de fonds.\n\nIl nécessite un objet JSON contenant les informations du retour de fons.\n\nL'API retourne une réponse HTTP 202 si le retour de fonds est initié avec succès, \nune réponse HTTP 200 si le retour de fonds existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetourFonds"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Le retour de fonds est dupliqué.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Le retour de fonds a été initié avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rapports/demandes": {
+      "post": {
+        "tags": [
+          "Gestion des réglements"
+        ],
+        "summary": "Envoyer une demande de rapport",
+        "description": "Ce point de terminaison permet d'envoyer pour Demande:\n  - Le solde de compensation\n  - La liste des transactions sur une période de compensation\n  - La facture sur une période mensuelle.\n\nIl nécessite un objet JSON contenant les informations de la demande.\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemandeRapportReglement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rapports/telechargements": {
+      "post": {
+        "tags": [
+          "Gestion des réglements"
+        ],
+        "summary": "Télécharger le rapport des transactions (liste des transactions)",
+        "description": "Ce point de terminaison permet d'envoyer pour télécharger:\n  - La liste des transactions du participant sur une période de compensation\n\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès, \nune réponse HTTP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TelechargerRapportTransaction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseTransfert"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Le téléchargement a été initié avec succés",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'endpoint n'a pas pu être contacté.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verifications-identites": {
+      "post": {
+        "tags": [
+          "Verifications"
+        ],
+        "summary": "Envoyer une demande de vérification d'identité",
+        "description": "Ce point de terminaison permet d'envoyer une demande de vérification d'identité.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Identite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationIdentite"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de vérification d'identité a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verifications-identites/reponses": {
+      "post": {
+        "tags": [
+          "Verifications"
+        ],
+        "summary": "Envoyer une réponse à une demande de vérification d'identité",
+        "description": "Ce point de terminaison permet d'envoyer une réponse à une demande de vérification d'identité précédemment reçu de PI.\nLa demande et la réponse de la vérification d'identité sont liées à l'aide d'un endToEndId; de même que le transfert lié à la vérification d'identité.\nIl nécessite un objet JSON contenant les informations de la réponse à la vérification d'identité. \nL'API retourne une réponse HTTP 202 si la réponse a été reçue avec succès,\nune réponse HTPP 200 si la demande existe déjà,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 404 si la demande correspondante est introuvable.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentiteReponse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationReponseIdentite"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La réponse à la vérification d'identité a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Données en entrée invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La demande correspondante n'existe pas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErrorDemandeInexistante"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alias/recherche": {
+      "post": {
+        "tags": [
+          "Alias"
+        ],
+        "summary": "Envoyer une demande de recherche d'alias à PI",
+        "description": "Avec les informations fournies, générer un message XML qui sera envoyé à PI.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RechercheAlias"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La demande de recherche d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessRechercheAlias"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alias/creation": {
+      "post": {
+        "tags": [
+          "Alias"
+        ],
+        "summary": "Envoyer une demande de création d'alias à PI",
+        "description": "Avec les informations fournies, soumet la demande de création à PI-RAC.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Alias"
+              },
+              "examples": {
+                "SHID_PERSONNE_PHYSIQUE_SANS_IDENTIFICATION": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonnePhysiqueSansIdentification"
+                },
+                "MBNO_PERSONNE_PHYSIQUE_SANS_IDENTIFICATION": {
+                  "$ref": "#/components/examples/creationAliasMBNOPersonnePhysiqueSansIdentification"
+                },
+                "SHID_PERSONNE_PHYSIQUE_IDENTIFICATION_NIN_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonnePhysiqueIdentificationNINCompteIBAN"
+                },
+                "SHID_PERSONNE_PHYSIQUE_IDENTIFICATION_NIN_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonnePhysiqueIdentificationNINCompteOTHER"
+                },
+                "MBNO_PERSONNE_PHYSIQUE_IDENTIFICATION_NIN_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMBNOPersonnePhysiqueIdentificationNINCompteIBAN"
+                },
+                "MBNO_PERSONNE_PHYSIQUE_IDENTIFICATION_NIN_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMBNOPersonnePhysiqueIdentificationNINCompteOTHER"
+                },
+                "SHID_PERSONNE_PHYSIQUE_IDENTIFICATION_PASSEPORT_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonnePhysiqueIdentificationPASSEPORTCompteIBAN"
+                },
+                "SHID_PERSONNE_PHYSIQUE_IDENTIFICATION_PASSEPORT_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonnePhysiqueIdentificationPASSEPORTCompteOTHER"
+                },
+                "MBNO_PERSONNE_PHYSIQUE_IDENTIFICATION_PASSEPORT_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMBNOPersonnePhysiqueIdentificationPASSEPORTCompteIBAN"
+                },
+                "MBNO_PERSONNE_PHYSIQUE_IDENTIFICATION_PASSEPORT_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMBNOPersonnePhysiqueIdentificationPASSEPORTCompteOTHER"
+                },
+                "SHID_COMMERCANT_IDENTIFICATION_NIN_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDCommercantIdentificationNINCompteIBAN"
+                },
+                "SHID_COMMERCANT_IDENTIFICATION_NIN_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDCommercantIdentificationNINCompteOTHER"
+                },
+                "MBNO_COMMERCANT_IDENTIFICATION_NIN_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMBNOCommercantIdentificationNINCompteIBAN"
+                },
+                "MBNO_COMMERCANT_IDENTIFICATION_NIN_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMBNOCommercantIdentificationNINCompteOTHER"
+                },
+                "MCOD_COMMERCANT_IDENTIFICATION_NIN_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMCODCommercantIdentificationNINCompteIBAN"
+                },
+                "MCOD_COMMERCANT_IDENTIFICATION_NIN_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMCODCommercantIdentificationNINCompteOTHER"
+                },
+                "SHID_COMMERCANT_IDENTIFICATION_PASSEPORT_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDCommercantIdentificationPASSEPORTCompteIBAN"
+                },
+                "SHID_COMMERCANT_IDENTIFICATION_PASSEPORT_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDCommercantIdentificationPASSEPORTCompteOTHER"
+                },
+                "MBNO_COMMERCANT_IDENTIFICATION_PASSEPORT_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMBNOCommercantIdentificationPASSEPORTCompteIBAN"
+                },
+                "MBNO_COMMERCANT_IDENTIFICATION_PASSEPORT_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMBNOCommercantIdentificationPASSEPORTCompteOTHER"
+                },
+                "MCOD_COMMERCANT_IDENTIFICATION_PASSEPORT_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMCODCommercantIdentificationPASSEPORTCompteIBAN"
+                },
+                "MCOD_COMMERCANT_IDENTIFICATION_PASSEPORT_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMCODCommercantIdentificationPASSEPORTCompteOTHER"
+                },
+                "SHID_PERSONNE_MORALE_G_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonneMoraleGCompteIBAN"
+                },
+                "SHID_PERSONNE_MORALE_G_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonneMoraleGCompteOTHER"
+                },
+                "MCOD_PERSONNE_MORALE_G_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMCODPersonneMoraleGCompteIBAN"
+                },
+                "MCOD_PERSONNE_MORALE_G_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMCODPersonneMoraleGCompteOTHER"
+                },
+                "SHID_PERSONNE_MORALE_B_IBAN": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonneMoraleBCompteIBAN"
+                },
+                "SHID_PERSONNE_MORALE_B_OTHER": {
+                  "$ref": "#/components/examples/creationAliasSHIDPersonneMoraleBCompteOTHER"
+                },
+                "MCOD_PERSONNE_MORALE_B_IBAN": {
+                  "$ref": "#/components/examples/creationAliasMCODPersonneMoraleBCompteIBAN"
+                },
+                "MCOD_PERSONNE_MORALE_B_OTHER": {
+                  "$ref": "#/components/examples/creationAliasMCODPersonneMoraleBCompteOTHER"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La demande de création d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessCreationAlias"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alias/modification": {
+      "post": {
+        "tags": [
+          "Alias"
+        ],
+        "summary": "Envoyer une demande de modification d'alias à PI",
+        "description": "Avec les informations fournies, générer un message XML qui sera envoyé à PI.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModificationAlias"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La demande de modification d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessModificationAlias"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alias/suppression": {
+      "post": {
+        "tags": [
+          "Alias"
+        ],
+        "summary": "Envoyer une demande de suppression d'alias à PI",
+        "description": "Avec les informations fournies, envoyer la demande de suppression à PI-RAC.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuppressionAlias"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La demande de suppression d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessSuppressionAlias"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/participants/listes": {
+      "post": {
+        "tags": [
+          "Participants"
+        ],
+        "summary": "Demander la liste des participants",
+        "description": "Cet point de terminaison permet de demander la liste des participants.     \nElle nécessite un objet JSON contenant les informations de la demande .\nL'API retourne une réponse HTTP 202 si la demande est initiée avec succès,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 200 si la demande existe déjà,.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListeParticipant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationListeParticipantDemande"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "La demande de la liste des participants a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/test-connectivite": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Envoyer un test de connectivité",
+        "description": "Ce point de terminaison permet d'envoyer un test de connectivité.\n\nIl nécessite un objet JSON contenant les informations du test de connectivité.\n\nL'API retourne une réponse HTTP 202 si le test de connectivité est initié avec succès,\nune réponse HTTP 400 si les données en entrée sont invalides,\net une réponse HTTP 200 si le test de connectivité existe déjà.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Notification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "La demande est dupliquée.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseDuplicationTestConnectivite"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Le test de connectivité a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages/statut/{msgId}": {
+      "parameters": [
+        {
+          "name": "msgId",
+          "in": "path",
+          "description": "l'identifiant du message dont le statut est recherché",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "tags": [
+          "Statuts"
+        ],
+        "summary": "Rechercher l'état d'un message",
+        "description": "Ce point de terminaison permet de recupérer le statut d'un message précédemment envoyé.\n\nL'API retourne une réponse HTTP 200 si le message se trouve dans la base de données,\nune réponse HTTP 404 si le message n'est pas retrouvé.",
+        "responses": {
+          "200": {
+            "description": "Le résultat de la vérification de statut",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseRechercheStatut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Les données en entrée sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseMessageNotFound"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/creation": {
+      "post": {
+        "tags": [
+          "Revendication"
+        ],
+        "summary": "Revendiquer un alias",
+        "description": "Envoyer une demande de revendication d'alias de type MBNO",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevendicationAlias"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La demande de revendication d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessRevendicationAlias"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données envoyées sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/recuperation": {
+      "post": {
+        "tags": [
+          "Revendication"
+        ],
+        "summary": "Recupérer une revendication d'alias",
+        "description": "Envoyer une recupération de revendication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecuperationRevendication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "La recupération d'une revendication d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessRecuperationRevendication"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données envoyées sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/acceptation": {
+      "post": {
+        "tags": [
+          "Revendication"
+        ],
+        "summary": "Accepter une revendication d'alias",
+        "description": "Envoyer une acceptation de revendication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptationRevendication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "L'acceptation d'une revendication d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessAcceptationRevendication"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données envoyées sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/revendications/rejet": {
+      "post": {
+        "tags": [
+          "Revendication"
+        ],
+        "summary": "Rejeter une revendication d'alias",
+        "description": "Envoyer un rejet de revendication",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejetRevendication"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Le rejet d'une revendication d'alias a été initiée avec succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseSuccessRejetRevendication"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Les données envoyées sont invalides.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erreur lors du traitement par l'AIP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseError500"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Identite": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF][0-9]{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "L'identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout. \nElle est générée par le participant lors de la vérification d’identité.\n"
+          },
+          "ibanClient": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client.  Il est renseigné lorsque le numéro de compte du client est un IBAN."
+          },
+          "otherClient": {
+            "type": "string",
+            "description": "Numéro de compte autre qu'un IBAN. Il est renseigné lorsque le numéro de compte du client est autre qu’un IBAN."
+          },
+          "codeMembreParticipant": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "minLength": 6,
+            "maxLength": 6,
+            "description": "Identifiant unique dans le système PI du participant à qui la vérification d’identité est adressée."
+          }
+        },
+        "required": [
+          "msgId",
+          "endToEndId",
+          "codeMembreParticipant"
+        ],
+        "example": {
+          "msgId": "MSNB0019vydyOl7iIZSMdz3GZfWcWBa410s",
+          "endToEndId": "ESNB00120230221153554KXvozkpNvhUk9e",
+          "ibanClient": "SN05SN9990333333000003122583",
+          "codeMembreParticipant": "SNB002"
+        }
+      },
+      "IdentiteReponse": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + PIUMOA + UNIQUEID(28 positions)",
+            "title": "MsgIdDemande",
+            "type": "string",
+            "description": "Identifiant unique du message de vérification d’identité auquel ce message répond.  \n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout.\nIl a la même valeur que le endToEndId de la vérification d'identité à laquelle ce message répond.\n"
+          },
+          "resultatVerification": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Résultat de la vérification d’identité.\nLorsque le résultat de la vérification d’identité est positif(true) tous les autres attributs sont renseignés à l’exception du code de la raison.\nLorsque le résultat de la vérification d’identité est négatif(false) seul l’attribut contenant le code de la raison devient obligatoire.\n"
+          },
+          "codeRaison": {
+            "type": "string",
+            "enum": [
+              "AC01"
+            ],
+            "description": "Code de la raison du résultat de la vérification. Il est obligatoire lorsque le résultat de la vérification d’identité est négatif."
+          },
+          "ibanClient": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client.  Il est obligatoire lorsque le résultat de la vérification d’identité est positif et le numéro de compte est un IBAN."
+          },
+          "otherClient": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client chez le participant. Il est renseigné lorsque le résultat de la vérification d’identité est positif le numéro de compte du client est autre qu’un IBAN."
+          },
+          "codeMembreParticipant": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "minLength": 6,
+            "maxLength": 6,
+            "description": "Identifiant unique dans le système PI du participant auquel la réponse à la vérification d’identité est adressée. Il est obligatoire lorsque le résultat de la vérification d’identité est positif."
+          },
+          "typeCompte": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "TRAL",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Type du compte client. Il est obligatoire lorsque le résultat de la vérification d’identité est positif.\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"TRAL\"  Compte sans KYC avec un plafond de 200 000 Francs CFA. Non utilisable par les établissements de paiements.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "nomClient": {
+            "type": "string",
+            "description": "Nom du client. Il est obligatoire lorsque le résultat de la vérification d’identité est positif."
+          },
+          "villeClient": {
+            "type": "string",
+            "description": "Ville du client. Il doit être renseigné si le participant"
+          },
+          "adresseComplete": {
+            "type": "string",
+            "description": "Adresse complète du client."
+          },
+          "numeroIdentification": {
+            "type": "string",
+            "description": "Numéro d’identification du client (identification fiscale pour un client de type personne morale et numero d’identification nationale ou numéro de passeport pour  une personne physique).\nIl est renseigné lorsque le résultat de la vérification d’identité est positif.  \n"
+          },
+          "systemeIdentification": {
+            "type": "string",
+            "enum": [
+              "TXID",
+              "CCPT",
+              "NIDN"
+            ],
+            "description": "Codification du système d'identification.  Il est renseigné lorsque le résultat de la vérification d’identité est positif."
+          },
+          "numeroRCCMClient": {
+            "type": "string",
+            "description": "Numéro d’enregistrement au registre du commerce du client. Il doit être renseigné dans le cas où le client est un marchand de type personne physique."
+          },
+          "dateNaissance": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "Date de naissance du client.  Il est renseigné lorsque le résultat de la vérification d’identité est positif et que le client est une personne physique dont le type de compte est différent de TRAL et son participant une banque."
+          },
+          "villeNaissance": {
+            "type": "string",
+            "description": "Ville de naissance du client.  Il est renseigné lorsque le résultat de la vérification d’identité est positif et que le client est une personne physique dont le type de compte est différent de TRAL et son participant une banque."
+          },
+          "paysNaissance": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}",
+            "description": "Pays de naissance du client.  Il est renseigné lorsque le résultat de la vérification d’identité est positif et que le client est une personne physique dont le type de compte est différent de TRAL et son participant une banque."
+          },
+          "paysResidence": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client. Il est obligatoire lorsque le résultat de la vérification d’identité est positif."
+          },
+          "devise": {
+            "type": "string",
+            "description": "Devise du compte du client. Il est obligatoire lorsque le résultat de la vérification d’identité est positif",
+            "enum": [
+              "XOF"
+            ]
+          },
+          "typeClient": {
+            "type": "string",
+            "enum": [
+              "P",
+              "G",
+              "B",
+              "C"
+            ],
+            "description": "Type du client. Il est obligatoire lorsque le résultat de la vérification d’identité est positif.\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour les personnes morales\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "msgIdDemande",
+          "resultatVerification",
+          "endToEndId"
+        ],
+        "example": {
+          "msgId": "MBFB0019vydyOl7iIZSMdz3GZfWcWBa240s",
+          "msgIdDemande": "MPIUMOA9vydyOl7iIZSMdz3GZfWcWBa410s",
+          "endToEndId": "ESNB00120230221153554KXvozkpNvhUk9e",
+          "resultatVerification": "true",
+          "ibanClient": "SN02SN0110333333000003122583",
+          "codeMembreParticipant": "SNB001",
+          "typeCompte": "CACC",
+          "nomClient": "Client C",
+          "villeClient": "Bobo-Dioulasso",
+          "adresseComplete": "Avenue de l'unité",
+          "numeroIdentification": "1975198730321",
+          "systemeIdentification": "POID",
+          "numeroRCCMClient": "1213589412 N",
+          "dateNaissance": "1995-10-11",
+          "villeNaissance": "Ouagadougou",
+          "paysNaissance": "BF",
+          "paysResidence": "BF",
+          "devise": "XOF",
+          "typeClient": "P"
+        }
+      },
+      "Virement": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "L'identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP. \n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "L'identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout. \nIl est généré par le participant lors de la vérification d’identité ou de la recherche l’alias.\n"
+          },
+          "montant": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant du transfert"
+          },
+          "paysClientPayeur": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client payeur.\n"
+          },
+          "typeCompteClientPayeur": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "TRAL",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client payeur.\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"TRAL\"  Compte sans KYC avec un plafond de 200 000 Francs CFA. Non utilisable par les établissements de paiements.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "deviseCompteClientPayeur": {
+            "type": "string",
+            "enum": [
+              "XOF"
+            ],
+            "description": "La devise du compte du client payeur"
+          },
+          "ibanClientPayeur": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client payeur.  Il est obligatoire lorsque le numéro de compte du client payeur est un IBAN."
+          },
+          "otherClientPayeur": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client payeur chez le participant. Il est renseigné lorsque le numéro de compte du client payeur est autre qu’un IBAN."
+          },
+          "aliasClientPayeur": {
+            "type": "string",
+            "description": "Valeur de l'alias du compte du client payeur."
+          },
+          "nomClientPayeur": {
+            "type": "string",
+            "description": "Le nom du client payeur."
+          },
+          "typeClientPayeur": {
+            "type": "string",
+            "enum": [
+              "P",
+              "B",
+              "G",
+              "C"
+            ],
+            "description": "Le type client payeur.\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour les personnes morales\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          },
+          "codeMembreParticipantPaye": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "description": "Le code membre du participant payé."
+          },
+          "paysClientPaye": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client payé\n"
+          },
+          "typeCompteClientPaye": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "TRAL",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client payé.\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"TRAL\"  Compte sans KYC avec un plafond de 200 000 Francs CFA. Non utilisable par les établissements de paiements.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "deviseCompteClientPaye": {
+            "type": "string",
+            "enum": [
+              "XOF"
+            ],
+            "description": "La devise du compte du client payé"
+          },
+          "ibanClientPaye": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client payé.  Il est renseigné lorsque le numéro de compte du client payé est un IBAN."
+          },
+          "otherClientPaye": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client chez le participant. Il est renseigné lorsque le numéro de compte du client payé est autre qu’un IBAN."
+          },
+          "nomClientPaye": {
+            "type": "string",
+            "description": "Le nom du client payé"
+          },
+          "typeClientPaye": {
+            "type": "string",
+            "enum": [
+              "P",
+              "B",
+              "G",
+              "C"
+            ],
+            "description": "Le type du client payé.\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour les personnes morales\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          },
+          "canalCommunication": {
+            "type": "string",
+            "enum": [
+              "731",
+              "633",
+              "999",
+              "000",
+              "400",
+              "733",
+              "401",
+              "500",
+              "520",
+              "521",
+              "631",
+              "300"
+            ],
+            "description": "Canal de communication sous forme de code propriétaire utilisé par le client payeur pour instruire la transaction.\nLes valeurs supportées par la plateforme sont:\n  - \"731\"  Transfert par QR Code\n  - \"633\"  Transfert par (adresse de paiement, alias numéro de téléphone et compte)\n  - \"999\"  Ordre de transfert bancaire\n  - \"000\"  Paiement par QR Code Statique\n  - \"400\"  Paiement par QR Code Dynamique\n  - \"733\"  Ordre de paiement via l'API Business\n  - \"401\"  Autres demandes de paiement de facture\n  - \"500\"  Demande de Paiement marchand sur site \n  - \"521\"  Demande de Paiement e-commerce immédiat\n  - \"631\"  Demande de paiement provenant d'un particulier\n  - \"300\"  Via le canal USSD\n  - \"520\"  Demande de Paiement e-commerce à la livraison\n"
+          },
+          "dateHeureAcceptation": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Il fournit l’information sur la Date et l’heure à laquelle l’ordre de transfert du client est reçu par le participant Pour tous les canaux, il s'agit de la date avant que les contrôles tels que la disponibilité des fonds ne soient effectués sauf pour le canal 999 (Ordre de transfert bancaire)"
+          },
+          "numeroIdentificationClientPayeur": {
+            "type": "string",
+            "description": "Numéro d’identification du client (identification fiscale pour un client de type personne morale et numero d’identification nationale ou numéro de passeport pour  une personne physique). \nIl est renseigné lorsque le type de compte est différent de TRAL.\n"
+          },
+          "systemeIdentificationClientPayeur": {
+            "type": "string",
+            "enum": [
+              "TXID",
+              "CCPT",
+              "NIDN"
+            ],
+            "description": "Codification du système d'identification du client payeur. Il est renseigné lorsque le type de compte est différent de TRAL.\nLes valeurs supportées par la plateforme sont:\n  - \"TXID\" Numéro d'identification fiscale \n  - \"CCPT\" Numéro attribué par une autorité pour identifier le numéro de passeport d'une personne.\n  - \"NIDN\" Numéro attribué par une autorité pour identifier le numéro d'identité national d'une personne.\n"
+          },
+          "numeroIdentificationClientPaye": {
+            "type": "string",
+            "description": "Numéro d’identification du client (identification fiscale pour un client de type personne morale et numero d’identification nationale ou numéro de passeport pour  une personne physique)\nIl est renseigné lorsque le le type de compte est différent de TRAL\n"
+          },
+          "systemeIdentificationClientPaye": {
+            "type": "string",
+            "enum": [
+              "TXID",
+              "CCPT",
+              "NIDN"
+            ],
+            "description": "Codification du système d'identification du client payeur. Il est renseigné lorsque le type de compte est différent de TRAL.\nLes valeurs supportées par la plateforme sont:\n  - \"TXID\" Numéro d'identification fiscale \n  - \"CCPT\" Numéro attribué par une autorité pour identifier le numéro de passeport d'une personne.\n  - \"NIDN\" Numéro attribué par une autorité pour identifier le numéro d'identité national d'une personne.\n"
+          },
+          "adresseClientPaye": {
+            "type": "string",
+            "description": "L'adresse du client payé"
+          },
+          "adresseClientPayeur": {
+            "type": "string",
+            "description": "L'adresse du client payeur. Ce champ doit être obligatoirement renseigné lorsque “latitudeClientPayeur” et “longitudeClientPayeur” sont renseignés."
+          },
+          "villeClientPaye": {
+            "type": "string",
+            "description": "La ville du client payé"
+          },
+          "villeClientPayeur": {
+            "type": "string",
+            "description": "La ville du client payeur. Ce champ doit être obligatoirement renseigné lorsque “latitudeClientPayeur” et “longitudeClientPayeur” sont renseignés."
+          },
+          "aliasClientPaye": {
+            "type": "string",
+            "description": "L'alias du client payé. Il est obligatoire dans le cas d'un virement initié à partir d'un alias de compte."
+          },
+          "referenceBulk": {
+            "type": "string",
+            "description": "Référence utilisée pour  identifier les transactions d’un virement de masse."
+          },
+          "identifiantTransaction": {
+            "type": "string",
+            "title": "TxId",
+            "description": "identification unique, attribuée par le premier donneur d'ordre, pour identifier sans ambiguïté la transaction qui est transmise, sans modification, tout au long de la chaîne interbancaire.\nDans le cas d’un paiement par QR Code, l'identifiant de la transaction est fourni par le marchand.\n"
+          },
+          "typeTransaction": {
+            "type": "string",
+            "enum": [
+              "PRMG",
+              "DISP"
+            ],
+            "description": "Il permet de spécifier la nature de la transaction. Il est renseigné dans le cadre du paiement programmé.\nLes valeurs supportées par la plateforme sont:\n  - \"PRMG\" Paiement programmé\n  - \"DISP\" Message de confirmation de disponibilité\n"
+          },
+          "motif": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Permet de renseigner des informations complémentaires sur la transaction."
+          },
+          "latitudeClientPayeur": {
+            "type": "string",
+            "description": "La latitude du client payeur. Obligatoire pour tous les canaux de communication sauf pour les codes 300 et 999."
+          },
+          "longitudeClientPayeur": {
+            "type": "string",
+            "description": "La longitude du client payeur. Obligatoire pour tous les canaux de communication sauf pour les codes 300 et 999."
+          },
+          "dateNaissanceClientPayeur": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "La date de naissance du client payeur. Il est renseigné lorsque le participant payeur est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "villeNaissanceClientPayeur": {
+            "type": "string",
+            "description": "La ville de naissance du client payeur. Il est renseigné lorsque le participant payeur est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "paysNaissanceClientPayeur": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "description": "Le pays de naissance du client payeur. Il est renseigné lorsque le participant payeur est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "dateNaissanceClientPaye": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "La date de naissance du client payé. Il est renseigné lorsque le participant payé est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "villeNaissanceClientPaye": {
+            "type": "string",
+            "description": "La ville de naissance du client payé. Il est renseigné lorsque le participant payé est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "paysNaissanceClientPaye": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "description": "Le pays de naissance du client payé. Il est renseigné lorsque le participant payé est une banque, le client de type personne physique et le type de compte différent de TRAL."
+          },
+          "numeroRCCMClientPayeur": {
+            "type": "string",
+            "description": "Numéro d’enregistrement au registre du commerce du client payeur. Il doit être renseigné dans le cas où le client a fourni son numéro RCCM lors de son enrôlement(création d’alias)."
+          },
+          "numeroRCCMClientPaye": {
+            "type": "string",
+            "description": "Numéro d’enregistrement au registre du commerce du client payé. Il doit être renseigné dans le cas où le client a fourni son numéro RCCM lors de son enrôlement(création d’alias)."
+          },
+          "typeDocumentReference": {
+            "type": "string",
+            "enum": [
+              "CINV",
+              "CMCN",
+              "DISP",
+              "PUOR"
+            ],
+            "description": "Document justificatif  relatif à cette demande de virement tel qu’une facture ou un document commercial.\nLes valeurs supportées par la plateforme sont:\n  - \"CINV\" Le document est une facture\n  - \"CMCN\" Le document est un contrat entre les parties, stipulant les termes et les conditions de la livraison de biens ou de services.\n  - \"DISP\" Le document est un avis d'expédition\n  - \"PUOR\" Le document est un bon de commande.\n"
+          },
+          "numeroDocumentReference": {
+            "type": "string",
+            "description": "Le numéro de référence du document lié au virement."
+          },
+          "montantAchat": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant de l’achat."
+          },
+          "montantRetrait": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant du retrait."
+          },
+          "fraisRetrait": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant des frais de retrait supportés par le client."
+          }
+        },
+        "required": [
+          "msgId",
+          "endToEndId",
+          "montant",
+          "paysClientPayeur",
+          "typeCompteClientPayeur",
+          "deviseCompteClientPayeur",
+          "nomClientPayeur",
+          "typeClientPayeur",
+          "codeMembreParticipantPaye",
+          "paysClientPaye",
+          "typeCompteClientPaye",
+          "deviseCompteClientPaye",
+          "nomClientPaye",
+          "typeClientPaye",
+          "canalCommunication",
+          "dateHeureAcceptation"
+        ],
+        "example": {
+          "msgId": "MSNB0019vydyOl7iIJKQdz3GZfWcWBa5820",
+          "endToEndId": "ESNB00120230302153554KXeezkpezhUk9e",
+          "montant": "10000",
+          "paysClientPayeur": "SN",
+          "typeCompteClientPayeur": "CACC",
+          "deviseCompteClientPayeur": "XOF",
+          "ibanClientPayeur": "SN01SN0110333333000003122583",
+          "aliasClientPayeur": "+221778945210",
+          "nomClientPayeur": "Client A",
+          "typeClientPayeur": "P",
+          "codeMembreParticipantPaye": "CIB001",
+          "paysClientPaye": "CI",
+          "typeCompteClientPaye": "TRAN",
+          "deviseCompteClientPaye": "XOF",
+          "ibanClientPaye": "CI02CI9990111133000003122583",
+          "nomClientPaye": "Client B",
+          "typeClientPaye": "P",
+          "canalCommunication": "633",
+          "dateHeureAcceptation": "2023-02-21T15:30:01.170Z",
+          "numeroIdentificationClientPayeur": "2892199202358",
+          "systemeIdentificationClientPayeur": "NIDN",
+          "numeroIdentificationClientPaye": "1069198545607",
+          "systemeIdentificationClientPaye": "NIDN",
+          "adresseClientPaye": "Boulevard de la Paix à Bouaké",
+          "adresseClientPayeur": "Avenue Abdoulaye Fadiga en face de l'agence Axa Assurance à côté du port Autonome de Dakar pas très loin du restaurant Quai 19.",
+          "villeClientPaye": "Abidjan",
+          "villeClientPayeur": "Dakar",
+          "aliasClientPaye": "eb453a60-c322-11ed-afa1-0242ac120002",
+          "latitudeClientPayeur": "14.670629",
+          "longitudeClientPayeur": "17.426421",
+          "dateNaissanceClientPayeur": "1993-05-31",
+          "villeNaissanceClientPayeur": "Jolof",
+          "paysNaissanceClientPayeur": "SN",
+          "dateNaissanceClientPaye": "1995-05-16",
+          "villeNaissanceClientPaye": "Bouake",
+          "paysNaissanceClientPaye": "CI"
+        }
+      },
+      "VirementReponse": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + PIUMOA + UNIQUEID(28 positions)",
+            "title": "MsgIdDemande",
+            "type": "string",
+            "description": "Identifiant unique du message de demande de virement auquel ce message répond.\n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout.\nC’est le endToEndId reçu dans la demande de virement.\n"
+          },
+          "statutTransaction": {
+            "type": "string",
+            "enum": [
+              "ACSP",
+              "RJCT"
+            ],
+            "description": "Le statut de la transaction.\nLes valeurs supportées par la plateforme sont:\n  - \"ACSP\" Règlement en cours d'exécution suite à la validation des contrôles de format et fonctionnel\n  - \"RJCT\" Instruction de paiement rejetée\n"
+          },
+          "codeRaison": {
+            "type": "string",
+            "pattern": "[A-Z]{2}[0-9]{2}",
+            "description": "code de la raison du rejet de la transaction. Il doit être renseigné lorsque la transaction est rejetée ( RJCT)."
+          },
+          "informationsAdditionnelles": {
+            "type": "string",
+            "description": "informations additionnelles qui explique le code de raison du rejet"
+          },
+          "referenceBulk": {
+            "type": "string",
+            "description": "Référence utilisée pour identifier les transactions d’un virement de masse.\nC’est la valeur du champ referenceBulk reçu dans la demande de virement.\nIl doit être fourni dans le cas des virements de masse.\n"
+          },
+          "identifiantTransaction": {
+            "type": "string",
+            "description": "Il est utilisé pour identifier sans ambiguïté une transaction. \nC’est le transactionId reçu dans la demande de virement.\n"
+          },
+          "codeService": {
+            "type": "string",
+            "enum": [
+              "PP2P"
+            ],
+            "description": "code du service utilisé. Il permet de requalifier un virement en paiement. Il doit être renseigné lorsqu’un paiement est considéré comme un virement."
+          }
+        },
+        "required": [
+          "msgId",
+          "msgIdDemande",
+          "endToEndId",
+          "statutTransaction"
+        ],
+        "example": {
+          "msgId": "MCIB001knGboRTh01unVTGkliPAC456hDElk",
+          "msgIdDemande": "MPIUMOA9vydyOl7iIJKQdz3GZfWcWBa5820",
+          "endToEndId": "ESNB00120230302153554KXeezkpezhUk9e",
+          "statutTransaction": "ACSP"
+        }
+      },
+      "VirementStatut": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout.\nC’est le endToEndId du virement dont le statut est demandé.\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "endToEndId"
+        ],
+        "example": {
+          "msgId": "MSNB000mlnGHYtbc965anbsdeRTB6543mlT",
+          "endToEndId": "ETGB00120230221153554KXvozkpNvhUplg"
+        }
+      },
+      "DemandePaiement": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "clientDemandeur": {
+            "type": "string",
+            "title": "clientDemandeur",
+            "description": "Il doit contenir le lien public vers le logo du client payé du site marchand ou la valeur 'X' pour le nom du client payé.\n"
+          },
+          "identifiantDemandePaiement": {
+            "type": "string",
+            "title": "identifiantDemandePaiement",
+            "description": "Identification de la demande de paiement. \nLorsque la demande de paiement est acceptée, le transfert correspondant enverra la même valeur dans le champ \"identifiantTransaction\" de la demande de virement\n"
+          },
+          "dateHeureExecution": {
+            "type": "string",
+            "title": "dateHeureExecution",
+            "format": "date-time",
+            "description": "Date et Heure à laquelle le client payé demande l'exécution du paiement. Elle correspond à la date limite de paiement.\n"
+          },
+          "dateHeureLimiteAction": {
+            "type": "string",
+            "title": "dateHeureLimiteAction",
+            "format": "date-time",
+            "description": "Date et Heure à laquelle le client payeur doit avoir accepté ou rejeté la demande de paiement.\nElle correspond à la date limite de réponse à la demande de paiement. \n"
+          },
+          "nomClientPayeur": {
+            "type": "string",
+            "title": "nomClientPayeur",
+            "description": "Nom du client à qui la demande de paiement est envoyée.\n"
+          },
+          "typeClientPayeur": {
+            "type": "string",
+            "enum": [
+              "P",
+              "B",
+              "G",
+              "C"
+            ],
+            "description": "Le type client payeur.\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour les personnes morales\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          },
+          "villeClientPayeur": {
+            "type": "string",
+            "description": "Nom de la ville du client payeur."
+          },
+          "adresseClientPayeur": {
+            "type": "string",
+            "description": "Information qui localise et identifie une adresse spécifique  du client payeur."
+          },
+          "numeroIdentificationClientPayeur": {
+            "type": "string",
+            "description": "Numéro d’identification du client (identification fiscale pour un client de type personne morale et numero d’identification nationale ou numéro de passeport pour  une personne physique). \n"
+          },
+          "systemeIdentificationClientPayeur": {
+            "type": "string",
+            "enum": [
+              "TXID",
+              "CCPT",
+              "NIDN"
+            ],
+            "description": "Codification du système d'identification du client payeur. Il est renseigné lorsque le type de compte est différent de TRAL.\nLes valeurs supportées par la plateforme sont:\n  - \"TXID\" Numéro d'identification fiscale \n  - \"CCPT\" Numéro attribué par une autorité pour identifier le numéro de passeport d'une personne.\n  - \"NIDN\" Numéro attribué par une autorité pour identifier le numéro d'identité national d'une personne.\n"
+          },
+          "dateNaissanceClientPayeur": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "La date de naissance du client payeur. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "villeNaissanceClientPayeur": {
+            "type": "string",
+            "description": "La ville de naissance du client payeur. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "paysNaissanceClientPayeur": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "description": "Le pays de naissance du client payeur. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "paysClientPayeur": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client payeur.\n"
+          },
+          "numeroRCCMClientPayeur": {
+            "type": "string",
+            "description": "Numéro d’enregistrement au registre du commerce du client payeur. Il doit être renseigné dans le cas où le client de type personne physique commerçante a fourni son numéro RCCM lors de son enrôlement(création d’alias)"
+          },
+          "ibanClientPayeur": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client payeur.  Il est obligatoire lorsque le numéro de compte du client payeur est un IBAN."
+          },
+          "otherClientPayeur": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client payeur chez le participant. Il est renseigné lorsque le numéro de compte du client payeur est autre qu’un IBAN."
+          },
+          "typeCompteClientPayeur": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "TRAL",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client payeur\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines.\n  - \"TRAL\"  Compte sans KYC avec un plafond de 200 000 Francs CFA. Non utilisable par les établissements de paiements.\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "deviseCompteClientPayeur": {
+            "type": "string",
+            "enum": [
+              "XOF"
+            ],
+            "description": "La devise du compte du client payeur"
+          },
+          "aliasClientPayeur": {
+            "type": "string",
+            "description": "Valeur de l'alias du compte du client payeur."
+          },
+          "codeMembreParticipantPayeur": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "description": "Identifiant unique du participant du client payeur dans le système PI."
+          },
+          "referenceBulk": {
+            "type": "string",
+            "description": "Référence utilisée pour  identifier les demandes de paiements en masse"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de la demande de paiement qui est transmise tout au long de la chaîne de bout en bout. \nIl est généré par le participant lors de la recherche l’alias.\n"
+          },
+          "canalCommunication": {
+            "type": "string",
+            "enum": [
+              "401",
+              "500",
+              "520",
+              "521",
+              "631"
+            ],
+            "description": "Il est utilisé pour spécifier le canal de communication du client payeur\nLes valeurs supportées par la plateforme sont:\n  - \"401\"  Autres demandes de paiement de facture\n  - \"500\"  Demande de Paiement marchand sur site \n  - \"521\"  Demande de Paiement e-commerce immédiat\n  - \"631\"  Demande de paiement provenant d'un particulier\n  - \"520\"  Demande de Paiement e-commerce à la livraison\n"
+          },
+          "autorisationModificationMontant": {
+            "type": "string",
+            "description": "Indique si le client payeur est autorisé à payer un montant différent du montant demandé.\nTrue : Pour une facture avec date d'échéance\nFalse : Pour un paiement immédiat avec débit différé (généralement fin de mois) par le participant payeur du compte du client payeur\nCe champ ne doit pas être renseigné dans le cas d'un paiement immédiat sans débit différé. \n"
+          },
+          "montantRemisePaiementImmediat": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Montant de la remise appliquée pour paiement immédiat dès la réception de la demande de paiement.\nPour une facture avec date d'échéance, le montant correspond à la remise sur le montant de la demande de paiement pour paiement immédiat.\nPour un paiement immédiat avec débit différé, montant correspond à la commission payée par le marchand à l'institution financière de son client. \nCette commission sera déduite du montant demandé.\nCe champ ne doit pas être renseigné dans le cas d'un paiement immédiat sans débit différé.\nSi ce champ est défini alors que autorisationModificationMontant  est à False, il s'agit d'une demande de paiement avec débit différé.\n"
+          },
+          "tauxRemisePaiementImmediat": {
+            "type": "string",
+            "description": "Le taux de la remise appliquée pour paiement immédiat dès la réception de la demande de paiement.\nPour une facture avec date d'échéance, le montant de la remise est de taux*(Montant demande de paiement)\nPour un paiement immédiat avec débit différé, le montant de la commission est de: taux*(Montant demande de paiement)\nCe champ ne doit pas être renseigné dans le cas d'un paiement immédiat sans débit différé.\nSi ce champ est défini alors que autorisationModificationMontant  est à False, il s'agit d'une demande de paiement avec débit différé.\n"
+          },
+          "montant": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant du paiement demandé."
+          },
+          "identifiantMandat": {
+            "type": "string",
+            "description": "Identifiant unique du mandat signé entre le client payeur et le client payé.\nIl correspond à l’échéance d’une tontine. Par exemple 2024-03-01.\n"
+          },
+          "signatureNumeriqueMandat": {
+            "type": "string",
+            "description": "Dispositions de sécurité supplémentaires fournies par le débiteur.\nIl correspond au secret utilisé pour ouvrir le rapport PDF de la tontine pour l'échéance\n"
+          },
+          "nomClientPaye": {
+            "type": "string",
+            "description": "Nom du client payé qui envoie la demande de paiement."
+          },
+          "typeClientPaye": {
+            "type": "string",
+            "enum": [
+              "P",
+              "B",
+              "G",
+              "C"
+            ],
+            "description": "Le type du client payé.\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour personne morale\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          },
+          "villeClientPaye": {
+            "type": "string",
+            "description": "La ville du client payé. Il est obligatoire lors Le client payé est un Business (B) ou Gouvernement (G)."
+          },
+          "latitudeClientPaye": {
+            "type": "string",
+            "description": "La latitude du client paye. Obligatoire lorsque le canal de communication est 631."
+          },
+          "longitudeClientPaye": {
+            "type": "string",
+            "description": "La longitude du client paye. Obligatoire lorsque le canal de communication est 631."
+          },
+          "adresseClientPaye": {
+            "type": "string",
+            "description": "L'adresse du client payé."
+          },
+          "numeroIdentificationClientPaye": {
+            "type": "string",
+            "description": "Numéro d’identification du client payé\n"
+          },
+          "systemeIdentificationClientPaye": {
+            "type": "string",
+            "enum": [
+              "TXID",
+              "CCPT",
+              "NIDN"
+            ],
+            "description": "Codification du système d'identification du client payé.\nLes valeurs supportées par la plateforme sont:\n  - \"TXID\" Numéro d'identification fiscale \n  - \"CCPT\" Numéro attribué par une autorité pour identifier le numéro de passeport d'une personne.\n  - \"NIDN\" Numéro attribué par une autorité pour identifier le numéro d'identité national d'une personne.\n"
+          },
+          "numeroRCCMClientPaye": {
+            "type": "string",
+            "description": "Numéro d’enregistrement au registre du commerce du client payé. Il doit être renseigné dans le cas où le client , de type est une personne physique commerçante a fourni son numéro RCCM lors de son enrôlement (création d’alias)."
+          },
+          "dateNaissanceClientPaye": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "Date de naissance du client payé. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "villeNaissanceClientPaye": {
+            "type": "string",
+            "description": "La ville de naissance du client payé. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "paysNaissanceClientPaye": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "description": "Le pays de naissance du client payé. Il est renseigné lorsque le client est de type personne physique."
+          },
+          "paysClientPaye": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client payé\n"
+          },
+          "ibanClientPaye": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client payé.  Il est renseigné lorsque le numéro de compte du client payé est un IBAN."
+          },
+          "otherClientPaye": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client chez le participant. Il est renseigné lorsque le numéro de compte du client payé est autre qu’un IBAN."
+          },
+          "typeCompteClientPaye": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client paye\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "deviseCompteClientPaye": {
+            "type": "string",
+            "enum": [
+              "XOF"
+            ],
+            "description": "La devise du compte du client payé"
+          },
+          "aliasClientPaye": {
+            "type": "string",
+            "description": "L'alias du client payé."
+          },
+          "motif": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "Permet de renseigner des informations complémentaires sur la transaction."
+          },
+          "typeDocumentReference": {
+            "type": "string",
+            "enum": [
+              "CINV",
+              "CMCN",
+              "DISP",
+              "PUOR"
+            ],
+            "description": "Document justificatif  relatif à cette demande de virement tel qu’une facture ou un document commercial.\nLes valeurs supportées par la plateforme sont:\n  - \"CINV\" Le document est une facture\n  - \"CMCN\" Le document est un contrat entre les parties, stipulant les termes et les conditions de la livraison de biens ou de services.\n  - \"DISP\" Le document est un avis d'expédition\n  - \"PUOR\" Le document est un bon de commande.\n"
+          },
+          "numeroDocumentReference": {
+            "type": "string",
+            "description": "Le numéro de référence du document lié au virement."
+          },
+          "montantAchat": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant de l’achat."
+          },
+          "montantRetrait": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant du retrait."
+          },
+          "fraisRetrait": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant des frais de retrait supportés par le client."
+          }
+        },
+        "required": [
+          "msgId",
+          "clientDemandeur",
+          "identifiantDemandePaiement",
+          "nomClientPayeur",
+          "typeClientPayeur",
+          "villeClientPayeur",
+          "numeroIdentificationClientPayeur",
+          "systemeIdentificationClientPayeur",
+          "paysClientPayeur",
+          "typeCompteClientPayeur",
+          "deviseCompteClientPayeur",
+          "aliasClientPayeur",
+          "codeMembreParticipantPayeur",
+          "endToEndId",
+          "canalCommunication",
+          "montant",
+          "nomClientPaye",
+          "villeClientPaye",
+          "numeroIdentificationClientPaye",
+          "systemeIdentificationClientPaye",
+          "typeClientPaye",
+          "paysClientPaye",
+          "typeCompteClientPaye",
+          "deviseCompteClientPaye",
+          "aliasClientPaye"
+        ],
+        "example": {
+          "msgId": "MSNB000nXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "clientDemandeur": "X",
+          "identifiantDemandePaiement": "154887878",
+          "dateHeureExecution": "2023-10-13T12:30:36.868Z",
+          "dateLimiteAction": "2023-10-13T12:35:36.868Z",
+          "nomClientPayeur": "Khady MBODJ",
+          "typeClientPayeur": "P",
+          "villeClientPayeur": "Dakar",
+          "numeroIdentificationClientPayeur": "2987199204567",
+          "systemeIdentificationClientPayeur": "NIDN",
+          "dateNaissanceClientPayeur": "1992-12-23",
+          "villeNaissanceClientPayeur": "Dakar",
+          "paysNaissanceClientPayeur": "SN",
+          "paysClientPayeur": "SN",
+          "ibanClientPayeur": "SN01SN0110333333000003122583",
+          "typeCompteClientPayeur": "CACC",
+          "deviseCompteClientPayeur": "XOF",
+          "aliasClientPayeur": "b4f7c90a-c746-11ed-afa1-0242ac120002",
+          "codeMembreParticipantPayeur": "SNB001",
+          "endToEndId": "ESNB00020230221153554KXvozkpNvhUk9e",
+          "canalCommunication": "500",
+          "montant": "10000",
+          "nomClientPaye": "Boutique XXX",
+          "typeClientPaye": "B",
+          "villeClientPaye": "Dakar",
+          "latitudeClientPaye": "47.862725",
+          "longitudeClientPaye": "2.287592",
+          "numeroIdentificationClientPaye": "00014622G3",
+          "systemeIdentificationClientPaye": "TXID",
+          "paysClientPaye": "SN",
+          "ibanClientPaye": "SN04SN0110568943000003122583",
+          "typeCompteClientPaye": "CACC",
+          "deviseCompteClientPaye": "XOF",
+          "aliasClientPaye": "111c3e1b-4312-49ec-b75e-4c8c74c10fd7",
+          "montantAchat": "8950",
+          "montantRetrait": "1050",
+          "fraisRetrait": "50"
+        }
+      },
+      "ReponseDemandePaiement": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + PIUMOA + UNIQUEID(28 positions)",
+            "title": "MsgIdDemande",
+            "type": "string",
+            "description": "Identifiant unique du message de demande de paiement auquel ce message répond.\n"
+          },
+          "identifiantDemandePaiement": {
+            "type": "string",
+            "title": "identifiantDemandePaiement",
+            "description": "Identification de la demande de paiement à laquelle ce message répond.\n"
+          },
+          "referenceBulk": {
+            "type": "string",
+            "description": "Référence utilisée pour identifier les demandes de paiements en masse. Elle doit être fournie si elle se trouve dans la demande de paiement."
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de bout en bout de la demande de paiement à laquelle ce message répond.\n"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "RJCT"
+            ],
+            "description": "Le statut de la demande de paiement.\nLes valeurs supportées par la plateforme sont:\n  - \"RJCT\" Instruction de paiement rejetée\n"
+          },
+          "codeRaison": {
+            "type": "string",
+            "pattern": "[A-Z]{2}[0-9]{2}",
+            "description": "code de la raison du rejet de la demande de paiement."
+          }
+        },
+        "required": [
+          "msgId",
+          "msgIdDemande",
+          "identifiantDemandePaiement",
+          "endToEndId",
+          "statut"
+        ],
+        "example": {
+          "msgId": "MSNB001nXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "msgIdDemandde": "MPIUMOAnXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "identifiantDemandePaiement": "187987878",
+          "endToEndId": "ECIB00220230221153554KXvozkpNvhUk9e",
+          "statut": "RJCT"
+        }
+      },
+      "DemandeRetourFonds": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "codeMembreParticipantPaye": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "description": "identifiant unique du participant du client paye dans le système PI."
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "L’identifiant unique de bout en bout de la transaction à laquelle fait référence la demande de retour de fonds.\n"
+          },
+          "raison": {
+            "type": "string",
+            "enum": [
+              "DUPL",
+              "AC03",
+              "AM09",
+              "FRAD",
+              "SVNR"
+            ],
+            "description": "Le statut de la demande de paiement.\nLes valeurs supportées par la plateforme sont:\n  - \"DUPL\" Dèjà payé\n  - \"AC03\" Erreur sur le destinataire\n  - \"AM09\" Erreur sur le montant\n  - \"FRAD\" Annulation demandée à la suite d'une transaction dont l'origine est frauduleuse\n  - \"SVNR\" Le paiement est annulé car le produit n'a pas été livré ou le service n'a pas été rendu\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "codeMembreParticipantPaye",
+          "endToEndId",
+          "raison"
+        ],
+        "example": {
+          "msgId": "MSNB001nXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "codeMembreParticipantPaye": "SNB234",
+          "endToEndId": "ESNB00120230221153554KXvozkpNvhUk9e",
+          "raison": "ENUE"
+        }
+      },
+      "ReponseRetourFonds": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "msgIdDemande": {
+            "pattern": "^M(PIUMOA)[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + PIUMOA + UNIQUEID(28 positions)",
+            "title": "MsgIdDemande",
+            "type": "string",
+            "description": "identifiant unique du message de demande de retour de fonds auquel ce message répond.\nC’est le msgId reçu par le backend du participant dans la demande de retour de fonds.\n"
+          },
+          "codeMembreParticipantPayeur": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "description": "Identifiant unique du participant du client payeur dans le système PI."
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "RJCR"
+            ],
+            "description": "Le statut de la demande de retour de fonds."
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "L’identifiant unique de bout en bout de la transaction à laquelle fait référence la demande de retour de fonds à laquelle ce message répond.\n"
+          },
+          "raison": {
+            "type": "string",
+            "enum": [
+              "CUST",
+              "AC04",
+              "ARDT"
+            ],
+            "description": "Spécifie de manière codifiée la raison du rejet de la demande de retour de fonds .\nLes valeurs supportées par la plateforme sont:\n  - \"CUST\" Lorsque l'annulation est rejetée en raison d'une décision du client (créditeur).\n  - \"AC04\" Le numéro de compte spécifié a été clôturé dans les livres du destinataire.\n  - \"ARDT\" L'annulation n'est pas acceptée car la transaction a déjà été renvoyée.\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "msgIdDemande",
+          "codeMembreParticipantPayeur",
+          "statut",
+          "endToEndId",
+          "raison"
+        ],
+        "example": {
+          "msgId": "MSNB234nXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "msgIdDemande": "MPIUMOAnXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "codeMembreParticipantPayeur": "CIB002",
+          "statut": "RJCR",
+          "endToEndId": "ECIB00220230221153554KXvozkpNvhUk9e",
+          "raison": "CUST"
+        }
+      },
+      "RetourFonds": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "endToEndId": {
+            "title": "EndToEndId",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "L’identifiant unique de bout en bout de la transaction à laquelle fait référence le message de retour de fonds\n"
+          },
+          "montantRetourne": {
+            "type": "string",
+            "pattern": "\\d+",
+            "description": "Le montant de la transaction initiale à laquelle ce message fait référence."
+          },
+          "raisonRetour": {
+            "type": "string",
+            "enum": [
+              "BE01",
+              "AC06",
+              "AC07",
+              "FR01",
+              "RR04",
+              "MD06",
+              "CUST"
+            ],
+            "description": "La raison du retour de fonds.\nLes valeurs supportées par la plateforme sont:\n  - \"BE01\" L'identification du client final ne correspond pas au numéro de compte associé, à l'identifiant de l'organisation ou à l'identifiant privé.\n  - \"AC06\" Le compte spécifié est bloqué\n  - \"AC07\" Numéro de compte du créditeur clôturé\n  - \"FR01\" Retourné à la suite d'une fraude\n  - \"RR04\" Raison règlementaire, notamment lorsque le bénéficiaire figure dans une liste d'interdiction\n  - \"MD06\" Retour de fonds demandé par le client payé\n  - \"CUST\" Retour de fonds demandé par le client payeur\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "endToEndId",
+          "montantRetourne",
+          "raisonRetour"
+        ],
+        "example": {
+          "msgId": "MSNB001nXydyOl7iIZSKdzEGZfWcWBaB6bY",
+          "endToEndId": "ECIB00220230221153554KXvozkpNvhUk9e",
+          "montantRetourne": "50000",
+          "raisonRetour": "CUST"
+        }
+      },
+      "DemandeRapportReglement": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "Identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP.\n"
+          },
+          "typeRapport": {
+            "title": "TypeRapport",
+            "enum": [
+              "COMP",
+              "FACT",
+              "TRANS"
+            ],
+            "type": "string",
+            "description": "Il spécifie le type de rapport qui est demandé.\nLes valeurs supportées par la plateforme sont:\n  - \"COMP\"  Solde de compensation\n  - \"FACT\"  Facture sur une période mensuelle\n  - \"TRANS\" Liste des transactions sur une période de compensation\n"
+          },
+          "dateDebutPeriode": {
+            "type": "string",
+            "pattern": "\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])",
+            "description": "Date de début de la période de compensation ou de facturation"
+          },
+          "heureDebutPeriode": {
+            "type": "string",
+            "description": "Heure de début de la période.\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "typeRapport",
+          "dateDebutPeriode",
+          "heureDebutPeriode"
+        ],
+        "example": {
+          "msgId": "MSNB000nXydyOl7iIZSKdzEGZfWcWBautbn",
+          "typeRapport": "TRANS",
+          "dateDebutPeriode": "2023-02-15",
+          "heureDebutPeriode": "09:00:00.000Z"
+        }
+      },
+      "TelechargerRapportTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "RECO(4) + CodeMembre(6) + DateCompens(14)",
+            "title": "Id",
+            "type": "string",
+            "description": "Identifiant du rapport contenant les transactions du participant\n"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "example": {
+          "id": "RECOSNB01920250327090000"
+        }
+      },
+      "ListeParticipant": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "L'identifiant unique du message transmis jusqu’à la plateforme interopérable.\nIl est généré et transféré à l’AIP par le système du participant.\n"
+          },
+          "requete": {
+            "type": "string",
+            "enum": [
+              "ALLL"
+            ],
+            "description": "La requête de la liste des participants. Utiliser toujours la chaîne de carectére \"ALL\"."
+          }
+        },
+        "required": [
+          "msgId",
+          "requete"
+        ],
+        "example": {
+          "msgId": "MSNF0019vydyOl7iIZSMdz3GZfWcWBa1136",
+          "requete": "ALLL"
+        }
+      },
+      "Alias": {
+        "type": "object",
+        "properties": {
+          "idCreationAlias": {
+            "type": "string",
+            "description": "l’identifiant de la demande de création d’Alias"
+          },
+          "nomClient": {
+            "type": "string",
+            "description": "Le nom du client"
+          },
+          "categorieClient": {
+            "type": "string",
+            "enum": [
+              "P",
+              "B",
+              "G",
+              "C"
+            ],
+            "description": "Catégorie du client\nLes valeurs supportées par la plateforme sont:\n  -\"P\" pour personne physique\n  -\"B\" pour les personnes morales\n  -\"G\" pour gouvernement\n  -\"C\" pour personne physique commerçante\n"
+          },
+          "nationaliteClient": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}",
+            "description": "Nationalité du client"
+          },
+          "paysResidenceClient": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résiddence du client"
+          },
+          "telephoneClient": {
+            "type": "string",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
+            "description": "Numéro de téléphone du client"
+          },
+          "denominationSociale": {
+            "type": "string",
+            "description": "La dénomination sociale du client Business (personne morale).Il est obligatoire lorsqu’il s’agit d’un client de type personne morale."
+          },
+          "raisonSociale": {
+            "type": "string",
+            "description": "La raison sociale du client Business (personne morale).Il est obligatoire lorsqu’il s’agit d’un client de type personne morale"
+          },
+          "identificationFiscale": {
+            "type": "string",
+            "description": "l’identification sociale du client Business (personne morale). Il est obligatoire lorsqu’il s’agit d’un client de type personne morale"
+          },
+          "identificationRccm": {
+            "type": "string",
+            "description": "l’immatriculation au Registre de Commerce et du Crédit Mobilier du client de type personne physique commerçante."
+          },
+          "emailClient": {
+            "type": "string",
+            "description": "Adresse e-mail du client"
+          },
+          "adresseClient": {
+            "type": "string",
+            "description": "Adresse du client"
+          },
+          "codePostaleClient": {
+            "type": "string",
+            "description": "Code postal du client"
+          },
+          "identificationNationaleClient": {
+            "type": "string",
+            "description": "Identification nationale du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique avec un type de compte différent de TRAL et que le numéro de passeport n’est pas fourni."
+          },
+          "numeroPasseport": {
+            "type": "string",
+            "description": "Numéro du passeport du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique avec un type de compte différent de TRAL et que le numéro d’identification nationale n’est pas fourni."
+          },
+          "genreClient": {
+            "type": "string",
+            "enum": [
+              "1",
+              "2"
+            ],
+            "description": "Genre du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique."
+          },
+          "dateNaissanceClient": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "Date de naissance du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique  d’un participant de type banque et avec un type de compte différent de TRAL."
+          },
+          "paysNaissanceClient": {
+            "pattern": "^[A-Z]{2}",
+            "type": "string",
+            "description": "Pays de naissance du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique d’un participant de type banque et avec un type de compte différent de TRAL."
+          },
+          "villeNaissanceClient": {
+            "type": "string",
+            "description": "Ville de naissance du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne physique  d’un participant de type banque et avec un type de compte différent de TRAL."
+          },
+          "villeClient": {
+            "type": "string",
+            "description": "Ville de résidence du client. Il est obligatoire lorsqu’il s’agit d’un client de type personne morale."
+          },
+          "nomMere": {
+            "type": "string",
+            "description": "Nom de famille de la mére du client"
+          },
+          "categorieEntreprise": {
+            "type": "string",
+            "description": "Catégorie de l’entreprise dans le cas d’un client de type personne morale."
+          },
+          "codeActivite": {
+            "type": "string",
+            "description": "Code d'activité de l'entreprise (NAEMA). Ce champ ne doit être envoyé que dans le cas d’un client de type personne morale."
+          },
+          "participant": {
+            "type": "string",
+            "pattern": "(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}",
+            "description": "Code membre du participant (compte)"
+          },
+          "iban": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte IBAN du client chez le participant. Il est renseigné lorsque le numéro de compte du client est un IBAN."
+          },
+          "other": {
+            "type": "string",
+            "description": "Le numéro de compte autre que IBAN du client chez le participant. Il est renseigné lorsque le numéro de compte du client est autre qu’un IBAN."
+          },
+          "typeCompte": {
+            "enum": [
+              "CACC",
+              "SVGS",
+              "LLSV",
+              "TRAN",
+              "TRAL",
+              "VACC",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client.\nLes valeurs supportées par la plateforme sont:\n  - \"CACC\"  Compte utilisé pour enregistrer des débits et des crédits lorsqu'aucun compte spécifique n'a été désigné.\n  - \"SVGS\"  Compte utilisé pour l'épargne.\n  - \"LLSV\"  Compte utilisé pour une tirelire\n  - \"TRAN\"  Un compte de transactions est le type de compte bancaire le plus basique que vous puissiez obtenir. La principale différence entre le compte de transactions et le compte chèque est que vous ne recevez généralement pas de chéquier avec votre compte de transactions et que vous ne bénéficiez pas non plus d'une facilité de découvert.\n  - \"TRAL\"  Compte sans KYC avec un plafond de 200 000 Francs CFA. Non utilisable par les établissements de paiements.\n  - \"VACC\"  Compte virtuel utilisé pour les tontines\n  - \"TAXE\"  Compte ouvert dans les livres de la BCEAO pour le trésor public\n"
+          },
+          "dateOuvertureCompte": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "description": "Date d'ouverture du compte"
+          },
+          "typeAlias": {
+            "type": "string",
+            "enum": [
+              "SHID",
+              "MBNO",
+              "MCOD"
+            ],
+            "description": "Type de l’alias du client\nLes valeurs supportées par la plateforme sont:\n  - \"SHID\" Adresse de paiement \n  - \"MBNO\" Numéro de téléphone\n  - \"MCOD\" Code marchand\n"
+          },
+          "valeurAlias": {
+            "type": "string",
+            "description": "La valeur de l'alias lorsque c'est MBNO. Il est obligatoire lorsque le type est MBNO."
+          },
+          "photoClient": {
+            "type": "string",
+            "description": "Lien public de la photo d’une personne physique ou du logo d’une entreprise ou d’un marchand ou d’un site e-commerce."
+          },
+          "preConfirmation": {
+            "type": "boolean",
+            "description": "Par défaut pour les clients business (entreprises et les gouvernements), \nPI marque l'irrévocabilité du transfert sans envoyer un pacs.008 au participant payé. \nSi pour un client business(B) , le participant souhaite recevoir le pacs.008 et effectuer des contrôles sur le client payé, \nil doit envoyer ce champ avec la valeur true.\n"
+          }
+        },
+        "required": [
+          "idCreationAlias",
+          "nomClient",
+          "categorieClient",
+          "paysResidenceClient",
+          "telephoneClient",
+          "participant",
+          "typeCompte",
+          "dateOuvertureCompte",
+          "typeAlias"
+        ],
+        "example": {
+          "idCreationAlias": "1",
+          "nomClient": "Client A",
+          "categorieClient": "P",
+          "nationaliteClient": "CI",
+          "paysResidenceClient": "CI",
+          "telephoneClient": "+225866264787",
+          "emailClient": "aaaa@example.com",
+          "adresseClient": "Youpougon",
+          "codePostaleClient": "23000",
+          "identificationNationaleClient": "1258946320128",
+          "genreClient": "1",
+          "dateNaissanceClient": "1995-10-11",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Mbour",
+          "participant": "CIB002",
+          "iban": "CI01CI0110568943000003122583",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2023-02-21",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+225888965212",
+          "photoClient": "https://example.com/photo.jpg"
+        }
+      },
+      "RechercheAlias": {
+        "type": "object",
+        "properties": {
+          "endToEndId": {
+            "title": "EndToEndId",
+            "maxLength": 35,
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "type": "string",
+            "description": "Identifiant unique de la transaction qui est transmise tout au long de la chaîne de bout en bout. \nElle est générée par le participant lors de la recherche d’alias.\n"
+          },
+          "alias": {
+            "type": "string",
+            "description": "valeur de l’alias recherché"
+          }
+        },
+        "required": [
+          "endToEndId",
+          "alias"
+        ],
+        "example": {
+          "endToEndId": "ESNB00120230221153554KXvozkpNvhUk9e",
+          "alias": "+221778965212"
+        }
+      },
+      "ModificationAlias": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "description": "Valeur de l’alias concernée par la modification."
+          },
+          "paysResidenceClient": {
+            "type": "string",
+            "enum": [
+              "BJ",
+              "BF",
+              "CI",
+              "GW",
+              "ML",
+              "NE",
+              "SN",
+              "TG"
+            ],
+            "description": "Pays de résidence du client. Il est obligatoire lorsque la modification concerne le pays de résidence du client."
+          },
+          "telephoneClient": {
+            "type": "string",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
+            "description": "Numéro de téléphone du client. Il est obligatoire lorsque la modification concerne le téléphone du client."
+          },
+          "codePostalClient": {
+            "type": "string",
+            "description": "Code postal du client. Il est obligatoire lorsque la modification concerne le code postale du client."
+          },
+          "numeroPasseport": {
+            "type": "string",
+            "description": "Numéro de passeport du client. Il est obligatoire lorsque la modification concerne le numéro de passeport du client."
+          },
+          "adresseClient": {
+            "type": "string",
+            "description": "La nouvelle adresse du client. Il est obligatoire lorsque la modification concerne la nouvelle adresse du client."
+          },
+          "emailClient": {
+            "type": "string",
+            "description": "La nouvelle adresse e-mail du client. Il est obligatoire lorsque la modification concerne la nouvelle adresse du e-mail du client."
+          },
+          "villeClient": {
+            "type": "string",
+            "description": "La nouvelle ville de résidence du client. Il est obligatoire lorsque la modification concerne la nouvelle ville de résidence du client."
+          },
+          "denominationSociale": {
+            "type": "string",
+            "description": "La dénomination sociale du client de type personne morale. Il est obligatoire lorsque la modification concerne la dénomination sociale d’un client de type personne morale."
+          },
+          "photoClient": {
+            "type": "string",
+            "description": "Lien public de la photo d’une personne physique ou du logo d’une entreprise ou d’un marchand ou d’un site e-commerce. Il est obligatoire lorsque la modification concerne la photo du client."
+          },
+          "preConfirmation": {
+            "type": "boolean",
+            "description": "Par défaut pour les clients business (entreprises et les gouvernements), \nPI marque l'irrévocabilité du transfert sans envoyer un pacs.008 au participant payé. \nSi pour un client business, le participant souhaite recevoir le pacs.008 et effectuer des contrôles sur le client payé, \nil doit envoyer ce champ avec la valeur true.\n"
+          }
+        },
+        "required": [
+          "alias"
+        ],
+        "example": {
+          "alias": "+221778965212",
+          "paysResidenceClient": "CI"
+        }
+      },
+      "SuppressionAlias": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "description": "Valeur de l’alias à supprimer."
+          },
+          "raisonSuppression": {
+            "type": "string",
+            "enum": [
+              "DEMANDE_CLIENT",
+              "FERMETURE_COMPTE_CLIENT"
+            ],
+            "description": "La raison de la suppression de l’alias\n"
+          }
+        },
+        "required": [
+          "alias",
+          "raisonSuppression"
+        ],
+        "example": {
+          "alias": "+221778965212",
+          "raisonSuppression": "DEMANDE_CLIENT"
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "type": "string",
+            "description": "L'identifiant unique du message transmis jusqu’à la plateforme interopérable.\nCet identifiant est généré par le système du participant et transféré à l’AIP. \n"
+          },
+          "evenement": {
+            "title": "Evenement",
+            "enum": [
+              "PING",
+              "MAIN"
+            ],
+            "type": "string",
+            "description": "Code propriétaire sur 4 caractères pour identifier le type d'evenement du systeme.\nLes valeurs supportées par la plateforme sont:\n  - \"PING\" Test de connectivité \n  - \"MAIN\" Système en maintenance\n"
+          },
+          "evenementDescription": {
+            "title": "EvenementDescription",
+            "type": "string",
+            "description": "Champ libre pour décrire l'evenement dans le systeme.\n"
+          },
+          "evenementDate": {
+            "title": "EvenementDate",
+            "format": "date-time",
+            "type": "string",
+            "description": "Date et heure de l'evenement dans le systeme\n"
+          }
+        },
+        "required": [
+          "msgId",
+          "evenement",
+          "evenementDescription",
+          "evenementDate"
+        ],
+        "example": {
+          "msgId": "MSNF0019vydyOl7iIZSMdz3GZfWcWBa1125",
+          "evenement": "PING",
+          "evenementDescription": "Test de connectivité",
+          "evenementDate": "2024-09-21T15:30:01.170Z"
+        }
+      },
+      "RevendicationAlias": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "title": "alias",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
+            "type": "string",
+            "description": "Valeur de l'alias revendiqué."
+          }
+        },
+        "required": [
+          "alias"
+        ],
+        "example": {
+          "alias": "+221770902134"
+        }
+      },
+      "RecuperationRevendication": {
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "title": "identifiantRevendication",
+            "type": "string",
+            "description": "Numéro d'identification de la revendication."
+          }
+        },
+        "required": [
+          "identifiantRevendication"
+        ],
+        "example": {
+          "identifiantRevendication": "+221770902134_1741263133994"
+        }
+      },
+      "AcceptationRevendication": {
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "title": "identifiantRevendication",
+            "type": "string",
+            "description": "Numéro d'identification de la revendication acceptée."
+          },
+          "dateAction": {
+            "title": "dateAction",
+            "format": "date-time",
+            "type": "string",
+            "description": "Date à laquelle la revendication est acceptée.\n"
+          },
+          "auteurAction": {
+            "title": "auteurAction",
+            "type": "string",
+            "enum": [
+              "CLIENT",
+              "PARTICIPANT"
+            ],
+            "description": "L’origine de l’acceptation."
+          }
+        },
+        "required": [
+          "identifiantRevendication",
+          "dateAction",
+          "auteurAction"
+        ],
+        "example": {
+          "identifiantRevendication": "+221770902134_1741263133994",
+          "dateAction": "2025-03-10T12:34:56.145Z",
+          "auteurAction": "CLIENT"
+        }
+      },
+      "RejetRevendication": {
+        "type": "object",
+        "properties": {
+          "identifiantRevendication": {
+            "title": "identifiantRevendication",
+            "type": "string",
+            "description": "Numéro d'identification de la revendication rejetée."
+          },
+          "dateAction": {
+            "title": "dateAction",
+            "format": "date-time",
+            "type": "string",
+            "description": "Date à laquelle la revendication est rejetée.\n"
+          }
+        },
+        "required": [
+          "identifiantRevendication",
+          "dateAction"
+        ],
+        "example": {
+          "identifiantRevendication": "+221770902134_1741263133994",
+          "dateAction": "2025-03-10T12:34:56.145Z"
+        }
+      },
+      "ReponseSuccess": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Votre requête a été initiée avec succès"
+          }
+        }
+      },
+      "ReponseError": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message d'erreur",
+            "example": "Les données envoyées ne sont pas conformes"
+          }
+        }
+      },
+      "ReponseError500": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message d'erreur",
+            "example": "Erreur lors du traitement par l'AIP"
+          }
+        }
+      },
+      "ReponseSuccessCreationAlias": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Demande de création d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessModificationAlias": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Demande de modification d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessSuppressionAlias": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Demande de suppression d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessRechercheAlias": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Demande de recherche d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessRevendicationAlias": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Demande de revendication d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessRecuperationRevendication": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Recupération de revendication d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessAcceptationRevendication": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Acceptation de la revendication d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseSuccessRejetRevendication": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de succès",
+            "example": "Rejet de la revendication d'alias en cours de traitement"
+          }
+        }
+      },
+      "ReponseErrorDemandeInexistante": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message d'inexistance de la demande",
+            "example": "La réponse ne correspond à aucune demande de vérification en base"
+          }
+        }
+      },
+      "ReponseDuplicationListeParticipantDemande": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base (DUPLICATE_LISTE_PARTICIPANTS_DEMANDE)"
+          }
+        }
+      },
+      "ReponseDuplicationIdentite": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base (DUPLICATE_VERIFICATION_DEMANDE)"
+          }
+        }
+      },
+      "ReponseDuplicationReponseIdentite": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base (DUPLICATE_VERIFICATION_REPONSE)"
+          }
+        }
+      },
+      "ReponseDuplicationTransfert": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base"
+          }
+        }
+      },
+      "ReponseDuplicationReponseTransfert": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base"
+          }
+        }
+      },
+      "ReponseDuplicationStatutTransfert": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base"
+          }
+        }
+      },
+      "ReponseDuplicationTestConnectivite": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message de duplication",
+            "example": "L'identifiant du message existe déjà en base"
+          }
+        }
+      },
+      "ReponseRechercheStatut": {
+        "type": "object",
+        "properties": {
+          "msgId": {
+            "type": "string",
+            "pattern": "^M(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}[a-zA-Z0-9]{28}$",
+            "format": "M(1 position) + CodeMembre(6 positions) + UNIQUEID(28 positions)",
+            "title": "MsgId",
+            "description": "L'identifiant du message dont le statut est demandé."
+          },
+          "messageRecu": {
+            "type": "string",
+            "title": "messageRecu",
+            "description": "Le contenu du message précédemment envoyé."
+          },
+          "etat": {
+            "type": "string",
+            "enum": [
+              "RECU_PARTICIPANT",
+              "TRAITE_PARTICIPANT",
+              "REJETE",
+              "DONNEES_RECUPEREES",
+              "ENVOYE_PI",
+              "ECHEC_ENVOI_PI"
+            ],
+            "description": "L'état du message dans l'AIP"
+          },
+          "dateReception": {
+            "type": "string",
+            "description": "La date de réception du message par l'AIP"
+          },
+          "dateEnvoi": {
+            "type": "string",
+            "description": "La date d'envoi du message à PI"
+          }
+        },
+        "example": {
+          "dateEnvoi": "2024-10-03T16:04:23.243Z",
+          "messageRecu": "{\"evenementDescription\":\"Test de connectivité\",\"msgId\":\"MSNB0009vydyOl7iIZSMdz3GZfWcWBa7861\",\"evenementDate\":\"2024-10-03T15:30:01.170Z\",\"evenement\":\"PING\"}",
+          "msgId": "MSNB0009vydyOl7iIZSMdz3GZfWcWBa7861",
+          "etat": "ENVOYE_PI",
+          "dateReception": "2024-10-03T16:04:03.612Z"
+        }
+      },
+      "ReponseMessageNotFound": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Le message d'erreur",
+            "example": "Aucun message ne correspond au 'MsgId' fourni MSNB0009vydyOl7iIZSMdz3GZfWcWBa1139"
+          }
+        }
+      }
+    },
+    "examples": {
+      "creationAliasSHIDPersonnePhysiqueSansIdentification": {
+        "summary": "SHID pour une personne physique sans identification(typeCompte=TRAL)",
+        "value": {
+          "idCreationAlias": "29",
+          "nomClient": "Christian POUYE",
+          "categorieClient": "P",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221775256398",
+          "participant": "SNB000",
+          "other": "123456789",
+          "typeCompte": "TRAL",
+          "dateOuvertureCompte": "2023-12-20",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMBNOPersonnePhysiqueSansIdentification": {
+        "summary": "MBNO pour une personne physique sans identification(typeCompte=TRAL)",
+        "value": {
+          "idCreationAlias": "30",
+          "nomClient": "Cheick DOUCOURE",
+          "categorieClient": "P",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221774486398",
+          "participant": "SNB000",
+          "other": "98745623",
+          "typeCompte": "TRAL",
+          "dateOuvertureCompte": "2024-04-04",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221774486398"
+        }
+      },
+      "creationAliasSHIDPersonnePhysiqueIdentificationNINCompteIBAN": {
+        "summary": "SHID pour une personne physique identifiée par une NIN(compte IBAN)",
+        "value": {
+          "idCreationAlias": "1",
+          "nomClient": "Ablaye DIOP",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221778795214",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "identificationNationaleClient": "1235894203698",
+          "dateNaissanceClient": "1993-02-02",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Dakar",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2023-09-15",
+          "iban": "SN01SN0000333333000003122583",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDPersonnePhysiqueIdentificationNINCompteOTHER": {
+        "summary": "SHID pour une personne physique identifiée par une NIN(compte OTHER)",
+        "value": {
+          "idCreationAlias": "2",
+          "nomClient": "Doudou Faye",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221768795232",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "identificationNationaleClient": "1789198614789",
+          "dateNaissanceClient": "1999-08-09",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Dakar",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2020-09-20",
+          "other": "768795232",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMBNOPersonnePhysiqueIdentificationNINCompteIBAN": {
+        "summary": "MBNO pour une personne physique identifiée par une NIN(compte IBAN)",
+        "value": {
+          "idCreationAlias": "3",
+          "nomClient": "Fatim Mbenga",
+          "nationaliteClient": "BJ",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221708523698",
+          "categorieClient": "P",
+          "genreClient": "2",
+          "identificationNationaleClient": "2359874123589",
+          "dateNaissanceClient": "1990-04-13",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Diourbel",
+          "participant": "SNB000",
+          "typeCompte": "SVGS",
+          "dateOuvertureCompte": "2020-08-09",
+          "iban": "SN01SN0000333333000003122584",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221708523698"
+        }
+      },
+      "creationAliasMBNOPersonnePhysiqueIdentificationNINCompteOTHER": {
+        "summary": "MBNO pour une personne physique identifiée par une NIN(compte OTHER)",
+        "value": {
+          "idCreationAlias": "4",
+          "nomClient": "Djalika DIEDHIOU",
+          "nationaliteClient": "BJ",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221778541236",
+          "categorieClient": "P",
+          "genreClient": "2",
+          "identificationNationaleClient": "2789199652874",
+          "dateNaissanceClient": "1992-05-20",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Matam",
+          "participant": "SNB000",
+          "typeCompte": "SVGS",
+          "dateOuvertureCompte": "2020-08-09",
+          "other": "96370639721f4bd28166a",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221778541236"
+        }
+      },
+      "creationAliasSHIDPersonnePhysiqueIdentificationPASSEPORTCompteIBAN": {
+        "summary": "SHID pour une personne physique identifiée par un PASSEPORT(compte IBAN)",
+        "value": {
+          "idCreationAlias": "5",
+          "nomClient": "Donald KABORE",
+          "nationaliteClient": "BF",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221789875232",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "numeroPasseport": "B2589746",
+          "dateNaissanceClient": "1987-03-28",
+          "paysNaissanceClient": "BF",
+          "villeNaissanceClient": "Bobo Dioulasso",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2023-09-15",
+          "iban": "SN01SN1110333333000003128745",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDPersonnePhysiqueIdentificationPASSEPORTCompteOTHER": {
+        "summary": "SHID pour une personne physique identifiée par un PASSEPORT(compte OTHER)",
+        "value": {
+          "idCreationAlias": "6",
+          "nomClient": "YOBOUE FABRICE",
+          "nationaliteClient": "CI",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221705214897",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "numeroPasseport": "A2589746",
+          "dateNaissanceClient": "1998-02-28",
+          "paysNaissanceClient": "CI",
+          "villeNaissanceClient": "Yamoussoukro",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2023-01-15",
+          "other": "32589741",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMBNOPersonnePhysiqueIdentificationPASSEPORTCompteIBAN": {
+        "summary": "MBNO pour une personne physique identifiée par un PASSEPORT(compte IBAN)",
+        "value": {
+          "idCreationAlias": "7",
+          "nomClient": "Abdou Rachid Adamou",
+          "nationaliteClient": "NE",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221767892014",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "numeroPasseport": "N78945",
+          "dateNaissanceClient": "1991-05-13",
+          "paysNaissanceClient": "NE",
+          "villeNaissanceClient": "Niamey",
+          "participant": "SNB000",
+          "typeCompte": "SVGS",
+          "dateOuvertureCompte": "2020-08-09",
+          "iban": "SN01SN2220333333000003125245",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221767892014"
+        }
+      },
+      "creationAliasMBNOPersonnePhysiqueIdentificationPASSEPORTCompteOTHER": {
+        "summary": "MBNO pour une personne physique identifiée par un PASSEPORT(compte OTHER)",
+        "value": {
+          "idCreationAlias": "8",
+          "nomClient": "David Lekeba",
+          "nationaliteClient": "GA",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221787451236",
+          "categorieClient": "P",
+          "genreClient": "1",
+          "numeroPasseport": "G126987",
+          "dateNaissanceClient": "1994-06-21",
+          "paysNaissanceClient": "GA",
+          "villeNaissanceClient": "Libreville",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2010-06-25",
+          "other": "489652317789",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221787451236"
+        }
+      },
+      "creationAliasSHIDCommercantIdentificationNINCompteIBAN": {
+        "summary": "SHID pour une personne physique commerçante identifiée par une NIN(compte IBAN)",
+        "value": {
+          "idCreationAlias": "9",
+          "nomClient": "Alioune SARR",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221704589723",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1789195412365",
+          "dateNaissanceClient": "1954-03-25",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Dakar",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "1999-02-15",
+          "iban": "SN01SN3330333333000003127895",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDCommercantIdentificationNINCompteOTHER": {
+        "summary": "SHID pour une personne physique commerçante identifiée par une NIN(compte OTHER)",
+        "value": {
+          "idCreationAlias": "10",
+          "nomClient": "Ousmane Faye",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221777892563",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1547197432589",
+          "dateNaissanceClient": "1974-07-15",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Thies",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2014-05-21",
+          "other": "8562317",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMBNOCommercantIdentificationNINCompteIBAN": {
+        "summary": "MBNO pour une personne physique commerçante identifiée par une NIN(compte IBAN)",
+        "value": {
+          "idCreationAlias": "11",
+          "nomClient": "Bassirou Sonko",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221765412356",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1541198014568",
+          "dateNaissanceClient": "1980-01-14",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Mbour",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2017-10-10",
+          "iban": "SN01SN4440333333000003128956",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221765412356"
+        }
+      },
+      "creationAliasMBNOCommercantIdentificationNINCompteOTHER": {
+        "summary": "MBNO pour une personne physique commerçante identifiée par une NIN(compte OTHER)",
+        "value": {
+          "idCreationAlias": "12",
+          "nomClient": "Birame Souleye DIOP",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221787459623",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1784198232589",
+          "dateNaissanceClient": "1982-03-20",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Thies",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2015-09-13",
+          "other": "78965423",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221787459623"
+        }
+      },
+      "creationAliasMCODCommercantIdentificationNINCompteIBAN": {
+        "summary": "MCOD pour une personne physique commerçante identifiée par une NIN(compte IBAN)",
+        "value": {
+          "idCreationAlias": "13",
+          "nomClient": "Saliou SALL",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221782568541",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1745196132589",
+          "dateNaissanceClient": "1961-11-14",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Fatick",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2017-10-10",
+          "iban": "SN01SN5550333333000003127896",
+          "typeAlias": "MCOD",
+          "valeurAlias": "856974"
+        }
+      },
+      "creationAliasMCODCommercantIdentificationNINCompteOTHER": {
+        "summary": "MCOD pour une personne physique commerçante identifiée par une NIN(compte OTHER)",
+        "value": {
+          "idCreationAlias": "14",
+          "nomClient": "Amadou BA",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221702589413",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "identificationNationaleClient": "1784196132584",
+          "dateNaissanceClient": "1961-03-20",
+          "paysNaissanceClient": "SN",
+          "villeNaissanceClient": "Dakar",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2000-09-13",
+          "other": "95632147",
+          "typeAlias": "MCOD",
+          "valeurAlias": "369874"
+        }
+      },
+      "creationAliasSHIDCommercantIdentificationPASSEPORTCompteIBAN": {
+        "summary": "SHID pour une personne physique commerçante identifiée par un PASSEPORT(compte IBAN)",
+        "value": {
+          "idCreationAlias": "15",
+          "nomClient": "Ibrahim Batoure",
+          "nationaliteClient": "NE",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221789745632",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "N123654",
+          "dateNaissanceClient": "1991-03-25",
+          "paysNaissanceClient": "NE",
+          "villeNaissanceClient": "Maradi",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2010-02-15",
+          "iban": "SN01SN6660333333000003124521",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDCommercantIdentificationPASSEPORTCompteOTHER": {
+        "summary": "SHID pour une personne physique commerçante identifiée par un PASSEPORT(compte OTHER)",
+        "value": {
+          "idCreationAlias": "16",
+          "nomClient": "Rajeib NEBIE",
+          "nationaliteClient": "BF",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221765287412",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "B52147",
+          "dateNaissanceClient": "1992-07-15",
+          "paysNaissanceClient": "BF",
+          "villeNaissanceClient": "Ouagadougou",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2014-05-21",
+          "other": "8965232",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMBNOCommercantIdentificationPASSEPORTCompteIBAN": {
+        "summary": "MBNO pour une personne physique commerçante identifiée par un PASSEPORT(compte IBAN)",
+        "value": {
+          "idCreationAlias": "17",
+          "nomClient": "Ladji Aboubakar",
+          "nationaliteClient": "CI",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221787963258",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "A325874",
+          "dateNaissanceClient": "1980-01-14",
+          "paysNaissanceClient": "CI",
+          "villeNaissanceClient": "Bouake",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2017-10-10",
+          "iban": "SN01SN7770333333000003128956",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221787963258"
+        }
+      },
+      "creationAliasMBNOCommercantIdentificationPASSEPORTCompteOTHER": {
+        "summary": "MBNO pour une personne physique commerçante identifiée par un PASSEPORT(compte OTHER)",
+        "value": {
+          "idCreationAlias": "18",
+          "nomClient": "KOSSI Guenebem",
+          "nationaliteClient": "CF",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221705236974",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "C85623",
+          "dateNaissanceClient": "1982-03-20",
+          "paysNaissanceClient": "CF",
+          "villeNaissanceClient": "Bangui",
+          "participant": "SNB000",
+          "typeCompte": "TRAN",
+          "dateOuvertureCompte": "2015-09-13",
+          "other": "5214789",
+          "typeAlias": "MBNO",
+          "valeurAlias": "+221705236974"
+        }
+      },
+      "creationAliasMCODCommercantIdentificationPASSEPORTCompteIBAN": {
+        "summary": "MCOD pour une personne physique commerçante identifiée par un PASSEPORT(compte IBAN)",
+        "value": {
+          "idCreationAlias": "19",
+          "nomClient": "Sekou Camara",
+          "nationaliteClient": "ML",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221761235478",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "M7894562",
+          "dateNaissanceClient": "1961-11-14",
+          "paysNaissanceClient": "ML",
+          "villeNaissanceClient": "Mopti",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2017-10-10",
+          "iban": "SN01SN7770333333000003127896",
+          "typeAlias": "MCOD",
+          "valeurAlias": "258743"
+        }
+      },
+      "creationAliasMCODCommercantIdentificationPASSEPORTCompteOTHER": {
+        "summary": "MCOD pour une personne physique commerçante identifiée par un PASSEPORT(compte OTHER)",
+        "value": {
+          "idCreationAlias": "20",
+          "nomClient": "Abdourahmane BAYO",
+          "nationaliteClient": "GN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221762314789",
+          "categorieClient": "C",
+          "genreClient": "1",
+          "numeroPasseport": "G9874563",
+          "dateNaissanceClient": "1961-03-20",
+          "paysNaissanceClient": "GN",
+          "villeNaissanceClient": "Labe",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2000-09-13",
+          "other": "63258741",
+          "typeAlias": "MCOD",
+          "valeurAlias": "325698"
+        }
+      },
+      "creationAliasSHIDPersonneMoraleGCompteIBAN": {
+        "summary": "SHID pour une personne morale de type Gouvernement (compte IBAN)",
+        "value": {
+          "idCreationAlias": "21",
+          "nomClient": "ADPME",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338746521",
+          "categorieClient": "G",
+          "villeClient": "Dakar",
+          "raisonSociale": "Agence de développement des petites et moyennes entreprises",
+          "denominationSociale": "ADMPE",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2014-09-13",
+          "iban": "SN01SN7770333333000003128745",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDPersonneMoraleGCompteOTHER": {
+        "summary": "SHID pour une personne morale de type Gouvernement (compte OTHER)",
+        "value": {
+          "idCreationAlias": "21",
+          "nomClient": "ADPME",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338746521",
+          "categorieClient": "G",
+          "villeClient": "Dakar",
+          "raisonSociale": "Agence de développement des petites et moyennes entreprises",
+          "denominationSociale": "ADMPE",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2014-09-13",
+          "iban": "SN01SN7770333333000003128745",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMCODPersonneMoraleGCompteIBAN": {
+        "summary": "MCOD pour une personne morale de type Gouvernement (compte IBAN)",
+        "value": {
+          "idCreationAlias": "23",
+          "nomClient": "HPD",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338741236",
+          "categorieClient": "G",
+          "villeClient": "Dakar",
+          "raisonSociale": "Hôpital principal de Dakar",
+          "denominationSociale": "HPD",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2014-09-13",
+          "iban": "SN01SN8880333333000003126321",
+          "typeAlias": "MCOD",
+          "valeurAlias": "9874123"
+        }
+      },
+      "creationAliasMCODPersonneMoraleGCompteOTHER": {
+        "summary": "MCOD pour une personne morale de type Gouvernement (compte OTHER)",
+        "value": {
+          "idCreationAlias": "24",
+          "nomClient": "Mairie Grand Yoff",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338745632",
+          "categorieClient": "G",
+          "villeClient": "Dakar",
+          "raisonSociale": "Mairie Grand Yoff",
+          "denominationSociale": "Mairie Grand Yoff",
+          "participant": "SNB000",
+          "typeCompte": "SVGS",
+          "dateOuvertureCompte": "2014-09-13",
+          "other": "654123",
+          "typeAlias": "MCOD",
+          "valeurAlias": "789456123"
+        }
+      },
+      "creationAliasSHIDPersonneMoraleBCompteIBAN": {
+        "summary": "SHID pour une personne morale de type Entreprise (compte IBAN)",
+        "value": {
+          "idCreationAlias": "25",
+          "nomClient": "Lekku Fii",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221307896523",
+          "categorieClient": "B",
+          "villeClient": "Dakar",
+          "raisonSociale": "Lekku Fii",
+          "denominationSociale": "Lekku Fii",
+          "identificationFiscale": "0008952 2G3",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2014-09-13",
+          "iban": "SN01SN7770999333000003127952",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasSHIDPersonneMoraleBCompteOTHER": {
+        "summary": "SHID pour une personne morale de type Entreprise (compte OTHER)",
+        "value": {
+          "idCreationAlias": "26",
+          "nomClient": "Moise Equipements",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338563214",
+          "categorieClient": "B",
+          "villeClient": "Dakar",
+          "raisonSociale": "Moise Equipements",
+          "denominationSociale": "Moise Equipements",
+          "identificationFiscale": "0009874 6N8",
+          "participant": "SNB000",
+          "typeCompte": "SVGS",
+          "dateOuvertureCompte": "2014-09-13",
+          "other": "78945621sde366",
+          "typeAlias": "SHID"
+        }
+      },
+      "creationAliasMCODPersonneMoraleBCompteIBAN": {
+        "summary": "MCOD pour une personne morale de type Entreprise (compte IBAN)",
+        "value": {
+          "idCreationAlias": "27",
+          "nomClient": "Ndiaye et Fréres",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338563214",
+          "categorieClient": "B",
+          "villeClient": "Dakar",
+          "raisonSociale": "Ndiaye et Fréres",
+          "denominationSociale": "Ndiaye et Fréres",
+          "identificationFiscale": "0003214 9V2",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2015-11-20",
+          "iban": "SN01SN5870999333000003122587",
+          "typeAlias": "MCOD",
+          "valeurAlias": "1235487"
+        }
+      },
+      "creationAliasMCODPersonneMoraleBCompteOTHER": {
+        "summary": "MCOD pour une personne morale de type Entreprise (compte OTHER)",
+        "value": {
+          "idCreationAlias": "28",
+          "nomClient": "Pharmacie Touba",
+          "nationaliteClient": "SN",
+          "paysResidenceClient": "SN",
+          "telephoneClient": "+221338963254",
+          "categorieClient": "B",
+          "villeClient": "Dakar",
+          "raisonSociale": "Pharmacie Touba",
+          "denominationSociale": "Pharmacie Touba",
+          "identificationFiscale": "0009874 2M3",
+          "participant": "SNB000",
+          "typeCompte": "CACC",
+          "dateOuvertureCompte": "2018-12-15",
+          "other": "456231789123",
+          "typeAlias": "MCOD",
+          "valeurAlias": "9632147"
+        }
+      }
+    }
+  }
+}

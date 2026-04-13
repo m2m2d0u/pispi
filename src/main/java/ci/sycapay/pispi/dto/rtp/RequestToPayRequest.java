@@ -28,6 +28,12 @@ public class RequestToPayRequest {
     @NotNull
     private CanalCommunicationRtp canalCommunication;
 
+    @NotBlank
+    private String clientDemandeur;
+
+    @NotBlank
+    private String identifiantDemandePaiement;
+
     @NotNull @Positive
     private BigDecimal montant;
 

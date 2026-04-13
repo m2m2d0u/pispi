@@ -43,8 +43,9 @@ public class AliasController {
     @DeleteMapping("/{typeAlias}/{aliasValue}")
     public ApiResponse<AliasResponse> deleteAlias(
             @Parameter(description = "Type of alias (e.g. MSISDN, EMAIL, NNI)") @PathVariable TypeAlias typeAlias,
-            @Parameter(description = "The alias value to delete") @PathVariable String aliasValue) {
-        return ApiResponse.ok(aliasService.deleteAlias(typeAlias, aliasValue));
+            @Parameter(description = "The alias value to delete") @PathVariable String aliasValue,
+            @Parameter(description = "Reason for deleting the alias") @RequestParam String raisonSuppression) {
+        return ApiResponse.ok(aliasService.deleteAlias(typeAlias, aliasValue, raisonSuppression));
     }
 
     @Operation(summary = "Search an alias in the RAC", description = "Queries the AIP RAC for the account linked to a given alias. Returns the raw AIP response including account number, type, and client info.")

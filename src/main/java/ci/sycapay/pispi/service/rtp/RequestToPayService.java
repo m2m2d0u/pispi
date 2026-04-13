@@ -42,6 +42,8 @@ public class RequestToPayService {
 
         Map<String, Object> pain013 = new HashMap<>();
         pain013.put("msgId", msgId);
+        pain013.put("clientDemandeur", request.getClientDemandeur());
+        pain013.put("identifiantDemandePaiement", request.getIdentifiantDemandePaiement());
         pain013.put("endToEndId", endToEndId);
         pain013.put("typeTransaction", request.getTypeTransaction().name());
         pain013.put("canalCommunication", request.getCanalCommunication().getCode());
@@ -81,6 +83,7 @@ public class RequestToPayService {
         PiRequestToPay rtp = PiRequestToPay.builder()
                 .msgId(msgId)
                 .endToEndId(endToEndId)
+                .identifiantDemandePaiement(request.getIdentifiantDemandePaiement())
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(request.getTypeTransaction())
                 .canalCommunication(request.getCanalCommunication())
@@ -121,8 +124,9 @@ public class RequestToPayService {
         Map<String, Object> pain014 = new HashMap<>();
         pain014.put("msgId", msgId);
         pain014.put("msgIdDemande", rtp.getMsgId());
+        pain014.put("identifiantDemandePaiement", rtp.getIdentifiantDemandePaiement());
         pain014.put("endToEndId", endToEndId);
-        pain014.put("statutDemandePaiement", "RJCT");
+        pain014.put("statut", "RJCT");
         pain014.put("codeRaison", codeRaison);
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014, MessageDirection.OUTBOUND, pain014, null, null);

@@ -34,6 +34,9 @@ public class AliasCreationRequest {
     @NotNull
     private TypeCompte typeCompte;
 
+    @NotBlank
+    private String dateOuvertureCompte;
+
     @Size(max = 20)
     private String codeAgence;
 
@@ -42,4 +45,8 @@ public class AliasCreationRequest {
 
     @Valid
     private MerchantInfo marchand;
+
+    private String photoClient;
+
+    private Boolean preConfirmation;
 }
