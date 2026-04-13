@@ -34,19 +34,20 @@ spring:
 # ---- Sycapay PI-SPI Config ----
 sycapay:
   pi-spi:
-    code-membre: ${PISPI_CODE_MEMBRE:CIF001}
-    aip-base-url: ${PISPI_AIP_BASE_URL:https://aip-sandbox.bceao.int}
+    code-membre: ${PISPI_CODE_MEMBRE:CIE002}
+    aip-base-url: ${PISPI_AIP_BASE_URL:https://bceao.symmetry.sn:8081}
     aip-api-key: ${PISPI_AIP_API_KEY:CHANGE_ME}
     api-version: ${PISPI_API_VERSION:1}
     webhook-url: ${PISPI_WEBHOOK_URL:https://sycapay-backend.local/api/pi-spi/webhook}
 
     # ---- mTLS ----
     mtls:
-      keystore-path: ${PISPI_MTLS_KEYSTORE_PATH:classpath:keystore.p12}
-      keystore-password: ${PISPI_MTLS_KEYSTORE_PASSWORD:changeit}
-      truststore-path: ${PISPI_MTLS_TRUSTSTORE_PATH:classpath:truststore.p12}
-      truststore-password: ${PISPI_MTLS_TRUSTSTORE_PASSWORD:changeit}
+      keystore-path: ${PISPI_MTLS_KEYSTORE_PATH:classpath:client/client.p12}
+      keystore-password: ${PISPI_MTLS_KEYSTORE_PASSWORD:}
+      truststore-path: ${PISPI_MTLS_TRUSTSTORE_PATH:classpath:client/truststore.p12}
+      truststore-password: ${PISPI_MTLS_TRUSTSTORE_PASSWORD:}
       keystore-type: ${PISPI_MTLS_KEYSTORE_TYPE:PKCS12}
+      trust-all: ${PISPI_MTLS_TRUST_ALL:true}
 
     # ---- Kafka Topics ----
     kafka:

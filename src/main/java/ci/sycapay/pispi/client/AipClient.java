@@ -90,7 +90,7 @@ public class AipClient {
     }
 
     @SuppressWarnings("unused")
-    private Map<String, Object> fallbackDelete(String path, Object body, Throwable t) {
+    private Map<String, Object> fallbackDelete(String path, Throwable t) {
         log.error("AIP DELETE call failed for path {}: {}", path, t.getMessage());
         throw new AipCommunicationException("AIP service unavailable: " + t.getMessage(), t);
     }

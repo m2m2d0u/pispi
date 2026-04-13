@@ -25,6 +25,7 @@ public class PiSpiProperties {
         private String truststorePath;
         private String truststorePassword;
         private String keystoreType = "PKCS12";
+        private boolean trustAll = false;
     }
 
     @Data
