@@ -56,6 +56,49 @@ resilience4j:
         max-attempts: ${RESILIENCE_RETRY_MAX_ATTEMPTS:3}
         wait-duration: ${RESILIENCE_RETRY_WAIT_DURATION:2s}
 
+# ---- Actuator ----
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info,metrics,env,loggers,flyway,circuitbreakers
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      show-components: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      probes:
+        enabled: true
+    loggers:
+      enabled: true
+    env:
+      show-values: ${ACTUATOR_ENV_SHOW_VALUES:never}
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+    circuitbreakers:
+      enabled: true
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    build:
+      enabled: true
+
+info:
+  app:
+    name: PI-SPI Connector
+    version: "@project.version@"
+    description: "@project.description@"
+  participant:
+    code-membre: ${PISPI_CODE_MEMBRE:CIE002}
+    aip-base-url: ${PISPI_AIP_BASE_URL:https://bceao.symmetry.sn:8081}
+
 # ---- OpenAPI ----
 springdoc:
   api-docs:

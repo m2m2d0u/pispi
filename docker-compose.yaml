@@ -1,25 +1,63 @@
 services:
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pispi-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health/liveness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - pispi-net
+
   postgres:
     image: postgres:17
     container_name: pispi-postgres
     environment:
-      POSTGRES_DB: pispi
-      POSTGRES_USER: pispi
-      POSTGRES_PASSWORD: pispi
+      POSTGRES_DB: ${DB_NAME:-pispi}
+      POSTGRES_USER: ${DB_USERNAME:-pispi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pispi}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pispi -d pispi"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-pispi} -d ${DB_NAME:-pispi}"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+    networks:
+      - pispi-net
 
   redis:
     image: redis:7-alpine
     container_name: pispi-redis
+    command: >
+      sh -c "redis-server ${REDIS_PASSWORD:+--requirepass $REDIS_PASSWORD}"
     ports:
       - "6379:6379"
     volumes:
@@ -29,6 +67,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
+    networks:
+      - pispi-net
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -56,42 +97,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-#  app:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    container_name: pispi-app
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    environment:
-#      DB_HOST: postgres
-#      DB_PORT: 5432
-#      DB_NAME: pispi
-#      DB_USERNAME: pispi
-#      DB_PASSWORD: pispi
-#      REDIS_HOST: redis
-#      REDIS_PORT: 6379
-#      REDIS_PASSWORD: ""
-#      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-#      PISPI_CODE_MEMBRE: ${PISPI_CODE_MEMBRE:-CIF001}
-#      PISPI_AIP_BASE_URL: ${PISPI_AIP_BASE_URL:-https://aip-sandbox.bceao.int}
-#      PISPI_AIP_API_KEY: ${PISPI_AIP_API_KEY:-CHANGE_ME}
-#      PISPI_API_VERSION: ${PISPI_API_VERSION:-1}
-#      PISPI_WEBHOOK_URL: ${PISPI_WEBHOOK_URL:-https://sycapay-backend.local/api/pi-spi/webhook}
-#      PISPI_MTLS_KEYSTORE_PATH: ${PISPI_MTLS_KEYSTORE_PATH:-classpath:keystore.p12}
-#      PISPI_MTLS_KEYSTORE_PASSWORD: ${PISPI_MTLS_KEYSTORE_PASSWORD:-changeit}
-#      PISPI_MTLS_TRUSTSTORE_PATH: ${PISPI_MTLS_TRUSTSTORE_PATH:-classpath:truststore.p12}
-#      PISPI_MTLS_TRUSTSTORE_PASSWORD: ${PISPI_MTLS_TRUSTSTORE_PASSWORD:-changeit}
-#    ports:
-#      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - pispi-net
 
 volumes:
   postgres_data:
   redis_data:
   kafka_data:
+
+networks:
+  pispi-net:
+    driver: bridge

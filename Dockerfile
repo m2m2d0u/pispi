@@ -25,7 +25,7 @@ COPY --chown=pispi:pispi src/main/resources/truststore/ /app/certs/truststore/
 
 USER pispi
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
