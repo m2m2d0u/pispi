@@ -26,7 +26,6 @@ import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 @Tag(name = "Transfer Callbacks")
 @Slf4j
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class TransferCallbackController {
 
@@ -36,7 +35,7 @@ public class TransferCallbackController {
 
     @Operation(summary = "Receive inbound transfer (PACS.008)", description = "Called by the AIP when another participant sends a credit transfer to this PI. Saves the transfer locally and forwards a webhook event to the backend.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementCallbackPayload.class)))
-    @PostMapping("/virement")
+    @PostMapping("/transferts")
     public ApiResponse<Void> receiveTransfer(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
@@ -66,7 +65,7 @@ public class TransferCallbackController {
 
     @Operation(summary = "Receive transfer result (PACS.002)", description = "Called by the AIP to deliver the final accept/reject outcome of an outbound transfer. Updates local transfer status and forwards a webhook event.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementResultatCallbackPayload.class)))
-    @PostMapping("/virement/resultat")
+    @PostMapping("/transferts/reponses")
     public ApiResponse<Void> receiveTransferResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
@@ -89,7 +88,7 @@ public class TransferCallbackController {
 
     @Operation(summary = "Receive message rejection (ADMI.002)", description = "Called by the AIP when a previously submitted message is structurally rejected. Logs the rejection and fires a MESSAGE_REJECTED webhook event.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RejetCallbackPayload.class)))
-    @PostMapping("/rejet")
+    @PostMapping("/transferts/echecs")
     public ApiResponse<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 

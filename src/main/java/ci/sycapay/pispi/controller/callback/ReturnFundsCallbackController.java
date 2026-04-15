@@ -24,7 +24,6 @@ import java.util.Map;
 
 @Tag(name = "Return Funds Callbacks")
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class ReturnFundsCallbackController {
 
@@ -60,7 +59,7 @@ public class ReturnFundsCallbackController {
 
     @Operation(summary = "Receive return rejection (CAMT.029)", description = "Called by the AIP when the receiving PI rejects a return-of-funds request initiated by this PI. Updates local return request status to RJCR.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsRejetCallbackPayload.class)))
-    @PostMapping("/retour-fonds/rejet")
+    @PostMapping("/retour-fonds/reponses")
     public ApiResponse<Void> receiveReturnRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");

@@ -35,7 +35,6 @@ import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 @Tag(name = "Report Callbacks")
 @Slf4j
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class ReportCallbackController {
 
@@ -49,7 +48,7 @@ public class ReportCallbackController {
 
     @Operation(summary = "Receive transaction statement (CAMT.052)", description = "Called by the AIP to deliver the transaction statement requested via POST /api/v1/reports/transactions. Persists the report and fires a TRANSACTION_REPORT webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ReleveCallbackPayload.class)))
-    @PostMapping("/releve")
+    @PostMapping("/rapports/telechargements/reponses")
     public ApiResponse<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
@@ -77,7 +76,7 @@ public class ReportCallbackController {
 
     @Operation(summary = "Receive compensation report (CAMT.053)", description = "Called by the AIP to deliver clearing/settlement balances requested via POST /api/v1/reports/compensation. Each balance entry is persisted as a PiCompensation record.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CompensationCallbackPayload.class)))
-    @PostMapping("/compensation")
+    @PostMapping("/reglements/soldes")
     @SuppressWarnings("unchecked")
     public ApiResponse<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
@@ -108,7 +107,7 @@ public class ReportCallbackController {
 
     @Operation(summary = "Receive guarantee update (CAMT.010)", description = "Called by the AIP to push an update to this participant's guarantee (collateral) position. Persists a PiGuarantee record and fires a GUARANTEE_UPDATED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = GarantieCallbackPayload.class)))
-    @PostMapping("/garantie")
+    @PostMapping("/notifications/garantie")
     public ApiResponse<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
@@ -137,7 +136,7 @@ public class ReportCallbackController {
 
     @Operation(summary = "Receive invoice report (CAMT.086)", description = "Called by the AIP to deliver the billing invoice requested via POST /api/v1/reports/invoices. Each invoice line item is persisted as a PiInvoice record.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = FactureCallbackPayload.class)))
-    @PostMapping("/facture")
+    @PostMapping("/rapports/factures/reponses")
     @SuppressWarnings("unchecked")
     public ApiResponse<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");

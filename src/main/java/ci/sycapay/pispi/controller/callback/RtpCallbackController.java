@@ -25,7 +25,6 @@ import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 @Tag(name = "RTP Callbacks")
 @Slf4j
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class RtpCallbackController {
 
@@ -35,7 +34,7 @@ public class RtpCallbackController {
 
     @Operation(summary = "Receive inbound Request-to-Pay (PAIN.013)", description = "Called by the AIP when another participant sends a Request-to-Pay to this PI. Saves the RTP locally and fires an RTP_RECEIVED webhook so the backend can prompt the payer.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = DemandePaiementCallbackPayload.class)))
-    @PostMapping("/demande-paiement")
+    @PostMapping("/demandes-paiements")
     public ApiResponse<Void> receiveRtp(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
@@ -64,7 +63,7 @@ public class RtpCallbackController {
 
     @Operation(summary = "Receive RTP result (PAIN.014)", description = "Called by the AIP to deliver the payee's reject decision on a Request-to-Pay this PI initiated. Updates local RTP status and fires an RTP_RESULT webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = DemandePaiementResultatCallbackPayload.class)))
-    @PostMapping("/demande-paiement/resultat")
+    @PostMapping("/demandes-paiements/reponses")
     public ApiResponse<Void> receiveRtpResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");

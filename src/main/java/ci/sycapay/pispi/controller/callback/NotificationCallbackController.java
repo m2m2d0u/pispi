@@ -14,9 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 import ci.sycapay.pispi.dto.callback.AccuseCallbackPayload;
@@ -33,7 +31,6 @@ import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 @Tag(name = "Notification Callbacks")
 @Slf4j
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class NotificationCallbackController {
 
@@ -45,7 +42,7 @@ public class NotificationCallbackController {
 
     @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally and fires a PI_NOTIFICATION webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
-    @PostMapping("/notification")
+    @PostMapping("/notifications/info-warn")
     public ApiResponse<Void> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
@@ -68,7 +65,7 @@ public class NotificationCallbackController {
 
     @Operation(summary = "Receive acknowledgment (ADMI.011)", description = "Called by the AIP to acknowledge receipt of a notification previously sent by this PI. Saves the acknowledgment record locally.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = AccuseCallbackPayload.class)))
-    @PostMapping("/notification/accuse")
+    @PostMapping("/notifications/accuse-reception")
     public ApiResponse<Void> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
@@ -80,6 +77,10 @@ public class NotificationCallbackController {
                 .msgIdDemande((String) payload.get("msgIdDemande"))
                 .direction(MessageDirection.INBOUND)
                 .evenement((String) payload.get("evenement"))
+                .evenementDescription((String) payload.get("evenementDescription"))
+                .evenementDate(payload.get("evenementDate") != null
+                        ? parseDateTime(payload.get("evenementDate"))
+                        : LocalDateTime.now())
                 .messageType(IsoMessageType.ADMI_011)
                 .build();
         notificationRepository.save(notification);
@@ -89,7 +90,7 @@ public class NotificationCallbackController {
 
     @Operation(summary = "Receive sponsor relation update (REDA.017)", description = "Called by the AIP to notify this PI of a change in the sponsor/guarantee relationship (ceiling amount, validity dates). Persists a PiGuarantee record with the new ceiling and fires a GUARANTEE_UPDATED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RelationCallbackPayload.class)))
-    @PostMapping("/relation")
+    @PostMapping("/notifications/relation")
     public ApiResponse<Void> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 

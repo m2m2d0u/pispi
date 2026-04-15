@@ -20,7 +20,6 @@ import java.util.Map;
 
 @Tag(name = "Verification Callbacks")
 @RestController
-@RequestMapping("/api/pi/callback")
 @RequiredArgsConstructor
 public class VerificationCallbackController {
 
@@ -30,7 +29,7 @@ public class VerificationCallbackController {
 
     @Operation(summary = "Receive inbound verification request (ACMT.023)", description = "Called by the AIP when another participant requests identity verification for an account held at this PI. Saves the request locally and fires a VERIFICATION_RECEIVED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationCallbackPayload.class)))
-    @PostMapping("/verification")
+    @PostMapping("/verifications-identites")
     public ApiResponse<Void> receiveVerification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
@@ -58,7 +57,7 @@ public class VerificationCallbackController {
 
     @Operation(summary = "Receive verification result (ACMT.024)", description = "Called by the AIP to deliver the result of a verification request this PI initiated. Updates local verification status and fires a VERIFICATION_RESULT webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationResultatCallbackPayload.class)))
-    @PostMapping("/verification/resultat")
+    @PostMapping("/verifications-identites/reponses")
     public ApiResponse<Void> receiveVerificationResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
