@@ -7,6 +7,7 @@ import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import ci.sycapay.pispi.dto.callback.VerificationCallbackPayload;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
 
 @Tag(name = "Verification Callbacks")
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class VerificationCallbackController {

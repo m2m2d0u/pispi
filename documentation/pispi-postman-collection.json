@@ -4375,21 +4375,18 @@
               "description": "",
               "item": [
                 {
-                  "name": "virement",
+                  "name": "transferts",
                   "description": "",
                   "item": [
                     {
                       "id": "0eab438d-b49f-4a47-9bf2-5c6876a26782",
-                      "name": "receive Transfer",
+                      "name": "receive Transfer (PACS.008)",
                       "request": {
-                        "name": "receive Transfer",
+                        "name": "receive Transfer (PACS.008)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "virement"
+                            "transferts"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -4427,10 +4424,7 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "virement"
+                                "transferts"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -4484,17 +4478,14 @@
                       "item": [
                         {
                           "id": "dad0da0c-bcd4-48bf-b1cf-f2b594b89381",
-                          "name": "receive Transfer Result",
+                          "name": "receive Transfer Result (PACS.002)",
                           "request": {
-                            "name": "receive Transfer Result",
+                            "name": "receive Transfer Result (PACS.002)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "virement",
-                                "resultat"
+                                "transferts",
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -4532,11 +4523,8 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
-                                    "virement",
-                                    "resultat"
+                                    "transferts",
+                                    "reponses"
                                   ],
                                   "host": [
                                     "{{baseUrl}}"
@@ -4589,21 +4577,18 @@
                   ]
                 },
                 {
-                  "name": "verification",
+                  "name": "verifications-identites",
                   "description": "",
                   "item": [
                     {
                       "id": "25deccb9-1ba2-4592-bd18-5ce18677ac30",
-                      "name": "receive Verification",
+                      "name": "receive Verification (ACMT.023)",
                       "request": {
-                        "name": "receive Verification",
+                        "name": "receive Verification (ACMT.023)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "verification"
+                            "verifications-identites"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -4641,10 +4626,7 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "verification"
+                                "verifications-identites"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -4698,17 +4680,14 @@
                       "item": [
                         {
                           "id": "c10f6a30-98ad-4afd-9a20-23e9c38d6a11",
-                          "name": "receive Verification Result",
+                          "name": "receive Verification Result (ACMT.024)",
                           "request": {
-                            "name": "receive Verification Result",
+                            "name": "receive Verification Result (ACMT.024)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "verification",
-                                "resultat"
+                                "verifications-identites",
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -4746,11 +4725,8 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
-                                    "verification",
-                                    "resultat"
+                                    "verifications-identites",
+                                    "reponses"
                                   ],
                                   "host": [
                                     "{{baseUrl}}"
@@ -4808,15 +4784,12 @@
                   "item": [
                     {
                       "id": "8d3612b0-6e0f-40e5-b517-863de8a99457",
-                      "name": "receive Return Execution",
+                      "name": "receive Return Execution (PACS.004)",
                       "request": {
-                        "name": "receive Return Execution",
+                        "name": "receive Return Execution (PACS.004)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
                             "retour-fonds"
                           ],
                           "host": [
@@ -4855,9 +4828,6 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
                                 "retour-fonds"
                               ],
                               "host": [
@@ -4912,17 +4882,14 @@
                       "item": [
                         {
                           "id": "f2c53d8d-d353-45d3-945e-8cdd02cffb4e",
-                          "name": "receive Return Rejection",
+                          "name": "receive Return Response (CAMT.029)",
                           "request": {
-                            "name": "receive Return Rejection",
+                            "name": "receive Return Response (CAMT.029)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
                                 "retour-fonds",
-                                "rejet"
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -4960,11 +4927,8 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
                                     "retour-fonds",
-                                    "rejet"
+                                    "reponses"
                                   ],
                                   "host": [
                                     "{{baseUrl}}"
@@ -5020,15 +4984,12 @@
                       "item": [
                         {
                           "id": "e39487fa-55aa-4604-a987-683c8938a254",
-                          "name": "receive Return Request",
+                          "name": "receive Return Request (CAMT.056)",
                           "request": {
-                            "name": "receive Return Request",
+                            "name": "receive Return Request (CAMT.056)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
                                 "retour-fonds",
                                 "demande"
                               ],
@@ -5068,9 +5029,6 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
                                     "retour-fonds",
                                     "demande"
                                   ],
@@ -5125,21 +5083,20 @@
                   ]
                 },
                 {
-                  "name": "releve",
+                  "name": "rapports-telechargements",
                   "description": "",
                   "item": [
                     {
                       "id": "acf55c91-a27c-4ac1-9bf6-edaa70643df1",
-                      "name": "receive Transaction Report",
+                      "name": "receive Transaction Report (CAMT.052)",
                       "request": {
-                        "name": "receive Transaction Report",
+                        "name": "receive Transaction Report (CAMT.052)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "releve"
+                            "rapports",
+                            "telechargements",
+                            "reponses"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -5177,10 +5134,9 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "releve"
+                                "rapports",
+                                "telechargements",
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5231,20 +5187,18 @@
                   ]
                 },
                 {
-                  "name": "relation",
+                  "name": "notifications-relation",
                   "description": "",
                   "item": [
                     {
                       "id": "c6a04a7b-bd33-4083-bdcd-fd794251ae0c",
-                      "name": "receive Relation",
+                      "name": "receive Relation (REDA.017)",
                       "request": {
-                        "name": "receive Relation",
+                        "name": "receive Relation (REDA.017)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
+                            "notifications",
                             "relation"
                           ],
                           "host": [
@@ -5283,9 +5237,7 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
+                                "notifications",
                                 "relation"
                               ],
                               "host": [
@@ -5337,21 +5289,19 @@
                   ]
                 },
                 {
-                  "name": "rejet",
+                  "name": "transferts-echecs",
                   "description": "",
                   "item": [
                     {
                       "id": "2d96a157-ba44-4d75-9eb2-987bef284d50",
-                      "name": "receive Rejection",
+                      "name": "receive Rejection (ADMI.002)",
                       "request": {
-                        "name": "receive Rejection",
+                        "name": "receive Rejection (ADMI.002)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "rejet"
+                            "transferts",
+                            "echecs"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -5389,10 +5339,8 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "rejet"
+                                "transferts",
+                                "echecs"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5443,21 +5391,19 @@
                   ]
                 },
                 {
-                  "name": "notification",
+                  "name": "notifications",
                   "description": "",
                   "item": [
                     {
                       "id": "470426b9-cd09-4004-930e-0e0b567f7da7",
-                      "name": "receive Notification",
+                      "name": "receive Notification (ADMI.004)",
                       "request": {
-                        "name": "receive Notification",
+                        "name": "receive Notification (ADMI.004)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "notification"
+                            "notifications",
+                            "info-warn"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -5495,10 +5441,8 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "notification"
+                                "notifications",
+                                "info-warn"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5552,17 +5496,14 @@
                       "item": [
                         {
                           "id": "4b8dc9e1-37c7-401a-832a-fc2eb9976a08",
-                          "name": "receive Acknowledgment",
+                          "name": "receive Acknowledgment (ADMI.011)",
                           "request": {
-                            "name": "receive Acknowledgment",
+                            "name": "receive Acknowledgment (ADMI.011)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "notification",
-                                "accuse"
+                                "notifications",
+                                "accuse-reception"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5600,11 +5541,8 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
-                                    "notification",
-                                    "accuse"
+                                    "notifications",
+                                    "accuse-reception"
                                   ],
                                   "host": [
                                     "{{baseUrl}}"
@@ -5657,20 +5595,18 @@
                   ]
                 },
                 {
-                  "name": "garantie",
+                  "name": "notifications-garantie",
                   "description": "",
                   "item": [
                     {
                       "id": "01a8ca85-f225-4186-bb20-7ea5c1d197a9",
-                      "name": "receive Guarantee",
+                      "name": "receive Guarantee (CAMT.010)",
                       "request": {
-                        "name": "receive Guarantee",
+                        "name": "receive Guarantee (CAMT.010)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
+                            "notifications",
                             "garantie"
                           ],
                           "host": [
@@ -5709,9 +5645,7 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
+                                "notifications",
                                 "garantie"
                               ],
                               "host": [
@@ -5763,21 +5697,20 @@
                   ]
                 },
                 {
-                  "name": "facture",
+                  "name": "rapports-factures",
                   "description": "",
                   "item": [
                     {
                       "id": "abf6ce4d-0e1e-4ead-bc7b-4853ac36522e",
-                      "name": "receive Invoice",
+                      "name": "receive Invoice (CAMT.086)",
                       "request": {
-                        "name": "receive Invoice",
+                        "name": "receive Invoice (CAMT.086)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "facture"
+                            "rapports",
+                            "factures",
+                            "reponses"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -5815,10 +5748,9 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "facture"
+                                "rapports",
+                                "factures",
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5869,21 +5801,18 @@
                   ]
                 },
                 {
-                  "name": "demande-paiement",
+                  "name": "demandes-paiements",
                   "description": "",
                   "item": [
                     {
                       "id": "d8119a5f-1341-4c45-bc59-ee38f9ad3efd",
-                      "name": "receive Rtp",
+                      "name": "receive RTP (PAIN.013)",
                       "request": {
-                        "name": "receive Rtp",
+                        "name": "receive RTP (PAIN.013)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "demande-paiement"
+                            "demandes-paiements"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -5921,10 +5850,7 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "demande-paiement"
+                                "demandes-paiements"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -5978,17 +5904,14 @@
                       "item": [
                         {
                           "id": "f1cb208b-9263-4e08-b29c-fc8fd18a7928",
-                          "name": "receive Rtp Result",
+                          "name": "receive RTP Result (PAIN.014)",
                           "request": {
-                            "name": "receive Rtp Result",
+                            "name": "receive RTP Result (PAIN.014)",
                             "description": {},
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "demande-paiement",
-                                "resultat"
+                                "demandes-paiements",
+                                "reponses"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -6026,11 +5949,8 @@
                               "originalRequest": {
                                 "url": {
                                   "path": [
-                                    "api",
-                                    "pi",
-                                    "callback",
-                                    "demande-paiement",
-                                    "resultat"
+                                    "demandes-paiements",
+                                    "reponses"
                                   ],
                                   "host": [
                                     "{{baseUrl}}"
@@ -6083,21 +6003,19 @@
                   ]
                 },
                 {
-                  "name": "compensation",
+                  "name": "reglements-soldes",
                   "description": "",
                   "item": [
                     {
                       "id": "8b077f17-fd45-400b-a37d-210aad3a0d07",
-                      "name": "receive Compensation",
+                      "name": "receive Compensation (CAMT.053)",
                       "request": {
-                        "name": "receive Compensation",
+                        "name": "receive Compensation (CAMT.053)",
                         "description": {},
                         "url": {
                           "path": [
-                            "api",
-                            "pi",
-                            "callback",
-                            "compensation"
+                            "reglements",
+                            "soldes"
                           ],
                           "host": [
                             "{{baseUrl}}"
@@ -6135,10 +6053,8 @@
                           "originalRequest": {
                             "url": {
                               "path": [
-                                "api",
-                                "pi",
-                                "callback",
-                                "compensation"
+                                "reglements",
+                                "soldes"
                               ],
                               "host": [
                                 "{{baseUrl}}"
@@ -6185,6 +6101,1358 @@
                       "protocolProfileBehavior": {
                         "disableBodyPruning": true
                       }
+                    }
+                  ]
+                },
+                {
+                  "name": "misc",
+                  "description": "Miscellaneous callback endpoints (error handling, alias responses, claim responses, participant responses)",
+                  "item": [
+                    {
+                      "id": "31f5c0b1-f57b-4931-844b-d1c6e06d98fe",
+                      "name": "Receive notification failure",
+                      "request": {
+                        "name": "Receive notification failure",
+                        "description": {
+                          "content": "Called when a notification fails",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "notifications",
+                            "echecs"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "b5ecc0e2-67d2-40a9-b310-ec9910b6687e",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "notifications",
+                                "echecs"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "d04bafce-5d42-41eb-a8da-8726e8fc31c9",
+                      "name": "Receive verification failure",
+                      "request": {
+                        "name": "Receive verification failure",
+                        "description": {
+                          "content": "Called when a verification fails",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "verifications-identites",
+                            "echecs"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "113253de-7cde-4f37-bce7-392833dc27cb",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "verifications-identites",
+                                "echecs"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "a9964a2a-7c5d-4f1a-90cd-de053cd74923",
+                      "name": "Receive participant list response",
+                      "request": {
+                        "name": "Receive participant list response",
+                        "description": {
+                          "content": "Called with participant list data",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "participants",
+                            "liste",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "fd7e1e11-ef9e-4440-80db-3c2ae63e3a4c",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "participants",
+                                "liste",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "98123904-6099-4cbc-a43a-2297b1151008",
+                      "name": "Receive alias search response",
+                      "request": {
+                        "name": "Receive alias search response",
+                        "description": {
+                          "content": "Called with alias search results",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "alias",
+                            "recherche",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "c574a36a-1293-4c2c-8704-c3e1448b40a4",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "alias",
+                                "recherche",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "9bd13555-c2a3-47b6-8bf8-e1bc4267e8d9",
+                      "name": "Receive alias creation response",
+                      "request": {
+                        "name": "Receive alias creation response",
+                        "description": {
+                          "content": "Called after alias creation",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "alias",
+                            "creation",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "aadce198-e184-487c-baa8-4109f784e036",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "alias",
+                                "creation",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "985ff101-67d6-4051-8a49-34df3ed5893e",
+                      "name": "Receive alias modification response",
+                      "request": {
+                        "name": "Receive alias modification response",
+                        "description": {
+                          "content": "Called after alias modification",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "alias",
+                            "modification",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "a92ab0f9-0022-4e53-a458-2efaa29fe44f",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "alias",
+                                "modification",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "7f15a818-779f-4c08-a3ac-b9536c70c8c3",
+                      "name": "Receive alias deletion response",
+                      "request": {
+                        "name": "Receive alias deletion response",
+                        "description": {
+                          "content": "Called after alias deletion",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "alias",
+                            "suppression",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "b60f2647-3310-481c-8114-d40b7c3bbc12",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "alias",
+                                "suppression",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "94b31426-4349-496d-89eb-09cfd5159747",
+                      "name": "Receive claim response",
+                      "request": {
+                        "name": "Receive claim response",
+                        "description": {
+                          "content": "Called with claim response",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "revendications",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "6844863a-1b22-4a8f-bb0a-7f5cc4ab75c9",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "revendications",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "9e4ec3fd-3936-4389-aa11-5c6f81798867",
+                      "name": "Receive claim recovery response",
+                      "request": {
+                        "name": "Receive claim recovery response",
+                        "description": {
+                          "content": "Called with claim recovery response",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "revendications",
+                            "recuperation",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "2b5179fd-31e6-4a3d-b869-288405ccf6b9",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "revendications",
+                                "recuperation",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "26d51690-435b-4e76-80ef-48b6f826ff07",
+                      "name": "Receive claim acceptance response",
+                      "request": {
+                        "name": "Receive claim acceptance response",
+                        "description": {
+                          "content": "Called with claim acceptance response",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "revendications",
+                            "acceptation",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "d7b5d8e0-280f-4415-ac7e-a6e89fd314a3",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "revendications",
+                                "acceptation",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "578977bc-1174-4331-96c8-aaa2889e30a0",
+                      "name": "Receive claim rejection response",
+                      "request": {
+                        "name": "Receive claim rejection response",
+                        "description": {
+                          "content": "Called with claim rejection response",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "revendications",
+                            "rejet",
+                            "reponses"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "260332a2-93f6-4e65-a65c-4e5fb02e415c",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "revendications",
+                                "rejet",
+                                "reponses"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "eaa75d60-e971-4509-a83c-7351e47b4184",
+                      "name": "Receive HTTP send failure",
+                      "request": {
+                        "name": "Receive HTTP send failure",
+                        "description": {
+                          "content": "Called on HTTP send failure",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "message-envoi",
+                            "echec-http"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "6d4f5fa3-8a17-4556-96b4-a21149dabb12",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "message-envoi",
+                                "echec-http"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "2d2f4bc3-f242-444a-ba13-cbd461e0851f",
+                      "name": "Receive processing failure",
+                      "request": {
+                        "name": "Receive processing failure",
+                        "description": {
+                          "content": "Called on message processing failure",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "message-traitement",
+                            "echec"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "887cae1a-0f6e-4271-8464-c86b1f2997a4",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "message-traitement",
+                                "echec"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "09810a49-b3d1-4180-bb5e-7949f05e6e0b",
+                      "name": "Receive ISO send failure",
+                      "request": {
+                        "name": "Receive ISO send failure",
+                        "description": {
+                          "content": "Called on ISO message send failure",
+                          "type": "text/plain"
+                        },
+                        "url": {
+                          "path": [
+                            "messages-iso",
+                            "echec-envoi"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                          },
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {
+                          "mode": "raw",
+                          "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                          "options": {
+                            "raw": {
+                              "headerFamily": "json",
+                              "language": "json"
+                            }
+                          }
+                        },
+                        "auth": null
+                      },
+                      "response": [
+                        {
+                          "id": "16ada716-aad9-43ba-a7c6-e775ebbc707f",
+                          "name": "OK",
+                          "originalRequest": {
+                            "url": {
+                              "path": [
+                                "messages-iso",
+                                "echec-envoi"
+                              ],
+                              "host": [
+                                "{{baseUrl}}"
+                              ],
+                              "query": [],
+                              "variable": []
+                            },
+                            "header": [
+                              {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                              },
+                              {
+                                "key": "Accept",
+                                "value": "*/*"
+                              }
+                            ],
+                            "method": "POST",
+                            "body": {
+                              "mode": "raw",
+                              "raw": "{\n  \"msgId\": \"<string>\"\n}",
+                              "options": {
+                                "raw": {
+                                  "headerFamily": "json",
+                                  "language": "json"
+                                }
+                              }
+                            }
+                          },
+                          "status": "OK",
+                          "code": 200,
+                          "header": [
+                            {
+                              "key": "Content-Type",
+                              "value": "application/json"
+                            }
+                          ],
+                          "body": "{\"success\": true, \"message\": \"Callback received\", \"data\": null}",
+                          "cookie": [],
+                          "_postman_previewlanguage": "json"
+                        }
+                      ]
                     }
                   ]
                 }

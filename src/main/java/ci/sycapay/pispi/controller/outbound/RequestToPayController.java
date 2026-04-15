@@ -7,6 +7,7 @@ import ci.sycapay.pispi.dto.rtp.RtpRejectRequest;
 import ci.sycapay.pispi.service.rtp.RequestToPayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Request to Pay")
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/rtp")
 @RequiredArgsConstructor

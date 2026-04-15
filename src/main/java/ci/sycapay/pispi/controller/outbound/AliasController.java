@@ -7,6 +7,7 @@ import ci.sycapay.pispi.enums.TypeAlias;
 import ci.sycapay.pispi.service.alias.AliasService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
 
 @Tag(name = "Aliases")
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/aliases")
 @RequiredArgsConstructor

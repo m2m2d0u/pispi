@@ -7,6 +7,7 @@ import ci.sycapay.pispi.dto.transfer.IdentityVerificationResponse;
 import ci.sycapay.pispi.service.transfer.IdentityVerificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Identity Verification")
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/verifications")
 @RequiredArgsConstructor

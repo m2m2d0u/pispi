@@ -9,6 +9,7 @@ import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
@@ -23,6 +24,7 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 @Tag(name = "Return Funds Callbacks")
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 public class ReturnFundsCallbackController {

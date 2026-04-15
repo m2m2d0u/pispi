@@ -4,6 +4,7 @@ import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.dto.notification.NotificationDto;
 import ci.sycapay.pispi.service.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Notifications")
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
