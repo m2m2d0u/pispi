@@ -91,9 +91,11 @@ public class TransferCallbackController {
     @PostMapping("/transferts/echecs")
     public ApiResponse<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
+        if (msgId == null) msgId = (String) payload.get("reference");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
+        log.warn("ADMI.002 rejection received [msgId={}]", msgId);
+        if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
+        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
 
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
         return ApiResponse.ok("Callback received", null);

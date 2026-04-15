@@ -28,10 +28,10 @@ public class MiscCallbackController {
     @Operation(summary = "Receive notification failure")
     @PostMapping("/notifications/echecs")
     public ApiResponse<Void> receiveNotificationFailure(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
+        String msgId = extractMsgId(payload);
         log.warn("Notification failure received: {}", msgId);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
+        if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
+        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
         return ApiResponse.ok("Callback received", null);
     }
@@ -41,10 +41,10 @@ public class MiscCallbackController {
     @Operation(summary = "Receive verification failure")
     @PostMapping("/verifications-identites/echecs")
     public ApiResponse<Void> receiveVerificationFailure(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
+        String msgId = extractMsgId(payload);
         log.warn("Verification failure received: {}", msgId);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
+        if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
+        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
         return ApiResponse.ok("Callback received", null);
     }
@@ -150,7 +150,7 @@ public class MiscCallbackController {
     @Operation(summary = "Receive HTTP send failure notification")
     @PostMapping("/message-envoi/echec-http")
     public ApiResponse<Void> receiveHttpSendFailure(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
+        String msgId = extractMsgId(payload);
         log.error("HTTP send failure: {}", payload);
         if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
@@ -160,7 +160,7 @@ public class MiscCallbackController {
     @Operation(summary = "Receive message processing failure")
     @PostMapping("/message-traitement/echec")
     public ApiResponse<Void> receiveProcessingFailure(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
+        String msgId = extractMsgId(payload);
         log.error("Message processing failure: {}", payload);
         if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
@@ -170,10 +170,18 @@ public class MiscCallbackController {
     @Operation(summary = "Receive ISO message send failure")
     @PostMapping("/messages-iso/echec-envoi")
     public ApiResponse<Void> receiveIsoSendFailure(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
+        String msgId = extractMsgId(payload);
         log.error("ISO message send failure: {}", payload);
         if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
+    }
+
+    private String extractMsgId(Map<String, Object> payload) {
+        String msgId = (String) payload.get("msgId");
+        if (msgId == null) {
+            msgId = (String) payload.get("reference");
+        }
+        return msgId;
     }
 }
