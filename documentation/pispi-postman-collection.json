@@ -4125,6 +4125,79 @@
                   ]
                 },
                 {
+                  "id": "c48f2b17-4e67-4ded-986c-892af7ede3ee",
+                  "name": "send Main",
+                  "request": {
+                    "name": "send Main",
+                    "description": {
+                      "content": "Generates an ADMI.004 MAIN event, sends it to the AIP, and saves the notification locally.",
+                      "type": "text/plain"
+                    },
+                    "url": {
+                      "path": [
+                        "api",
+                        "v1",
+                        "notifications",
+                        "main"
+                      ],
+                      "host": [
+                        "{{baseUrl}}"
+                      ],
+                      "query": [],
+                      "variable": []
+                    },
+                    "header": [
+                      {
+                        "key": "Accept",
+                        "value": "*/*"
+                      }
+                    ],
+                    "method": "POST",
+                    "body": {},
+                    "auth": null
+                  },
+                  "response": [
+                    {
+                      "id": "58fdbf63-aaf5-4232-bf1b-0dfa6ab868b9",
+                      "name": "OK",
+                      "originalRequest": {
+                        "url": {
+                          "path": [
+                            "api",
+                            "v1",
+                            "notifications",
+                            "main"
+                          ],
+                          "host": [
+                            "{{baseUrl}}"
+                          ],
+                          "query": [],
+                          "variable": []
+                        },
+                        "header": [
+                          {
+                            "key": "Accept",
+                            "value": "*/*"
+                          }
+                        ],
+                        "method": "POST",
+                        "body": {}
+                      },
+                      "status": "OK",
+                      "code": 200,
+                      "header": [
+                        {
+                          "key": "Content-Type",
+                          "value": "application/json"
+                        }
+                      ],
+                      "body": "{\"success\": true, \"message\": \"OK\", \"data\": {\"msgId\": \"<string>\", \"direction\": \"OUTBOUND\", \"evenement\": \"MAIN\", \"evenementDescription\": \"Maintenance notification\", \"messageType\": \"ADMI_004\"}}",
+                      "cookie": [],
+                      "_postman_previewlanguage": "json"
+                    }
+                  ]
+                },
+                {
                   "id": "998077f5-b051-41c7-8781-eaefa63a3873",
                   "name": "list Notifications",
                   "request": {

@@ -31,23 +31,32 @@ public class NotificationService {
 
     @Transactional
     public NotificationDto sendPing() {
+        return sendNotification("PING", "Connectivity test", "/notifications/test-connectivite");
+    }
+
+    @Transactional
+    public NotificationDto sendMain() {
+        return sendNotification("MAIN", "Maintenance notification", "/notifications/maintenance");
+    }
+
+    private NotificationDto sendNotification(String evenement, String description, String aipPath) {
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
 
         Map<String, Object> admi004 = new HashMap<>();
         admi004.put("msgId", msgId);
-        admi004.put("evenement", "PING");
-        admi004.put("evenementDescription", "Connectivity test");
+        admi004.put("evenement", evenement);
+        admi004.put("evenementDescription", description);
         admi004.put("evenementDate", DateTimeUtil.nowIso());
 
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.OUTBOUND, admi004, null, null);
-        aipClient.post("/notifications/test-connectivite", admi004);
+        aipClient.post(aipPath, admi004);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
                 .direction(MessageDirection.OUTBOUND)
-                .evenement("PING")
-                .evenementDescription("Connectivity test")
+                .evenement(evenement)
+                .evenementDescription(description)
                 .evenementDate(LocalDateTime.now())
                 .messageType(IsoMessageType.ADMI_004)
                 .build();

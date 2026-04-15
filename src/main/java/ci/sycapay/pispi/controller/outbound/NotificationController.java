@@ -21,10 +21,17 @@ public class NotificationController {
     private final NotificationService service;
 
     @Operation(summary = "Send connectivity test (ping)",
-               description = "Generates an ADMI.004 PING event, logs it locally, and saves it to the database. Note: this AIP deployment does not expose a notification endpoint — the ping is recorded locally only.")
+               description = "Generates an ADMI.004 PING event, sends it to the AIP, and saves the notification locally.")
     @PostMapping("/ping")
     public ApiResponse<NotificationDto> sendPing() {
         return ApiResponse.ok(service.sendPing());
+    }
+
+    @Operation(summary = "Send maintenance notification",
+               description = "Generates an ADMI.004 MAIN event, sends it to the AIP, and saves the notification locally.")
+    @PostMapping("/main")
+    public ApiResponse<NotificationDto> sendMain() {
+        return ApiResponse.ok(service.sendMain());
     }
 
     @Operation(summary = "List notifications", description = "Returns a paginated list of all inbound and outbound notification events, ordered by creation date descending.")

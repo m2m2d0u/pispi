@@ -15,4 +15,10 @@ public class AccuseCallbackPayload {
 
     @Schema(description = "Acknowledged event type", example = "PING")
     private String evenement;
+
+    @Schema(description = "Human-readable event description", example = "Acknowledgment of connectivity test")
+    private String evenementDescription;
+
+    @Schema(description = "Event timestamp (ISO 8601)", example = "2026-04-13T10:00:00Z")
+    private String evenementDate;
 }

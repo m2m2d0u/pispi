@@ -45,6 +45,8 @@ public class NotificationCallbackController {
     @PostMapping("/notifications/info-warn")
     public ApiResponse<Void> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
+        String evenement = (String) payload.get("evenement");
+        log.info("ADMI.004 received [msgId={}, evenement={}]", msgId, evenement);
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 200, null);
@@ -52,7 +54,7 @@ public class NotificationCallbackController {
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
                 .direction(MessageDirection.INBOUND)
-                .evenement((String) payload.get("evenement"))
+                .evenement(evenement)
                 .evenementDescription((String) payload.get("evenementDescription"))
                 .evenementDate(parseDateTime(payload.get("evenementDate")))
                 .messageType(IsoMessageType.ADMI_004)
@@ -68,15 +70,18 @@ public class NotificationCallbackController {
     @PostMapping("/notifications/accuse-reception")
     public ApiResponse<Void> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
+        String msgIdDemande = (String) payload.get("msgIdDemande");
+        String evenement = (String) payload.get("evenement");
+        log.info("ADMI.011 received [msgId={}, msgIdDemande={}, evenement={}]", msgId, msgIdDemande, evenement);
 
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 200, null);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
-                .msgIdDemande((String) payload.get("msgIdDemande"))
+                .msgIdDemande(msgIdDemande)
                 .direction(MessageDirection.INBOUND)
-                .evenement((String) payload.get("evenement"))
+                .evenement(evenement)
                 .evenementDescription((String) payload.get("evenementDescription"))
                 .evenementDate(payload.get("evenementDate") != null
                         ? parseDateTime(payload.get("evenementDate"))
@@ -85,6 +90,7 @@ public class NotificationCallbackController {
                 .build();
         notificationRepository.save(notification);
 
+        webhookService.notify(WebhookEventType.NOTIFICATION_ACK, null, msgId, payload);
         return ApiResponse.ok("Callback received", null);
     }
 
