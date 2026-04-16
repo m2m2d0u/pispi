@@ -68,8 +68,13 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias search response")
     @PostMapping("/alias/recherche/reponses")
     public ApiResponse<Void> receiveAliasSearchResponse(@RequestBody Map<String, Object> payload) {
+        String endToEndId = (String) payload.get("endToEndId");
         log.info("Alias search response received: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 200, null);
+        messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 200, null);
+
+        // Process callback: update or create alias with data from PI-RAC
+        aliasCallbackService.processSearchResponse(payload);
+
         return ApiResponse.ok("Callback received", null);
     }
 

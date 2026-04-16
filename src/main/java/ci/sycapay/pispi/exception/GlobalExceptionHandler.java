@@ -14,13 +14,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException ex) {
-        List<ApiResponse.FieldError> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> ApiResponse.FieldError.builder()
+        List<ApiResponse.FieldError> fieldErrors = new java.util.ArrayList<>();
+
+        // Field-level errors (e.g., @NotBlank, @Size, @Pattern)
+        ex.getBindingResult().getFieldErrors().forEach(fe ->
+                fieldErrors.add(ApiResponse.FieldError.builder()
                         .field(fe.getField())
                         .message(fe.getDefaultMessage())
                         .rejectedValue(fe.getRejectedValue())
                         .build())
-                .toList();
+        );
+
+        // Global/Object-level errors (e.g., @AssertTrue cross-field validations)
+        ex.getBindingResult().getGlobalErrors().forEach(ge ->
+                fieldErrors.add(ApiResponse.FieldError.builder()
+                        .field(ge.getObjectName())
+                        .message(ge.getDefaultMessage())
+                        .rejectedValue(null)
+                        .build())
+        );
 
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error(400, "VALIDATION_ERROR", "Validation failed", fieldErrors));

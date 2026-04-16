@@ -44,6 +44,7 @@ public class AliasService {
     public AliasResponse createAlias(AliasCreationRequest request) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        log.info("Creating alias with endToEndId: {}", endToEndId);
 
         // 0. Check if alias already exists with ACTIVE or PENDING status
         if (request.getAlias() != null) {
@@ -90,6 +91,7 @@ public class AliasService {
 
         // 2. Build and send request to PI-RAC
         Map<String, Object> payload = buildAliasPayload(endToEndId, request);
+        log.info("Sending alias creation payload: {}", payload);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE, MessageDirection.OUTBOUND, payload, null, null);
 
         try {
@@ -220,6 +222,7 @@ public class AliasService {
         Map<String, Object> payload = new HashMap<>();
 
         // Required fields (based on interface-participant Alias DTO)
+        log.info("Building payload with idCreationAlias: {}", endToEndId);
         payload.put("idCreationAlias", endToEndId);  // Use same ID as saved in entity for callback matching
         payload.put("typeAlias", request.getTypeAlias().name());
         payload.put("nomClient", c.getNom());

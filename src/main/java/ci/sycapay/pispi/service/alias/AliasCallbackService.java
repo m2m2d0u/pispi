@@ -2,7 +2,10 @@ package ci.sycapay.pispi.service.alias;
 
 import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.enums.AliasStatus;
+import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.TypeAlias;
+import ci.sycapay.pispi.enums.TypeClient;
+import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.enums.WebhookEventType;
@@ -11,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
@@ -179,6 +183,145 @@ public class AliasCallbackService {
         webhookService.notify(
                 "SUCCES".equalsIgnoreCase(statut) ? WebhookEventType.ALIAS_DELETED : WebhookEventType.ALIAS_FAILED,
                 aliasEntity.getEndToEndId(),
+                null,
+                payload
+        );
+    }
+
+    /**
+     * Process alias search callback response.
+     * Updates existing alias or creates new one with data from PI-RAC.
+     *
+     * Response example: {nationalite=CI, other=+2250707070710, ville=Abidjan, categorie=P,
+     *                   dateNaissance=1990-01-15, typeCompte=TRAN, telephone=+2250707070710,
+     *                   endToEndId=ECIE002..., nom=Diallo, participant=CIE002,
+     *                   identificationNationale=CMI123456789, valeurAlias=59041c28-...,
+     *                   typeAlias=SHID, statut=SUCCES, paysResidence=CI, email=...}
+     */
+    @Transactional
+    public void processSearchResponse(Map<String, Object> payload) {
+        String statut = (String) payload.get("statut");
+
+        if (!"SUCCES".equalsIgnoreCase(statut)) {
+            log.info("Alias search returned no result or failed: {}", payload);
+            return;
+        }
+
+        String endToEndId = (String) payload.get("endToEndId");
+        String aliasValue = (String) payload.get("valeurAlias");
+        String typeAliasStr = (String) payload.get("typeAlias");
+
+        if (endToEndId == null || aliasValue == null) {
+            log.warn("Alias search response missing required fields: {}", payload);
+            return;
+        }
+
+        // Try to find existing alias by endToEndId or aliasValue
+        Optional<PiAlias> existingOpt = aliasRepository.findByEndToEndId(endToEndId);
+        if (existingOpt.isEmpty()) {
+            existingOpt = findByAliasValue(aliasValue);
+        }
+
+        PiAlias alias;
+        boolean isNew = false;
+
+        if (existingOpt.isPresent()) {
+            alias = existingOpt.get();
+            log.info("Updating existing alias {} with search response data", aliasValue);
+        } else {
+            alias = new PiAlias();
+            alias.setEndToEndId(endToEndId);
+            isNew = true;
+            log.info("Creating new alias {} from search response", aliasValue);
+        }
+
+        // Map response fields to entity
+        alias.setAliasValue(aliasValue);
+        alias.setStatut(AliasStatus.ACTIVE);
+
+        if (typeAliasStr != null) {
+            try {
+                alias.setTypeAlias(TypeAlias.valueOf(typeAliasStr));
+            } catch (IllegalArgumentException e) {
+                log.warn("Unknown alias type: {}", typeAliasStr);
+            }
+        }
+
+        // Client info
+        String nom = (String) payload.get("nom");
+        if (nom != null) alias.setNom(nom);
+
+        String categorie = (String) payload.get("categorie");
+        if (categorie != null) {
+            try {
+                alias.setTypeClient(TypeClient.valueOf(categorie));
+            } catch (IllegalArgumentException e) {
+                log.warn("Unknown client type: {}", categorie);
+            }
+        }
+
+        String telephone = (String) payload.get("telephone");
+        if (telephone != null) alias.setTelephone(telephone);
+
+        String email = (String) payload.get("email");
+        if (email != null) alias.setEmail(email);
+
+        String nationalite = (String) payload.get("nationalite");
+        if (nationalite != null) alias.setNationalite(nationalite);
+
+        String paysResidence = (String) payload.get("paysResidence");
+        if (paysResidence != null) alias.setPays(paysResidence);
+
+        // Identification
+        String identificationNationale = (String) payload.get("identificationNationale");
+        if (identificationNationale != null) {
+            alias.setIdentifiant(identificationNationale);
+            alias.setTypeIdentifiant(CodeSystemeIdentification.NIDN);
+        }
+        String numeroPasseport = (String) payload.get("numeroPasseport");
+        if (numeroPasseport != null) {
+            alias.setIdentifiant(numeroPasseport);
+            alias.setTypeIdentifiant(CodeSystemeIdentification.CCPT);
+        }
+        String identificationFiscale = (String) payload.get("identificationFiscale");
+        if (identificationFiscale != null) {
+            alias.setIdentifiant(identificationFiscale);
+            alias.setTypeIdentifiant(CodeSystemeIdentification.TXID);
+        }
+
+        // Date of birth
+        String dateNaissanceStr = (String) payload.get("dateNaissance");
+        if (dateNaissanceStr != null) {
+            try {
+                alias.setDateNaissance(LocalDate.parse(dateNaissanceStr));
+            } catch (Exception e) {
+                log.warn("Failed to parse dateNaissance: {}", dateNaissanceStr);
+            }
+        }
+
+        // Account info
+        String other = (String) payload.get("other");
+        if (other != null) alias.setNumeroCompte(other);
+
+        String typeCompteStr = (String) payload.get("typeCompte");
+        if (typeCompteStr != null) {
+            try {
+                alias.setTypeCompte(TypeCompte.valueOf(typeCompteStr));
+            } catch (IllegalArgumentException e) {
+                log.warn("Unknown account type: {}", typeCompteStr);
+            }
+        }
+
+        String participant = (String) payload.get("participant");
+        if (participant != null) alias.setCodeMembreParticipant(participant);
+
+        aliasRepository.save(alias);
+
+        log.info("Alias {} {} from search response", aliasValue, isNew ? "created" : "updated");
+
+        webhookService.notify(
+                WebhookEventType.ALIAS_SEARCH_RESULT,
+                alias.getEndToEndId(),
                 null,
                 payload
         );
