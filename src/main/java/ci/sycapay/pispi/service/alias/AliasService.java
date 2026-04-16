@@ -5,6 +5,7 @@ import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.alias.AliasCreationRequest;
 import ci.sycapay.pispi.dto.alias.AliasResponse;
 import ci.sycapay.pispi.entity.PiAlias;
+import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
@@ -50,6 +51,11 @@ public class AliasService {
                 .typeClient(request.getClient().getTypeClient())
                 .nom(request.getClient().getNom())
                 .prenom(request.getClient().getPrenom())
+                .raisonSociale(request.getClient().getRaisonSociale())
+                .typeIdentifiant(request.getClient().getTypeIdentifiant())
+                .identifiant(request.getClient().getIdentifiant())
+                .nationalite(request.getClient().getNationalite())
+                .pays(request.getClient().getPays())
                 .telephone(request.getClient().getTelephone())
                 .email(request.getClient().getEmail())
                 .numeroCompte(request.getNumeroCompte())
@@ -82,7 +88,7 @@ public class AliasService {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
-        Map<String, Object> payload = buildAliasPayload(endToEndId, request);
+        Map<String, Object> payload = buildModificationPayload(request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
 
         Map<String, Object> response = aipClient.post("/alias/modification", payload);
@@ -110,14 +116,14 @@ public class AliasService {
     }
 
     @Transactional
-    public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue, String raisonSuppression) {
+    public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue, CodeRaisonSuppression raisonSuppression) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", aliasValue);
-        payload.put("raisonSuppression", raisonSuppression);
+        payload.put("raisonSuppression", raisonSuppression.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
         aipClient.post("/alias/suppression", payload);
@@ -142,7 +148,6 @@ public class AliasService {
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", alias);
-        payload.put("typeAlias", typeAlias.name());
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.OUTBOUND, payload, null, null);
         return aipClient.post("/alias/recherche", payload);
@@ -158,42 +163,88 @@ public class AliasService {
                         .build());
     }
 
+    // ---- AIP payload builders ----
+
+    /**
+     * Builds the creation payload matching the AIP's Alias schema.
+     * Field names are dictated by the AIP OpenAPI spec (v3/api-docs).
+     */
     private Map<String, Object> buildAliasPayload(String endToEndId, AliasCreationRequest request) {
+        ClientInfo c = request.getClient();
         Map<String, Object> payload = new HashMap<>();
+
+        // Required fields
         payload.put("idCreationAlias", IdGenerator.generateEndToEndId(properties.getCodeMembre()));
         payload.put("endToEndId", endToEndId);
-        payload.put("alias", request.getAlias());
         payload.put("typeAlias", request.getTypeAlias().name());
-        payload.put("typeClient", request.getClient().getTypeClient().name());
-        payload.put("nom", request.getClient().getNom());
-        payload.put("typeIdentifiant", request.getClient().getTypeIdentifiant().name());
-        payload.put("identifiant", request.getClient().getIdentifiant());
-        payload.put("telephone", request.getClient().getTelephone());
-        payload.put("numeroCompte", request.getNumeroCompte());
+        payload.put("nomClient", c.getNom());
+        payload.put("categorieClient", c.getTypeClient().name());
+        payload.put("telephoneClient", c.getTelephone());
+        payload.put("paysResidenceClient", c.getPays());
+        payload.put("participant", properties.getCodeMembre());
+        payload.put("iban", request.getNumeroCompte());
         payload.put("typeCompte", request.getTypeCompte().name());
         payload.put("dateOuvertureCompte", request.getDateOuvertureCompte());
-        payload.put("codeMembreParticipant", properties.getCodeMembre());
-        if (request.getClient().getPrenom() != null) payload.put("prenom", request.getClient().getPrenom());
-        if (request.getClient().getAutrePrenom() != null) payload.put("autrePrenom", request.getClient().getAutrePrenom());
-        if (request.getClient().getRaisonSociale() != null) payload.put("raisonSociale", request.getClient().getRaisonSociale());
-        if (request.getClient().getDateNaissance() != null) payload.put("dateNaissance", request.getClient().getDateNaissance());
-        if (request.getClient().getLieuNaissance() != null) payload.put("lieuNaissance", request.getClient().getLieuNaissance());
-        if (request.getClient().getNationalite() != null) payload.put("nationalite", request.getClient().getNationalite());
-        if (request.getClient().getAdresse() != null) payload.put("adresse", request.getClient().getAdresse());
-        if (request.getClient().getVille() != null) payload.put("ville", request.getClient().getVille());
-        if (request.getClient().getPays() != null) payload.put("pays", request.getClient().getPays());
-        if (request.getClient().getEmail() != null) payload.put("email", request.getClient().getEmail());
-        if (request.getCodeAgence() != null) payload.put("codeAgence", request.getCodeAgence());
-        if (request.getNomAgence() != null) payload.put("nomAgence", request.getNomAgence());
+
+        // Alias value (optional for SHID — AIP generates it; required for MBNO/MCOD)
+        if (request.getAlias() != null) payload.put("valeurAlias", request.getAlias());
+
+        // Identifier: mapped by type to the correct AIP field
+        if (c.getTypeIdentifiant() != null && c.getIdentifiant() != null) {
+            switch (c.getTypeIdentifiant()) {
+                case NIDN -> payload.put("identificationNationaleClient", c.getIdentifiant());
+                case CCPT -> payload.put("numeroPasseport", c.getIdentifiant());
+                case TXID -> payload.put("identificationFiscale", c.getIdentifiant());
+            }
+        }
+
+        // Optional client fields
+        if (c.getRaisonSociale() != null) payload.put("raisonSociale", c.getRaisonSociale());
+        if (c.getDateNaissance() != null) payload.put("dateNaissanceClient", c.getDateNaissance());
+        if (c.getLieuNaissance() != null) payload.put("villeNaissanceClient", c.getLieuNaissance());
+        if (c.getNationalite() != null) payload.put("nationaliteClient", c.getNationalite());
+        if (c.getAdresse() != null) payload.put("adresseClient", c.getAdresse());
+        if (c.getVille() != null) payload.put("villeClient", c.getVille());
+        if (c.getEmail() != null) payload.put("emailClient", c.getEmail());
+        if (c.getCodePostal() != null) payload.put("codePostaleClient", c.getCodePostal());
         if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
         if (request.getPreConfirmation() != null) payload.put("preConfirmation", request.getPreConfirmation());
+
+        // Merchant: denominationSociale maps to merchant name; codeActivite to MCC category
         if (request.getMarchand() != null) {
-            if (request.getMarchand().getCodeMarchand() != null) payload.put("codeMarchand", request.getMarchand().getCodeMarchand());
-            if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("categorieCodeMarchand", request.getMarchand().getCategorieCodeMarchand());
-            if (request.getMarchand().getNomMarchand() != null) payload.put("nomMarchand", request.getMarchand().getNomMarchand());
-            if (request.getMarchand().getVilleMarchand() != null) payload.put("villeMarchand", request.getMarchand().getVilleMarchand());
-            if (request.getMarchand().getPaysMarchand() != null) payload.put("paysMarchand", request.getMarchand().getPaysMarchand());
+            if (request.getMarchand().getNomMarchand() != null) payload.put("denominationSociale", request.getMarchand().getNomMarchand());
+            if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("codeActivite", request.getMarchand().getCategorieCodeMarchand());
         }
+
+        return payload;
+    }
+
+    /**
+     * Builds the modification payload matching the AIP's ModificationAlias schema.
+     * Only the fields accepted by that schema are sent (not the full creation payload).
+     */
+    private Map<String, Object> buildModificationPayload(AliasCreationRequest request) {
+        ClientInfo c = request.getClient();
+        Map<String, Object> payload = new HashMap<>();
+
+        payload.put("alias", request.getAlias());
+
+        if (c.getPays() != null) payload.put("paysResidenceClient", c.getPays());
+        if (c.getTelephone() != null) payload.put("telephoneClient", c.getTelephone());
+        if (c.getEmail() != null) payload.put("emailClient", c.getEmail());
+        if (c.getAdresse() != null) payload.put("adresseClient", c.getAdresse());
+        if (c.getVille() != null) payload.put("villeClient", c.getVille());
+        if (c.getCodePostal() != null) payload.put("codePostalClient", c.getCodePostal());
+        if (c.getRaisonSociale() != null) payload.put("denominationSociale", c.getRaisonSociale());
+
+        // Passport update only (the only ID type accepted for modification)
+        if (c.getTypeIdentifiant() == CodeSystemeIdentification.CCPT && c.getIdentifiant() != null) {
+            payload.put("numeroPasseport", c.getIdentifiant());
+        }
+
+        if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
+        if (request.getPreConfirmation() != null) payload.put("preConfirmation", request.getPreConfirmation());
+
         return payload;
     }
 

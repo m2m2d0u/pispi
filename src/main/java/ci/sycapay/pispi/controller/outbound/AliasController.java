@@ -3,6 +3,7 @@ package ci.sycapay.pispi.controller.outbound;
 import ci.sycapay.pispi.dto.alias.AliasCreationRequest;
 import ci.sycapay.pispi.dto.alias.AliasResponse;
 import ci.sycapay.pispi.dto.common.ApiResponse;
+import ci.sycapay.pispi.enums.CodeRaisonSuppression;
 import ci.sycapay.pispi.enums.TypeAlias;
 import ci.sycapay.pispi.service.alias.AliasService;
 import jakarta.validation.Valid;
@@ -44,9 +45,9 @@ public class AliasController {
     @Operation(summary = "Delete an alias", description = "Removes an alias from the RAC and marks it as DELETED locally.")
     @DeleteMapping("/{typeAlias}/{aliasValue}")
     public ApiResponse<AliasResponse> deleteAlias(
-            @Parameter(description = "Type of alias (e.g. MSISDN, EMAIL, NNI)") @PathVariable TypeAlias typeAlias,
+            @Parameter(description = "Type of alias") @PathVariable TypeAlias typeAlias,
             @Parameter(description = "The alias value to delete") @PathVariable String aliasValue,
-            @Parameter(description = "Reason for deleting the alias") @RequestParam String raisonSuppression) {
+            @Parameter(description = "Reason for deletion: FERMETURE_COMPTE_CLIENT or DEMANDE_CLIENT") @RequestParam CodeRaisonSuppression raisonSuppression) {
         return ApiResponse.ok(aliasService.deleteAlias(typeAlias, aliasValue, raisonSuppression));
     }
 

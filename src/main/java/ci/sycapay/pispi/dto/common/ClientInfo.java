@@ -60,4 +60,7 @@ public class ClientInfo {
 
     @Email @Size(max = 254)
     private String email;
+
+    @Size(max = 20)
+    private String codePostal;
 }
