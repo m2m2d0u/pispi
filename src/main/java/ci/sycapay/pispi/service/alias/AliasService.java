@@ -7,6 +7,7 @@ import ci.sycapay.pispi.dto.alias.AliasResponse;
 import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.enums.*;
+import ci.sycapay.pispi.exception.AipCommunicationException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -42,7 +44,21 @@ public class AliasService {
         Map<String, Object> payload = buildAliasPayload(endToEndId, request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE, MessageDirection.OUTBOUND, payload, null, null);
 
-        Map<String, Object> response = aipClient.post("/alias/creation", payload);
+        Map<String, Object> response;
+        try {
+            response = aipClient.post("/alias/creation", payload);
+        } catch (AipCommunicationException e) {
+            Throwable cause = e.getCause();
+            Integer httpStatus = null;
+            String errorBody = e.getMessage();
+            if (cause instanceof HttpStatusCodeException httpEx) {
+                httpStatus = httpEx.getStatusCode().value();
+                errorBody = httpEx.getResponseBodyAsString();
+            }
+            messageLogService.logError(endToEndId, IsoMessageType.RAC_CREATE,
+                    Map.of("aipError", errorBody != null ? errorBody : "unknown"), httpStatus, errorBody);
+            throw e;
+        }
 
         PiAlias alias = PiAlias.builder()
                 .endToEndId(endToEndId)

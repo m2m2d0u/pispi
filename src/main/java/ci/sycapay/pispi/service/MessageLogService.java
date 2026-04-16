@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
@@ -36,6 +38,13 @@ public class MessageLogService {
                 .errorMessage(errorMessage)
                 .build();
         return repository.save(entry);
+    }
+
+    /** Saves the log entry in a new independent transaction so it commits even if the caller rolls back. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public PiMessageLog logError(String endToEndId, IsoMessageType messageType, Object payload,
+                                 Integer httpStatus, String errorMessage) {
+        return log(null, endToEndId, messageType, MessageDirection.INBOUND, payload, httpStatus, errorMessage);
     }
 
     public boolean isDuplicate(String msgId) {
