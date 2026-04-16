@@ -20,9 +20,11 @@ import lombok.NoArgsConstructor;
  * Required fields per BCEAO OpenAPI spec:
  * - For type P (personne physique): nom, nationalite, paysResidence, telephone, categorie, genre,
  *   identificationNationale (or numeroPasseport), dateNaissance, paysNaissance, villeNaissance
- * - For type C (commercial): same as P
- * - For type B (business): nom, nationalite, paysResidence, telephone, categorie, raisonSociale
- * - For type G (government): nom, nationalite, paysResidence, telephone, categorie, raisonSociale
+ * - For type C (commercial): same as P, optionally with identificationRCCM or identificationFiscale
+ * - For type B (business): nom, nationalite, paysResidence, telephone, categorie, identificationFiscale,
+ *   raisonSociale, denominationSociale, ville
+ * - For type G (government): nom, nationalite, paysResidence, telephone, categorie, raisonSociale,
+ *   denominationSociale, ville
  */
 @Data
 @Builder

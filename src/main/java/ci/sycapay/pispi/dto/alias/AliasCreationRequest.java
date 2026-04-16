@@ -22,10 +22,15 @@ import lombok.NoArgsConstructor;
  *
  * Per BCEAO OpenAPI spec:
  * - typeCompte must be one of: CACC, SVGS, LLSV, TRAN (CompteOther schema)
- * - typeCompte TRAL is special: for persons without identification (type P only)
  * - alias is required for MBNO (phone format) and MCOD (2-10 digits), optional for SHID
  * - preConfirmation is only valid for type B (business) clients
  * - marchand info is recommended for type C (commercial) clients
+ *
+ * Note on TRAL (ClientParticulierSansIdentification):
+ * BCEAO spec defines CompteTRAL for persons without identification, requiring only:
+ * nom, categorie (P), paysResidence, telephone.
+ * However, TRAL is NOT available for EME (établissements de paiement) participants.
+ * Only bank participants can create TRAL accounts.
  */
 @Data
 @Builder
@@ -232,15 +237,13 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that nationalite is provided for type P and C clients.
+     * Validates that nationalite is provided for all client types.
+     * Per BCEAO spec, nationalite is required for P, C, B, and G clients.
      */
     @JsonIgnore
-    @AssertTrue(message = "nationalite is required for type P and C clients")
-    public boolean isNationaliteRequiredForPC() {
-        if (client != null && (client.getTypeClient() == TypeClient.P || client.getTypeClient() == TypeClient.C)) {
-            return client.getNationalite() != null && !client.getNationalite().isBlank();
-        }
-        return true;
+    @AssertTrue(message = "nationalite is required")
+    public boolean isNationaliteRequired() {
+        return client != null && client.getNationalite() != null && !client.getNationalite().isBlank();
     }
 
     /**
@@ -254,6 +257,34 @@ public class AliasCreationRequest {
             return client.getDateNaissance() != null && !client.getDateNaissance().isBlank()
                     && client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank()
                     && client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
+        }
+        return true;
+    }
+
+    // ---- Type B/G required fields ----
+
+    /**
+     * Validates that denominationSociale is provided for type B and G clients.
+     * Per BCEAO spec, denominationSociale is required for ClientEntreprise (B) and ClientGouvernement (G).
+     */
+    @JsonIgnore
+    @AssertTrue(message = "denominationSociale is required for type B (business) and G (government) clients")
+    public boolean isDenominationSocialeRequiredForBG() {
+        if (client != null && (client.getTypeClient() == TypeClient.B || client.getTypeClient() == TypeClient.G)) {
+            return client.getDenominationSociale() != null && !client.getDenominationSociale().isBlank();
+        }
+        return true;
+    }
+
+    /**
+     * Validates that ville is provided for type B and G clients.
+     * Per BCEAO spec, ville is required for ClientEntreprise (B) and ClientGouvernement (G).
+     */
+    @JsonIgnore
+    @AssertTrue(message = "ville is required for type B (business) and G (government) clients")
+    public boolean isVilleRequiredForBG() {
+        if (client != null && (client.getTypeClient() == TypeClient.B || client.getTypeClient() == TypeClient.G)) {
+            return client.getVille() != null && !client.getVille().isBlank();
         }
         return true;
     }
