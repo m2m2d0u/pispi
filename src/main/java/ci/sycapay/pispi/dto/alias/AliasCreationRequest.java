@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
  *
  * Per BCEAO OpenAPI spec:
  * - typeCompte must be one of: CACC, SVGS, LLSV, TRAN (CompteOther schema)
+ * - typeCompte TRAL is special: for persons without identification (type P only)
  * - alias is required for MBNO (phone format) and MCOD (2-10 digits), optional for SHID
  * - preConfirmation is only valid for type B (business) clients
  * - marchand info is recommended for type C (commercial) clients
@@ -138,11 +139,12 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that typeCompte is appropriate for CompteOther schema.
+     * Validates that typeCompte is appropriate.
      * Per BCEAO OpenAPI, CompteOther accepts: CACC, SVGS, LLSV, TRAN.
+     * Note: TRAL (lightweight accounts for persons without ID) is NOT available for EME participants.
      */
     @JsonIgnore
-    @AssertTrue(message = "typeCompte must be one of: CACC, SVGS, LLSV, TRAN (per BCEAO CompteOther schema)")
+    @AssertTrue(message = "typeCompte must be one of: CACC, SVGS, LLSV, TRAN")
     public boolean isTypeCompteValid() {
         if (typeCompte == null) {
             return true; // Let @NotNull handle this
@@ -151,6 +153,19 @@ public class AliasCreationRequest {
                typeCompte == TypeCompte.SVGS ||
                typeCompte == TypeCompte.LLSV ||
                typeCompte == TypeCompte.TRAN;
+    }
+
+    /**
+     * Validates that identification is always provided.
+     * Note: TRAL accounts (persons without ID) are NOT available for EME participants.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "typeIdentifiant and identifiant are required")
+    public boolean isIdentificationRequired() {
+        return client != null
+               && client.getTypeIdentifiant() != null
+               && client.getIdentifiant() != null
+               && !client.getIdentifiant().isBlank();
     }
 
     /**
@@ -200,5 +215,46 @@ public class AliasCreationRequest {
             return true;
         }
         return marchand != null;
+    }
+
+    // ---- Type P/C required fields ----
+
+    /**
+     * Validates that genre is provided for type P and C clients.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "genre is required for type P and C clients")
+    public boolean isGenreRequiredForPC() {
+        if (client != null && (client.getTypeClient() == TypeClient.P || client.getTypeClient() == TypeClient.C)) {
+            return client.getGenre() != null && !client.getGenre().isBlank();
+        }
+        return true;
+    }
+
+    /**
+     * Validates that nationalite is provided for type P and C clients.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "nationalite is required for type P and C clients")
+    public boolean isNationaliteRequiredForPC() {
+        if (client != null && (client.getTypeClient() == TypeClient.P || client.getTypeClient() == TypeClient.C)) {
+            return client.getNationalite() != null && !client.getNationalite().isBlank();
+        }
+        return true;
+    }
+
+    /**
+     * Validates that birth info is provided for type P and C clients.
+     * Per BCEAO: dateNaissance, paysNaissance, and villeNaissance are required.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "dateNaissance, paysNaissance, and lieuNaissance are required for type P and C clients")
+    public boolean isBirthInfoRequiredForPC() {
+        if (client != null && (client.getTypeClient() == TypeClient.P || client.getTypeClient() == TypeClient.C)) {
+            return client.getDateNaissance() != null && !client.getDateNaissance().isBlank()
+                    && client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank()
+                    && client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
+        }
+        return true;
     }
 }

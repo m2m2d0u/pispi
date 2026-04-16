@@ -19,4 +19,8 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
     Page<PiAlias> findByCodeMembreParticipantAndStatut(String codeMembre, AliasStatus statut, Pageable pageable);
 
     Optional<PiAlias> findByEndToEndId(String endToEndId);
+
+    Optional<PiAlias> findByIdentifiant(String identifiant);
+
+    Optional<PiAlias> findByIdentifiantAndTypeAlias(String identifiant, TypeAlias typeAlias);
 }

@@ -9,6 +9,7 @@ import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.AipCommunicationException;
 import ci.sycapay.pispi.exception.DuplicateRequestException;
+import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -128,16 +129,23 @@ public class AliasService {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
-        // 1. Find and update alias locally before sending to PI-RAC
+        // 1. Find alias in PI-RAC
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
                 request.getAlias(), request.getTypeAlias(), AliasStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Alias", request.getAlias()));
 
-        // Update all modifiable client fields to maintain consistency with PI-RAC
         ClientInfo c = request.getClient();
+
+        // 2. Validate modification constraints per PI-RAC rules
+        validateModificationConstraints(alias, c);
+
+        // 3. Update modifiable client fields locally
         if (c.getNom() != null) alias.setNom(c.getNom());
         if (c.getPrenom() != null) alias.setPrenom(c.getPrenom());
-        if (c.getRaisonSociale() != null) alias.setRaisonSociale(c.getRaisonSociale());
+        // Only update raisonSociale for B/G clients (validated above)
+        if (c.getRaisonSociale() != null && (alias.getTypeClient() == TypeClient.B || alias.getTypeClient() == TypeClient.G)) {
+            alias.setRaisonSociale(c.getRaisonSociale());
+        }
         if (c.getPays() != null) alias.setPays(c.getPays());
         if (c.getTelephone() != null) alias.setTelephone(c.getTelephone());
         if (c.getEmail() != null) alias.setEmail(c.getEmail());
@@ -145,19 +153,48 @@ public class AliasService {
         if (request.getTypeCompte() != null) alias.setTypeCompte(request.getTypeCompte());
         aliasRepository.save(alias);
 
-        // 2. Build and send request to PI-RAC
-        Map<String, Object> payload = buildModificationPayload(request);
+        // 4. Build and send request to PI-RAC
+        Map<String, Object> payload = buildModificationPayload(alias, request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
 
         aipClient.post("/alias/modification", payload);
 
-        // 3. Return EN_COURS - callback will update dateModificationRac
+        // 5. Return EN_COURS - callback will update dateModificationRac
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
                 .statut(StatutOperationAlias.EN_COURS)
                 .alias(request.getAlias())
                 .typeAlias(request.getTypeAlias())
                 .build();
+    }
+
+    /**
+     * Validates PI-RAC modification constraints:
+     * - denominationSociale can only be modified for B and G clients
+     * - Cannot change identification type (NIDN ↔ CCPT)
+     */
+    private void validateModificationConstraints(PiAlias alias, ClientInfo requestClient) {
+        // 1. denominationSociale/raisonSociale can only be modified for B and G clients
+        if (requestClient.getRaisonSociale() != null || requestClient.getDenominationSociale() != null) {
+            if (alias.getTypeClient() != TypeClient.B && alias.getTypeClient() != TypeClient.G) {
+                throw new InvalidStateException(
+                        "denominationSociale/raisonSociale can only be modified for type B (business) and G (government) clients");
+            }
+        }
+
+        // 2. Cannot change identification type from NIDN to CCPT or vice versa
+        if (requestClient.getTypeIdentifiant() != null && alias.getTypeIdentifiant() != null) {
+            CodeSystemeIdentification originalType = alias.getTypeIdentifiant();
+            CodeSystemeIdentification requestedType = requestClient.getTypeIdentifiant();
+
+            // NIDN ↔ CCPT change is not allowed
+            if ((originalType == CodeSystemeIdentification.NIDN && requestedType == CodeSystemeIdentification.CCPT) ||
+                (originalType == CodeSystemeIdentification.CCPT && requestedType == CodeSystemeIdentification.NIDN)) {
+                throw new InvalidStateException(
+                        "Cannot change identification type from " + originalType + " to " + requestedType +
+                        ". Original identification type must be preserved.");
+            }
+        }
     }
 
     @Transactional
@@ -284,8 +321,11 @@ public class AliasService {
     /**
      * Builds the modification payload matching the AIP's ModificationAlias schema.
      * Only the fields accepted by that schema are sent (not the full creation payload).
+     * Respects PI-RAC constraints:
+     * - denominationSociale only for B/G clients
+     * - numeroPasseport only if alias was created with CCPT
      */
-    private Map<String, Object> buildModificationPayload(AliasCreationRequest request) {
+    private Map<String, Object> buildModificationPayload(PiAlias alias, AliasCreationRequest request) {
         ClientInfo c = request.getClient();
         Map<String, Object> payload = new HashMap<>();
 
@@ -297,10 +337,14 @@ public class AliasService {
         if (c.getAdresse() != null) payload.put("adresseClient", c.getAdresse());
         if (c.getVille() != null) payload.put("villeClient", c.getVille());
         if (c.getCodePostal() != null) payload.put("codePostalClient", c.getCodePostal());
-        if (c.getRaisonSociale() != null) payload.put("denominationSociale", c.getRaisonSociale());
 
-        // Passport update only (the only ID type accepted for modification)
-        if (c.getTypeIdentifiant() == CodeSystemeIdentification.CCPT && c.getIdentifiant() != null) {
+        // denominationSociale only allowed for B and G clients
+        if (c.getRaisonSociale() != null && (alias.getTypeClient() == TypeClient.B || alias.getTypeClient() == TypeClient.G)) {
+            payload.put("denominationSociale", c.getRaisonSociale());
+        }
+
+        // Passport update only if alias was originally created with CCPT identification
+        if (alias.getTypeIdentifiant() == CodeSystemeIdentification.CCPT && c.getIdentifiant() != null) {
             payload.put("numeroPasseport", c.getIdentifiant());
         }
 

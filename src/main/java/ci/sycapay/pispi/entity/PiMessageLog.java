@@ -23,7 +23,7 @@ public class PiMessageLog {
     @Column(name = "msg_id", unique = true, length = 35)
     private String msgId;
 
-    @Column(name = "end_to_end_id", length = 35)
+    @Column(name = "end_to_end_id", length = 50)
     private String endToEndId;
 
     @Enumerated(EnumType.STRING)

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
@@ -170,9 +171,10 @@ public class AliasCallbackService {
 
         if ("SUCCES".equalsIgnoreCase(statut)) {
             aliasEntity.setStatut(AliasStatus.DELETED);
-            if (dateSuppression != null) {
-                aliasEntity.setDateSuppressionRac(parseDateTime(dateSuppression));
-            }
+            // Set deletion date from response or use current time as fallback
+            aliasEntity.setDateSuppressionRac(dateSuppression != null
+                    ? parseDateTime(dateSuppression)
+                    : LocalDateTime.now());
             log.info("Alias {} deleted successfully", alias);
         } else {
             log.warn("Alias deletion failed for {}: {}", alias, payload);
@@ -210,6 +212,7 @@ public class AliasCallbackService {
         String endToEndId = (String) payload.get("endToEndId");
         String aliasValue = (String) payload.get("valeurAlias");
         String typeAliasStr = (String) payload.get("typeAlias");
+        String identifiant = (String) payload.get("identificationFiscale");
 
         if (endToEndId == null || aliasValue == null) {
             log.warn("Alias search response missing required fields: {}", payload);
@@ -217,7 +220,7 @@ public class AliasCallbackService {
         }
 
         // Try to find existing alias by endToEndId or aliasValue
-        Optional<PiAlias> existingOpt = aliasRepository.findByEndToEndId(endToEndId);
+        Optional<PiAlias> existingOpt = aliasRepository.findByIdentifiantAndTypeAlias(identifiant, TypeAlias.valueOf(typeAliasStr));
         if (existingOpt.isEmpty()) {
             existingOpt = findByAliasValue(aliasValue);
         }
@@ -314,6 +317,16 @@ public class AliasCallbackService {
 
         String participant = (String) payload.get("participant");
         if (participant != null) alias.setCodeMembreParticipant(participant);
+
+        // Business info (required for type B/G)
+        String raisonSociale = (String) payload.get("raisonSociale");
+        if (raisonSociale != null) alias.setRaisonSociale(raisonSociale);
+
+        // If raisonSociale not provided but denominationSociale is, use it as fallback
+        String denominationSociale = (String) payload.get("denominationSociale");
+        if (alias.getRaisonSociale() == null && denominationSociale != null) {
+            alias.setRaisonSociale(denominationSociale);
+        }
 
         aliasRepository.save(alias);
 

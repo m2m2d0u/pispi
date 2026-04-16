@@ -18,10 +18,11 @@ import lombok.NoArgsConstructor;
  * Client information for alias creation.
  *
  * Required fields per BCEAO OpenAPI spec:
- * - For type P (personne physique): nom, nationalite, paysResidence, telephone, categorie, genre, identificationNationale (or numeroPasseport)
- * - For type C (commercial): same as P plus genre
- * - For type B (business): nom, nationalite, paysResidence, telephone, categorie
- * - For type G (government): nom, nationalite, paysResidence, telephone, categorie
+ * - For type P (personne physique): nom, nationalite, paysResidence, telephone, categorie, genre,
+ *   identificationNationale (or numeroPasseport), dateNaissance, paysNaissance, villeNaissance
+ * - For type C (commercial): same as P
+ * - For type B (business): nom, nationalite, paysResidence, telephone, categorie, raisonSociale
+ * - For type G (government): nom, nationalite, paysResidence, telephone, categorie, raisonSociale
  */
 @Data
 @Builder
@@ -61,30 +62,37 @@ public class ClientInfo {
     @NotNull(message = "typeClient is required")
     private TypeClient typeClient;
 
-    /** Type d'identifiant: NIDN (national ID), CCPT (passport), TXID (fiscal ID). */
-    @NotNull(message = "typeIdentifiant is required")
+    /**
+     * Type d'identifiant: NIDN (national ID), CCPT (passport), TXID (fiscal ID).
+     * Required for all clients EXCEPT persons without identification (typeCompte: TRAL).
+     */
     private CodeSystemeIdentification typeIdentifiant;
 
-    /** Numéro d'identification (nationale, passeport ou fiscale selon typeIdentifiant). */
-    @NotBlank(message = "identifiant is required")
+    /**
+     * Numéro d'identification (nationale, passeport ou fiscale selon typeIdentifiant).
+     * Required for all clients EXCEPT persons without identification (typeCompte: TRAL).
+     */
     @Size(max = 35, message = "identifiant must not exceed 35 characters")
     private String identifiant;
 
     /**
      * Date de naissance au format ISO 8601 (YYYY-MM-DD).
-     * Recommandé pour les types P et C.
+     * Obligatoire pour les types P et C per BCEAO spec.
      */
     @Pattern(regexp = "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
              message = "dateNaissance must be in format YYYY-MM-DD")
     private String dateNaissance;
 
-    /** Ville de naissance. Recommandé pour les types P et C. */
+    /**
+     * Ville de naissance.
+     * Obligatoire pour les types P et C per BCEAO spec.
+     */
     @Size(max = 35, message = "lieuNaissance must not exceed 35 characters")
     private String lieuNaissance;
 
     /**
      * Pays de naissance au format ISO 3166 alpha-2 (ex: CI, SN, BF).
-     * Recommandé pour les types P et C.
+     * Obligatoire pour les types P et C per BCEAO spec.
      */
     @Size(min = 2, max = 2, message = "paysNaissance must be ISO 3166 alpha-2 code (2 characters)")
     @Pattern(regexp = "^[A-Z]{2}$", message = "paysNaissance must be uppercase ISO 3166 alpha-2 code")
@@ -142,35 +150,12 @@ public class ClientInfo {
     private String nomMere;
 
     // ---- Cross-field validations ----
-
-    /**
-     * Validates that genre is provided for type P (personne physique) and C (commercial) clients.
-     * Per BCEAO spec, genreClient is required for these client types.
-     */
-    @JsonIgnore
-    @AssertTrue(message = "genre is required for type P (personne physique) and C (commercial) clients")
-    public boolean isGenreValidForClientType() {
-        if (typeClient == TypeClient.P || typeClient == TypeClient.C) {
-            return genre != null && !genre.isBlank();
-        }
-        return true;
-    }
-
-    /**
-     * Validates that nationalite is provided for type P and C clients.
-     * Per BCEAO spec, nationaliteClient is required for these client types.
-     */
-    @JsonIgnore
-    @AssertTrue(message = "nationalite is required for type P (personne physique) and C (commercial) clients")
-    public boolean isNationaliteValidForClientType() {
-        if (typeClient == TypeClient.P || typeClient == TypeClient.C) {
-            return nationalite != null && !nationalite.isBlank();
-        }
-        return true;
-    }
+    // NOTE: Most "required for P/C" validations are moved to AliasCreationRequest
+    // because they depend on typeCompte (TRAL exempts these requirements).
 
     /**
      * Validates that raisonSociale is provided for type B (business) and G (government) clients.
+     * B/G clients cannot use TRAL, so this validation always applies.
      */
     @JsonIgnore
     @AssertTrue(message = "raisonSociale is required for type B (business) and G (government) clients")
@@ -182,7 +167,7 @@ public class ClientInfo {
     }
 
     /**
-     * Validates identifier type matches client type.
+     * Validates identifier type matches client type when identification is provided.
      * - Type P/C: should use NIDN or CCPT
      * - Type B/G: should use TXID
      */
@@ -190,7 +175,7 @@ public class ClientInfo {
     @AssertTrue(message = "typeIdentifiant must match typeClient: P/C should use NIDN or CCPT, B/G should use TXID")
     public boolean isIdentifiantTypeValidForClientType() {
         if (typeClient == null || typeIdentifiant == null) {
-            return true; // Let @NotNull handle this
+            return true; // Identification is optional for TRAL accounts
         }
         return switch (typeClient) {
             case P, C -> typeIdentifiant == CodeSystemeIdentification.NIDN ||

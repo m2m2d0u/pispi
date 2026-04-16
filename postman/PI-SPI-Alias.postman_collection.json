@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "pi-spi-alias-revendication",
     "name": "PI-SPI — Alias & Revendication",
-    "description": "Collection de tests pour les opérations Alias (RAC) et Revendication du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/aliases`              — créer\n- `PUT    /api/v1/aliases`              — modifier\n- `DELETE /api/v1/aliases/{type}/{val}` — supprimer\n- `GET    /api/v1/aliases/search`       — rechercher\n- `POST   /api/v1/revendications`       — initier revendication\n- `POST   /api/v1/revendications/incoming/{id}/accept|reject`\n\n**⚠️ LIMITATIONS BCEAO** :\n1. Le champ `prenomClient` n'est PAS supporté par le DTO interface-participant\n2. `typeCompte` doit être `TRAN` (pas `TRAL`) pour EME - voir schéma OpenAPI CompteOther\n3. Pour les clients type P/C, les champs `dateNaissance`, `paysNaissance`, `lieuNaissance` sont recommandés\n\n**typeCompte valides (CompteOther)** : `CACC`, `SVGS`, `LLSV`, `TRAN`\n\n**Champs requis pour type P (personne physique)** :\n`nom`, `nationalite`, `paysResidence`, `telephone`, `categorie`, `genre`, `identificationNationale` (ou `numeroPasseport`)\n\n**Format compte (EME)** : Pour les participants de type E (monnaie électronique), utiliser `other` (pas `iban`). Exemple: `+2250707070707`\n\n**Téléphone** : `^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$`\n\n**raisonSuppression** (enum) : `FERMETURE_COMPTE_CLIENT` | `DEMANDE_CLIENT`",
+    "description": "Collection de tests pour les opérations Alias (RAC) et Revendication du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/aliases`              — créer\n- `PUT    /api/v1/aliases`              — modifier\n- `DELETE /api/v1/aliases/{type}/{val}` — supprimer\n- `GET    /api/v1/aliases/search`       — rechercher\n- `POST   /api/v1/revendications`       — initier revendication\n- `POST   /api/v1/revendications/incoming/{id}/accept|reject`\n\n**⚠️ LIMITATIONS BCEAO** :\n1. Le champ `prenomClient` n'est PAS supporté par le DTO interface-participant\n2. `typeCompte` doit être `TRAN` (pas `TRAL`) pour EME - voir schéma OpenAPI CompteOther\n3. Pour les clients type P/C, les champs `dateNaissance`, `paysNaissance`, `lieuNaissance` sont recommandés\n\n**typeCompte valides (CompteOther)** : `CACC`, `SVGS`, `LLSV`, `TRAN`\n\n**⚠️ Note** : TRAL (compte allégé sans identification) n'est PAS disponible pour les EME (établissements de paiement).\n\n**Champs requis pour type P (personne physique)** :\n`nom`, `nationalite`, `paysResidence`, `telephone`, `categorie`, `genre`, `identificationNationale` (ou `numeroPasseport`), `dateNaissance`, `paysNaissance`, `villeNaissance`\n\n**Format compte (EME)** : Pour les participants de type E (monnaie électronique), utiliser `other` (pas `iban`). Exemple: `+2250707070707`\n\n**Téléphone** : `^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$`\n\n**raisonSuppression** (enum) : `FERMETURE_COMPTE_CLIENT` | `DEMANDE_CLIENT`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -113,16 +113,16 @@
         },
 
         {
-          "name": "Créer alias SHID — Personne sans identification",
+          "name": "Créer alias SHID — Personne avec passeport (CCPT)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/api/v1/aliases", "host": ["{{baseUrl}}"], "path": ["api", "v1", "aliases"] },
-            "description": "Crée un alias SHID pour une personne physique sans document d'identification national.\n\n**typeClient** : P\n**typeIdentifiant** : CCPT → champ AIP `numeroPasseport`\n`prenom` et `dateNaissance` peuvent être absents.",
+            "description": "Crée un alias SHID pour une personne physique identifiée par passeport (sans CNI).\n\n**typeClient** : P\n**typeIdentifiant** : CCPT → champ AIP `numeroPasseport`\n\n**⚠️ Champs obligatoires pour type P** : `dateNaissance`, `paysNaissance`, `lieuNaissance` (villeNaissance) sont requis par BCEAO.",
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"ANONYME\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"CCPTTEMP20240001\",\n    \"nationalite\": \"SN\",\n    \"adresse\": \"Quartier Résidentiel, Rue 5\",\n    \"ville\": \"Dakar\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+221771234567\"\n  },\n  \"numeroCompte\": \"+221771234567\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}"
+              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PASSN12345678\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"SN\",\n    \"lieuNaissance\": \"Dakar\",\n    \"nationalite\": \"SN\",\n    \"adresse\": \"Quartier Résidentiel, Rue 5\",\n    \"ville\": \"Dakar\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+221771234567\",\n    \"email\": \"traore.passport@email.sn\"\n  },\n  \"numeroCompte\": \"+221771234567\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}"
             }
           }
         }
@@ -132,7 +132,7 @@
 
     {
       "name": "Modification",
-      "description": "Toutes les requêtes de modification utilisent `PUT /api/v1/aliases` avec un corps `AliasCreationRequest`. Seuls les champs listés dans le schéma AIP `ModificationAlias` sont transmis à la plateforme : `alias`, `paysResidenceClient`, `telephoneClient`, `emailClient`, `adresseClient`, `villeClient`, `codePostalClient`, `denominationSociale`, `numeroPasseport` (CCPT uniquement), `photoClient`, `preConfirmation`.\n\nLes champs `nom`, `typeClient`, `typeIdentifiant`, `identifiant`, `telephone`, `numeroCompte`, `typeCompte`, `dateOuvertureCompte` sont obligatoires pour la validation DTO locale mais ne sont pas renvoyés à l'AIP (sauf `telephoneClient` et `numeroPasseport`).",
+      "description": "Toutes les requêtes de modification utilisent `PUT /api/v1/aliases` avec un corps `AliasCreationRequest`. Seuls les champs listés dans le schéma AIP `ModificationAlias` sont transmis à la plateforme : `alias`, `paysResidenceClient`, `telephoneClient`, `emailClient`, `adresseClient`, `villeClient`, `codePostalClient`, `denominationSociale`, `numeroPasseport` (CCPT uniquement), `photoClient`, `preConfirmation`.\n\nLes champs `nom`, `typeClient`, `typeIdentifiant`, `identifiant`, `telephone`, `numeroCompte`, `typeCompte`, `dateOuvertureCompte` sont obligatoires pour la validation DTO locale mais ne sont pas renvoyés à l'AIP (sauf `telephoneClient` et `numeroPasseport`).\n\n**⚠️ CONTRAINTES PI-RAC IMPORTANTES:**\n1. `denominationSociale` / `raisonSociale` : Modification uniquement autorisée pour les types B (Business) et G (Government). Rejeté pour P et C.\n2. `numeroPasseport` : Modification uniquement si l'alias a été créé avec `typeIdentifiant: CCPT`. Impossible de changer NIDN → CCPT ou vice versa.\n3. `preConfirmation` : Uniquement valide pour les clients type B (business).",
       "item": [
 
         {
@@ -145,7 +145,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Cité Patte d'Oie, Villa 32, Rue 17\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Cité Patte d'Oie, Villa 32, Rue 17\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         },
@@ -160,37 +160,37 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"f.ouedraogo.nouveau@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"f.ouedraogo.nouveau@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         },
 
         {
-          "name": "Modifier le nom commercial d'un client",
+          "name": "Modifier le nom commercial d'un client (B/G only)",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/api/v1/aliases", "host": ["{{baseUrl}}"], "path": ["api", "v1", "aliases"] },
-            "description": "Met à jour `denominationSociale` côté AIP (mappé depuis `client.raisonSociale`). Applicable aux clients Business (B) et Commercial (C).",
+            "description": "Met à jour `denominationSociale` côté AIP (mappé depuis `client.raisonSociale`). **⚠️ Uniquement pour les clients Business (B) et Government (G)** — PI-RAC rejette cette modification pour les types P et C.",
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidCom}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"KONE\",\n    \"raisonSociale\": \"EPICERIE KONE, FILS & ASSOCIES\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"TXNCOM55544\",\n    \"adresse\": \"Marché Adjamé, Box 245\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250505050505\",\n    \"email\": \"epicerie.kone@gmail.com\"\n  },\n  \"numeroCompte\": \"CI61CI0050000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2021-07-20\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidBiz}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"GROUPE FINANCE PLUS\",\n    \"raisonSociale\": \"FINANCE PLUS SA - NOUVEAU NOM\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"TXNBUS98765\",\n    \"adresse\": \"Tour B, Plateau Business Center\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252720000001\",\n    \"email\": \"contact@financeplus.ci\"\n  },\n  \"numeroCompte\": \"+2252720000001\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2018-01-15\"\n}"
             }
           }
         },
 
         {
-          "name": "Modifier le numéro de passeport d'un client",
+          "name": "Modifier le numéro de passeport d'un client (CCPT only)",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/api/v1/aliases", "host": ["{{baseUrl}}"], "path": ["api", "v1", "aliases"] },
-            "description": "Met à jour `numeroPasseport` côté AIP. **Condition** : `client.typeIdentifiant` doit être `CCPT` — c'est la seule condition qui déclenche le mapping vers `numeroPasseport` dans `buildModificationPayload`.",
+            "description": "Met à jour `numeroPasseport` côté AIP. **⚠️ Condition** : L'alias doit avoir été créé avec `typeIdentifiant: CCPT`. PI-RAC interdit le changement de type d'identification (NIDN ↔ CCPT). Utilise l'alias `aliasShidAnon` qui a été créé avec CCPT.",
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PASSPBFA123456\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidAnon}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PASSN87654321\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"SN\",\n    \"lieuNaissance\": \"Dakar\",\n    \"nationalite\": \"SN\",\n    \"adresse\": \"Quartier Résidentiel, Rue 5\",\n    \"ville\": \"Dakar\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+221771234567\",\n    \"email\": \"traore.passport@email.sn\"\n  },\n  \"numeroCompte\": \"+221771234567\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}"
             }
           }
         },
@@ -205,7 +205,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         },
@@ -220,7 +220,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\",\n  \"photoClient\": \"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/==\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\",\n  \"photoClient\": \"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/==\"\n}"
             }
           }
         },
@@ -235,22 +235,22 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"codePostal\": \"01000\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"codePostal\": \"01000\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         },
 
         {
-          "name": "Modifier l'attribut préconfirmation d'un alias",
+          "name": "Modifier l'attribut préconfirmation d'un alias (B only)",
           "request": {
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": { "raw": "{{baseUrl}}/api/v1/aliases", "host": ["{{baseUrl}}"], "path": ["api", "v1", "aliases"] },
-            "description": "Active ou désactive `preConfirmation` côté AIP. Quand `true`, le payeur doit confirmer avant que le virement soit finalisé.",
+            "description": "Active ou désactive `preConfirmation` côté AIP. Quand `true`, le payeur doit confirmer avant que le virement soit finalisé. **⚠️ Uniquement valide pour les clients type B (business).**",
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\",\n  \"preConfirmation\": true\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidBiz}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"GROUPE FINANCE PLUS\",\n    \"raisonSociale\": \"FINANCE PLUS SA\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"TXNBUS98765\",\n    \"adresse\": \"Tour B, Plateau Business Center\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252720000001\",\n    \"email\": \"contact@financeplus.ci\"\n  },\n  \"numeroCompte\": \"+2252720000001\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2018-01-15\",\n  \"preConfirmation\": false\n}"
             }
           }
         },
@@ -265,7 +265,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22678999888\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22678999888\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         },
@@ -280,7 +280,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"adresse\": \"Quartier Patte d'Oie, Villa 32\",\n    \"ville\": \"Bobo-Dioulasso\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Quartier Patte d'Oie, Villa 32\",\n    \"ville\": \"Bobo-Dioulasso\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}"
             }
           }
         }
