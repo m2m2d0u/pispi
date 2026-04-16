@@ -68,10 +68,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias search response")
     @PostMapping("/alias/recherche/reponses")
     public ApiResponse<Void> receiveAliasSearchResponse(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
         log.info("Alias search response received: {}", payload);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 200, null);
+        messageLogService.log(null, null, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
     }
 

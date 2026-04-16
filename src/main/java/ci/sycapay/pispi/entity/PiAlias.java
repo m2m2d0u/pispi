@@ -21,7 +21,7 @@ public class PiAlias {
     @Column(name = "end_to_end_id", unique = true, nullable = false, length = 35)
     private String endToEndId;
 
-    @Column(name = "alias_value", nullable = false, length = 50)
+    @Column(name = "alias_value", length = 50)  // nullable for SHID - PI-RAC generates the value
     private String aliasValue;
 
     @Enumerated(EnumType.STRING)

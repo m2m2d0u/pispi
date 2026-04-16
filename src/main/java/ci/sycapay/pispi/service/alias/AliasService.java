@@ -93,7 +93,8 @@ public class AliasService {
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE, MessageDirection.OUTBOUND, payload, null, null);
 
         try {
-            aipClient.post("/alias/creation", payload);
+            Map<String, Object> response = aipClient.post("/alias/creation", payload);
+            log.info("Alias creation response from AIP: {}", response);
         } catch (AipCommunicationException e) {
             // Mark as FAILED if request fails
             alias.setStatut(AliasStatus.FAILED);
@@ -219,7 +220,7 @@ public class AliasService {
         Map<String, Object> payload = new HashMap<>();
 
         // Required fields (based on interface-participant Alias DTO)
-        payload.put("idCreationAlias", IdGenerator.generateEndToEndId(properties.getCodeMembre()));
+        payload.put("idCreationAlias", endToEndId);  // Use same ID as saved in entity for callback matching
         payload.put("typeAlias", request.getTypeAlias().name());
         payload.put("nomClient", c.getNom());
         payload.put("categorieClient", c.getTypeClient().name());
