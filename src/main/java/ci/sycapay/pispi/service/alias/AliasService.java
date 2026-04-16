@@ -182,16 +182,15 @@ public class AliasService {
     // ---- AIP payload builders ----
 
     /**
-     * Builds the creation payload matching the AIP's Alias schema.
-     * Field names are dictated by the AIP OpenAPI spec (v3/api-docs).
+     * Builds the creation payload matching the interface-participant's Alias DTO.
+     * Uses FLAT structure with exact field names from the decompiled DTO.
      */
     private Map<String, Object> buildAliasPayload(String endToEndId, AliasCreationRequest request) {
         ClientInfo c = request.getClient();
         Map<String, Object> payload = new HashMap<>();
 
-        // Required fields
+        // Required fields (based on interface-participant Alias DTO)
         payload.put("idCreationAlias", IdGenerator.generateEndToEndId(properties.getCodeMembre()));
-        payload.put("endToEndId", endToEndId);
         payload.put("typeAlias", request.getTypeAlias().name());
         payload.put("nomClient", c.getNom());
         payload.put("categorieClient", c.getTypeClient().name());
@@ -206,7 +205,7 @@ public class AliasService {
         // Alias value (optional for SHID — AIP generates it; required for MBNO/MCOD)
         if (request.getAlias() != null) payload.put("valeurAlias", request.getAlias());
 
-        // Identifier: mapped by type to the correct AIP field
+        // Identifier: mapped by type to the correct field
         if (c.getTypeIdentifiant() != null && c.getIdentifiant() != null) {
             switch (c.getTypeIdentifiant()) {
                 case NIDN -> payload.put("identificationNationaleClient", c.getIdentifiant());
@@ -215,8 +214,14 @@ public class AliasService {
             }
         }
 
-        // Optional client fields
-        if (c.getGenre() != null) payload.put("genreClient", c.getGenre());
+        // Genre is required for type P and C clients
+        if (c.getTypeClient() == TypeClient.P || c.getTypeClient() == TypeClient.C) {
+            payload.put("genreClient", c.getGenre() != null ? c.getGenre() : "1");
+        } else if (c.getGenre() != null) {
+            payload.put("genreClient", c.getGenre());
+        }
+
+        // Optional client fields (matching interface-participant Alias DTO field names)
         if (c.getRaisonSociale() != null) payload.put("raisonSociale", c.getRaisonSociale());
         if (c.getDenominationSociale() != null) payload.put("denominationSociale", c.getDenominationSociale());
         if (c.getDateNaissance() != null) payload.put("dateNaissanceClient", c.getDateNaissance());
@@ -228,11 +233,13 @@ public class AliasService {
         if (c.getEmail() != null) payload.put("emailClient", c.getEmail());
         if (c.getCodePostal() != null) payload.put("codePostaleClient", c.getCodePostal());
         if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
-        // preConfirmation is only valid for type B (personne morale) clients per BCEAO data model
-        if (c.getTypeClient() == TypeClient.B && request.getPreConfirmation() != null)
-            payload.put("preConfirmation", request.getPreConfirmation());
 
-        // Merchant: nomMarchand overrides denominationSociale; codeActivite maps to MCC category
+        // preConfirmation is only valid for type B (personne morale) clients
+        if (c.getTypeClient() == TypeClient.B && request.getPreConfirmation() != null) {
+            payload.put("preConfirmation", request.getPreConfirmation());
+        }
+
+        // Merchant fields
         if (request.getMarchand() != null) {
             if (request.getMarchand().getNomMarchand() != null) payload.put("denominationSociale", request.getMarchand().getNomMarchand());
             if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("codeActivite", request.getMarchand().getCategorieCodeMarchand());
