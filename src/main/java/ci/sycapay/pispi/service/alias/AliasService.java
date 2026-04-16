@@ -8,6 +8,7 @@ import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.AipCommunicationException;
+import ci.sycapay.pispi.exception.DuplicateRequestException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -20,8 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 
+import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
@@ -41,13 +45,60 @@ public class AliasService {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
+        // 0. Check if alias already exists with ACTIVE or PENDING status
+        if (request.getAlias() != null) {
+            Optional<PiAlias> existing = aliasRepository.findByAliasValueAndTypeAliasAndStatutIn(
+                    request.getAlias(),
+                    request.getTypeAlias(),
+                    List.of(AliasStatus.ACTIVE, AliasStatus.PENDING)
+            );
+            if (existing.isPresent()) {
+                throw new DuplicateRequestException("Alias", request.getAlias(), existing.get().getStatut().name());
+            }
+        }
+
+        // 1. Save alias with PENDING status before sending to PI-RAC
+        PiAlias alias = PiAlias.builder()
+                .endToEndId(endToEndId)
+                .aliasValue(request.getAlias())
+                .typeAlias(request.getTypeAlias())
+                .typeClient(request.getClient().getTypeClient())
+                .nom(request.getClient().getNom())
+                .prenom(request.getClient().getPrenom())
+                .raisonSociale(request.getClient().getRaisonSociale())
+                .typeIdentifiant(request.getClient().getTypeIdentifiant())
+                .identifiant(request.getClient().getIdentifiant())
+                .dateNaissance(request.getClient().getDateNaissance() != null
+                        ? LocalDate.parse(request.getClient().getDateNaissance()) : null)
+                .nationalite(request.getClient().getNationalite())
+                .pays(request.getClient().getPays())
+                .telephone(request.getClient().getTelephone())
+                .email(request.getClient().getEmail())
+                .numeroCompte(request.getNumeroCompte())
+                .typeCompte(request.getTypeCompte())
+                .codeMembreParticipant(codeMembre)
+                .statut(AliasStatus.PENDING)
+                .build();
+
+        if (request.getMarchand() != null) {
+            alias.setCodeMarchand(request.getMarchand().getCodeMarchand());
+            alias.setCategorieCodeMarchand(request.getMarchand().getCategorieCodeMarchand());
+            alias.setNomMarchand(request.getMarchand().getNomMarchand());
+        }
+
+        aliasRepository.save(alias);
+
+        // 2. Build and send request to PI-RAC
         Map<String, Object> payload = buildAliasPayload(endToEndId, request);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE, MessageDirection.OUTBOUND, payload, null, null);
 
-        Map<String, Object> response;
         try {
-            response = aipClient.post("/alias/creation", payload);
+            aipClient.post("/alias/creation", payload);
         } catch (AipCommunicationException e) {
+            // Mark as FAILED if request fails
+            alias.setStatut(AliasStatus.FAILED);
+            aliasRepository.save(alias);
+
             Throwable cause = e.getCause();
             Integer httpStatus = null;
             String errorBody = e.getMessage();
@@ -60,42 +111,12 @@ public class AliasService {
             throw e;
         }
 
-        PiAlias alias = PiAlias.builder()
-                .endToEndId(endToEndId)
-                .aliasValue(request.getAlias())
-                .typeAlias(request.getTypeAlias())
-                .typeClient(request.getClient().getTypeClient())
-                .nom(request.getClient().getNom())
-                .prenom(request.getClient().getPrenom())
-                .raisonSociale(request.getClient().getRaisonSociale())
-                .typeIdentifiant(request.getClient().getTypeIdentifiant())
-                .identifiant(request.getClient().getIdentifiant())
-                .nationalite(request.getClient().getNationalite())
-                .pays(request.getClient().getPays())
-                .telephone(request.getClient().getTelephone())
-                .email(request.getClient().getEmail())
-                .numeroCompte(request.getNumeroCompte())
-                .typeCompte(request.getTypeCompte())
-                .codeMembreParticipant(codeMembre)
-                .statut(AliasStatus.ACTIVE)
-                .dateCreationRac(response != null && response.get("dateCreation") != null
-                        ? parseDateTime(String.valueOf(response.get("dateCreation"))) : null)
-                .build();
-
-        if (request.getMarchand() != null) {
-            alias.setCodeMarchand(request.getMarchand().getCodeMarchand());
-            alias.setCategorieCodeMarchand(request.getMarchand().getCategorieCodeMarchand());
-            alias.setNomMarchand(request.getMarchand().getNomMarchand());
-        }
-
-        aliasRepository.save(alias);
-
+        // 3. Return PENDING response - callback will update to ACTIVE/FAILED
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
-                .statut(StatutOperationAlias.SUCCES)
+                .statut(StatutOperationAlias.EN_COURS)
                 .alias(request.getAlias())
                 .typeAlias(request.getTypeAlias())
-                .dateCreation(formatDateTime(alias.getDateCreationRac()))
                 .build();
     }
 
@@ -104,30 +125,35 @@ public class AliasService {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
-        Map<String, Object> payload = buildModificationPayload(request);
-        messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
-
-        Map<String, Object> response = aipClient.post("/alias/modification", payload);
-
+        // 1. Find and update alias locally before sending to PI-RAC
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
                 request.getAlias(), request.getTypeAlias(), AliasStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Alias", request.getAlias()));
 
-        alias.setNom(request.getClient().getNom());
-        alias.setPrenom(request.getClient().getPrenom());
-        alias.setNumeroCompte(request.getNumeroCompte());
-        alias.setTypeCompte(request.getTypeCompte());
-        alias.setStatut(AliasStatus.MODIFIED);
-        alias.setDateModificationRac(response != null && response.get("dateModification") != null
-                ? parseDateTime(String.valueOf(response.get("dateModification"))) : null);
+        // Update all modifiable client fields to maintain consistency with PI-RAC
+        ClientInfo c = request.getClient();
+        if (c.getNom() != null) alias.setNom(c.getNom());
+        if (c.getPrenom() != null) alias.setPrenom(c.getPrenom());
+        if (c.getRaisonSociale() != null) alias.setRaisonSociale(c.getRaisonSociale());
+        if (c.getPays() != null) alias.setPays(c.getPays());
+        if (c.getTelephone() != null) alias.setTelephone(c.getTelephone());
+        if (c.getEmail() != null) alias.setEmail(c.getEmail());
+        if (request.getNumeroCompte() != null) alias.setNumeroCompte(request.getNumeroCompte());
+        if (request.getTypeCompte() != null) alias.setTypeCompte(request.getTypeCompte());
         aliasRepository.save(alias);
 
+        // 2. Build and send request to PI-RAC
+        Map<String, Object> payload = buildModificationPayload(request);
+        messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
+
+        aipClient.post("/alias/modification", payload);
+
+        // 3. Return EN_COURS - callback will update dateModificationRac
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
-                .statut(StatutOperationAlias.SUCCES)
+                .statut(StatutOperationAlias.EN_COURS)
                 .alias(request.getAlias())
                 .typeAlias(request.getTypeAlias())
-                .dateModification(formatDateTime(alias.getDateModificationRac()))
                 .build();
     }
 
@@ -136,6 +162,13 @@ public class AliasService {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
+        // 1. Find alias and mark as PENDING deletion
+        PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(aliasValue, typeAlias, AliasStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Alias", aliasValue));
+
+        // Keep alias ACTIVE until callback confirms deletion
+
+        // 2. Build and send request to PI-RAC
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", aliasValue);
@@ -144,16 +177,12 @@ public class AliasService {
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
         aipClient.post("/alias/suppression", payload);
 
-        PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(aliasValue, typeAlias, AliasStatus.ACTIVE)
-                .orElseThrow(() -> new ResourceNotFoundException("Alias", aliasValue));
-
-        alias.setStatut(AliasStatus.DELETED);
-        aliasRepository.save(alias);
-
+        // 3. Return EN_COURS - callback will update status to DELETED and set dateSuppressionRac
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
-                .statut(StatutOperationAlias.SUCCES)
+                .statut(StatutOperationAlias.EN_COURS)
                 .alias(aliasValue)
+                .typeAlias(typeAlias)
                 .build();
     }
 

@@ -5,6 +5,7 @@ import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
+import ci.sycapay.pispi.service.alias.AliasCallbackService;
 import ci.sycapay.pispi.enums.WebhookEventType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,7 @@ public class MiscCallbackController {
 
     private final MessageLogService messageLogService;
     private final WebhookService webhookService;
+    private final AliasCallbackService aliasCallbackService;
 
     // ---- Notification failures ----
 
@@ -29,7 +31,7 @@ public class MiscCallbackController {
     @PostMapping("/notifications/echecs")
     public ApiResponse<Void> receiveNotificationFailure(@RequestBody Map<String, Object> payload) {
         String msgId = extractMsgId(payload);
-        log.warn("Notification failure received: {}", msgId);
+        log.warn("Notification failure received: {}", payload);
         if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
@@ -42,7 +44,7 @@ public class MiscCallbackController {
     @PostMapping("/verifications-identites/echecs")
     public ApiResponse<Void> receiveVerificationFailure(@RequestBody Map<String, Object> payload) {
         String msgId = extractMsgId(payload);
-        log.warn("Verification failure received: {}", msgId);
+        log.warn("Verification failure received: {}", payload);
         if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
@@ -55,7 +57,7 @@ public class MiscCallbackController {
     @PostMapping("/participants/liste/reponses")
     public ApiResponse<Void> receiveParticipantList(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Participant list received: {}", msgId);
+        log.info("Participant list received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.REDA_014, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
@@ -67,7 +69,7 @@ public class MiscCallbackController {
     @PostMapping("/alias/recherche/reponses")
     public ApiResponse<Void> receiveAliasSearchResponse(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Alias search response received: {}", msgId);
+        log.info("Alias search response received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
@@ -76,30 +78,48 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias creation response")
     @PostMapping("/alias/creation/reponses")
     public ApiResponse<Void> receiveAliasCreationResponse(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
-        log.info("Alias creation response received: {}", msgId);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.RAC_CREATE, MessageDirection.INBOUND, payload, 200, null);
+        String idCreationAlias = (String) payload.get("idCreationAlias");
+        log.info("Alias creation response received: {}", payload);
+        if (idCreationAlias != null && messageLogService.isDuplicate(idCreationAlias)) {
+            return ApiResponse.ok(null);
+        }
+        messageLogService.log(null, idCreationAlias, IsoMessageType.RAC_CREATE, MessageDirection.INBOUND, payload, 200, null);
+
+        // Process callback: update alias with actual values from PI-RAC
+        aliasCallbackService.processCreationResponse(payload);
+
         return ApiResponse.ok("Callback received", null);
     }
 
     @Operation(summary = "Receive alias modification response")
     @PostMapping("/alias/modification/reponses")
     public ApiResponse<Void> receiveAliasModificationResponse(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
-        log.info("Alias modification response received: {}", msgId);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.RAC_MODIFY, MessageDirection.INBOUND, payload, 200, null);
+        String alias = (String) payload.get("alias");
+        log.info("Alias modification response received: {}", payload);
+        if (alias != null && messageLogService.isDuplicate("MOD_" + alias)) {
+            return ApiResponse.ok(null);
+        }
+        messageLogService.log(null, "MOD_" + alias, IsoMessageType.RAC_MODIFY, MessageDirection.INBOUND, payload, 200, null);
+
+        // Process callback: update alias with dateModification from PI-RAC
+        aliasCallbackService.processModificationResponse(payload);
+
         return ApiResponse.ok("Callback received", null);
     }
 
     @Operation(summary = "Receive alias deletion response")
     @PostMapping("/alias/suppression/reponses")
     public ApiResponse<Void> receiveAliasDeletionResponse(@RequestBody Map<String, Object> payload) {
-        String msgId = (String) payload.get("msgId");
-        log.info("Alias deletion response received: {}", msgId);
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.RAC_DELETE, MessageDirection.INBOUND, payload, 200, null);
+        String alias = (String) payload.get("alias");
+        log.info("Alias deletion response received: {}", payload);
+        if (alias != null && messageLogService.isDuplicate("DEL_" + alias)) {
+            return ApiResponse.ok(null);
+        }
+        messageLogService.log(null, "DEL_" + alias, IsoMessageType.RAC_DELETE, MessageDirection.INBOUND, payload, 200, null);
+
+        // Process callback: update alias status to DELETED and set dateSuppressionRac
+        aliasCallbackService.processDeletionResponse(payload);
+
         return ApiResponse.ok("Callback received", null);
     }
 
@@ -109,7 +129,7 @@ public class MiscCallbackController {
     @PostMapping("/revendications/reponses")
     public ApiResponse<Void> receiveClaimResponse(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Claim response received: {}", msgId);
+        log.info("Claim response received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
@@ -119,7 +139,7 @@ public class MiscCallbackController {
     @PostMapping("/revendications/recuperation/reponses")
     public ApiResponse<Void> receiveClaimRecoveryResponse(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Claim recovery response received: {}", msgId);
+        log.info("Claim recovery response received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
@@ -129,7 +149,7 @@ public class MiscCallbackController {
     @PostMapping("/revendications/acceptation/reponses")
     public ApiResponse<Void> receiveClaimAcceptanceResponse(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Claim acceptance response received: {}", msgId);
+        log.info("Claim acceptance response received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
@@ -139,7 +159,7 @@ public class MiscCallbackController {
     @PostMapping("/revendications/rejet/reponses")
     public ApiResponse<Void> receiveClaimRejectionResponse(@RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("Claim rejection response received: {}", msgId);
+        log.info("Claim rejection response received: {}", payload);
         if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
         messageLogService.log(msgId, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 200, null);
         return ApiResponse.ok("Callback received", null);
