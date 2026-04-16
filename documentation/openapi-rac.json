@@ -1,0 +1,4036 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PI - Répertoire des Alias de Comptes - OpenAPI 3.0",
+    "x-logo": {
+      "url": "https://bceao.int/themes/medianet/image/png/logo_fr.png"
+    },
+    "description": "Le répertoire des alias de comptes - `PI-RAC` - est le service de la plateforme d’interopérabilité PI qui offre la possibilité aux personnes physiques et morales de définir des alias de compte.\n\nUn alias de compte est une identification choisie par un client qui lui permet de recevoir des virements sans fournir les informations d’identification de son compte.\n\nLes alias améliorent l’expérience client en permettant au client payeur d'effectuer des transactions de manière transparente sans avoir besoin de connaître et de saisir les détails du compte bancaire du bénéficiaire.\n\nLe répertoire des alias de compte permet de créer les types d’alias suivants :\n *  Une adresse de paiement codifiée `SHID`\n *  Un numéro de téléphone codifié `MBNO`\n *  un identifiant de compte marchand codifié `MCOD`\n\nPour obtenir plus d'informations sur le repertoire des alias:\n- [La présentation de PI RAC](https://pi-bceao.com/publications?document=BCEAO-PI-RAC-PRESENTATION.pdf)\n\n# Généralités\n\nL'API PI RAC suit les principes fondamentaux d'une API REST et utilise le format JSON de manière cohérente pour représenter les ressources.\n\nTous les appels à PI RAC doivent être signés selon la `norme JWS (JSON Web Signature)` sauf la recherche d’alias.\n\n## Gestion des versions\n\n  La stratégie de développement de l'API est de maintenir la rétrocompatibilité entre l'API et ses ressources et services dans la mesure du possible.\n  Les APIs de PI utilisent la spécification `SemVer12 (La gestion sémantique de versions)`; en ce sens, les modifications compatibles ne doivent pas générer une nouvelle version majeure.\n\n  La version de l’API utilise ainsi le format` MAJEUR.MINEUR.CORRECTIF`\n  * le numéro de version `MAJEUR` quand il y a des changements non rétrocompatibles,\n  * le numéro de version `MINEUR` quand il y a des ajouts de fonctionnalités rétrocompatibles,\n  * le numéro de version de `CORRECTIF` quand il y a des corrections d’anomalies rétrocompatibles.\n\n  Chaque fois qu'un changement dans ce document définissant les caractéristiques de l'API est mis à jour et affecte d'une manière ou d'une autre un service d'API, une nouvelle version de l’API sera publiée.\n  La version initiale de chaque API est `1.0.0`.\n  ### `1) Versions de correction `\n  L’identifiant de version de correction est  incrémenté si des corrections rétrocompatibles sont introduites. Une correction est définie comme un changement interne qui corrige un comportement incorrect.\n  ### `2) Versions mineurs `\n  Certaines modifications n'affectent pas la version de la ressource API; par exemple, si l'ordre des paramètres dans une requête change.\n\n  La liste suivante décrit quelques modifications considérées comme rétrocompatibles. Les participants doivent implémenter leur système de manière à ce que les services d'API prennent automatiquement en charge ces modifications sans interrompre le fonctionnement du système:\n  * paramètres de requêtes facultatifs\n  * ajout de nouveaux codes d'erreur\n\n  Ces types de modifications affectent la version mineure du service d'API.\n  ### `3) Versions majeurs`\n  La liste suivante décrit les modifications considérées comme rétro-incompatibles si la modification affecte un service d'API connecté à une ressource. Les intégrateurs d'API n'ont pas besoin d'implémenter de manière à prendre automatiquement en charge ces modifications.\n  En effet, pour des changements importants, un plan de migration sera défini et dépendra de la nature de ces changements.\n  Les situations suivantes peuvent entraîner la publication d’une version majeure:\n  * Paramètres obligatoires supprimés ou ajoutés à une requête\n  * Paramètres facultatifs changés en obligatoires dans une requête\n  * Paramètres renommés\n  * Types de données modifiés\n  * La logique métier d’un service modifiée\n  * Les URI de ressource/service d'API modifiées\n\n  Ces types de modifications affectent la version principale du service d'API. Veuillez noter que la liste n'est pas exhaustive ; il peut également y avoir d'autres modifications susceptibles d'affecter la version principale du service d'API.\n  ### `4) Informations de version`\n  La gestion des versions s’effectuera via le chemin URI qui consiste à inclure le numéro de version dans le chemin URI et permet de gérer facilement plusieurs versions parallèles de l’API.\n  Le numéro de version majeure sera inclus dans l’URL de l’API comme suit: __https://www.example.com/api/v1/products__\n\n## Gestion des erreurs\n\nEn ce qui concerne les réponses notifiant une erreur, PI utilise le format décrit dans la `RFC 7807` qui décrit comment les API peuvent renvoyer des informations d'erreur de manière standardisée.  Une telle réponse contient les éléments suivants :\n<table>\n  <tr>\n    <td><b>type</b></td>\n    <td>Le champ \"type\" est une URI unique qui identifie le type de problème. L’URI peut être relative.</td>\n  </tr>\n  <tr>\n    <td><b>title</b></td>\n    <td>Le champ \"title\"  fournit une description courte pour comprendre le problème. Il est identique pour le même type de problème.</td>\n  </tr>\n  <tr>\n    <td><b>detail</b></td>\n    <td>Le champ \"detail\" donne des explications sur le problème.</td>\n  </tr>\n  <tr>\n    <td><b>instance</b></td>\n    <td>Il indique une référence URI de ressource concernée par le problème. Il est optionnel.</td>\n  </tr>\n  <tr>\n    <td><b>status</b></td>\n    <td>Le champ \"status\" renvoie le code de statut HTTP qui a déclenché cette réponse. Ce champ est optionnel.</td>\n  </tr>\n</table>\n\nPour donner des informations détaillées sur le problème, des extensions sont permises. Les extensions sont des champs additionnels qui peuvent figurer dans la réponse.\n\nCi-dessous un exemple de réponse en JSON:\n<img src=\"./images/exemple-erreur-json.png\" />\n\nIci, le problème `format-invalide` __(identifié par son type URI)__  indique la raison de l’erreur `400` retournée par le serveur lors de la création d’un client; deux extensions sont ajoutées: `typeClient` qui indique le __champ incorrect__, et `invalid-params` qui indiquent les __paramètres invalides et la raison d’invalidité__.\nPar ailleurs, l'URI de type d'un problème devrait référencer une page HTML expliquant comment résoudre le problème. Cependant des types prédéfinis existent: c’est le cas du type `about:blank` qui indique que __le problème n'a pas de sémantique supplémentaire au-delà de celle du code de statut HTTP__. Lorsque `about:blank` est utilisé, le champ `title` est le même que le libellé du statut HTTP comme montré dans l’exemple suivant:\n\n\n# Sécurité\nLe cryptage des échanges avec `TLS` constitue une exigence avec une authentification mutuelle obligatoire lors de l’établissement de la connexion TLS aux APIs de PI.  Pour garantir la non-répudiation, la __signature numérique__ des messages échangés est exigée.\n\nLes clés utilisées pour les processus de signature et de cryptage __doivent être certifiées par l’autorité de certification de la BCEAO__ .\n\n## Mecanismes de sécurité\n<SecurityDefinitions />\n\n## Signature des messages\nLa norme JWS (JSON Web Signature) est utilisée pour signer les requêtes HTTP JSON envoyées à l’API. Cette norme fournit un format standard pour la signature numérique des données JSON. La signature consiste à  fournir un JWS avec un contenu détaché, tel que défini dans la RFC 7515, dans l'en-tête HTTP de chaque requête API. Le corps HTTP forme une charge utile non codée telle que définie dans la RFC 7797.\n\nLa procédure de signature et de vérification des messages est détaillée dans le guide d'intégration: [Sécurité du système > Signature des messages](https://developers.pi-bceao.com/sandbox/pages/sandbox-securite-signature)\n",
+    "contact": {
+      "email": "contact@pi-bceao.com"
+    },
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "https://sandbox.api.pi-bceao.com/rac/v1"
+    }
+  ],
+  "security": [
+    {
+      "myAuthorizer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Entrées d'alias",
+      "description": "Gestion de la création, modification, suppression et recherche des alias"
+    }
+  ],
+  "paths": {
+    "/alias": {
+      "post": {
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": true,
+            "description": "apikey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "tags": [
+          "Entrées d'alias"
+        ],
+        "summary": "Créer un alias",
+        "description": "\nCréer un nouveau alias de compte\n\nLa création d’un alias peut être initiée par le client final à partir de l’application que lui fournit son participant ou par le participant à la demande de son client.\n\nUne demande de création d'alias contient les  `informations du client  + les informations du compte + les informations propres à l'alias`\n",
+        "operationId": "creerAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasCreationDemande"
+              },
+              "examples": {
+                "PP_SHID": {
+                  "$ref": "#/components/examples/pp-shid"
+                },
+                "PC_MBNO": {
+                  "$ref": "#/components/examples/pc-mbno"
+                },
+                "PC_ID_FISCALE": {
+                  "$ref": "#/components/examples/pc-shid-idFiscale"
+                },
+                "MBNO": {
+                  "$ref": "#/components/examples/pp-mbno"
+                },
+                "MCOD": {
+                  "$ref": "#/components/examples/pm-mcod"
+                },
+                "PM_SHID": {
+                  "$ref": "#/components/examples/pm-shid"
+                },
+                "PP_TRAL": {
+                  "$ref": "#/components/examples/pp-tral"
+                },
+                "PG_TAXE": {
+                  "$ref": "#/components/examples/pm-taxe"
+                }
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasCreationDemande"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Alias créé avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasCreationReponse"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasCreationReponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format invalid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "invalid-request-body": {
+                    "$ref": "#/components/examples/Problem7807ExempleBadRequestJSON"
+                  },
+                  "identification-client_manquant": {
+                    "$ref": "#/components/examples/CreationAliasDonneesIdentificationPersonnePhysiqueManquantPourLesBanque"
+                  },
+                  "pays-iban-invalid": {
+                    "$ref": "#/components/examples/CreationAliasIbanNeDebutePasParLeCodePaysDuParticipant"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de créer l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "demandeur-non-valid": {
+                    "$ref": "#/components/examples/CreationAliasParticipantNonDetenteurCompteClient"
+                  },
+                  "limit-pp": {
+                    "$ref": "#/components/examples/CreationAliasDepassementDeLimitPP"
+                  },
+                  "limit-pm": {
+                    "$ref": "#/components/examples/CreationAliasDepassementDeLimitPM"
+                  },
+                  "type-compte-invalid": {
+                    "$ref": "#/components/examples/CreationAliasTypeCompteInvalid"
+                  },
+                  "mcod-reserve-pm": {
+                    "$ref": "#/components/examples/CreationAliasMcodPourPP"
+                  },
+                  "mbno-reserve-pp": {
+                    "$ref": "#/components/examples/CreationAliasMbnoPourPM"
+                  },
+                  "alias-existe-pour-client-different": {
+                    "$ref": "#/components/examples/CreationAliasAlreadyExist"
+                  },
+                  "alias-existe-pour-meme-client": {
+                    "$ref": "#/components/examples/CreationAliasAlreadyExistPourLeMemeClient"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        },
+        "security": [
+          {
+            "myAuthorizer": []
+          }
+        ]
+      }
+    },
+    "/alias/{cle}": {
+      "get": {
+        "tags": [
+          "Entrées d'alias"
+        ],
+        "summary": "Rechercher un alias",
+        "description": "Demander les détails d'un compte associée à un alias",
+        "operationId": "rechercherAlias",
+        "parameters": [
+          {
+            "name": "cle",
+            "in": "path",
+            "description": "valeur de l'alias (le MBNO, le MCOD ou le SHID)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-pi-EndToEndId",
+            "in": "header",
+            "description": "EndToEndId de la transaction pour laquelle la recherche d'alias est effectuée",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": true,
+            "description": "apikey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opération réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRechercheReponse"
+                }
+              },
+              "application/xml": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRechercheReponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "L'alias recherché n'existe pas dans le système"
+          },
+          "423": {
+            "description": "L'alias est verrouillé dans le système"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Entrées d'alias"
+        ],
+        "summary": "Modifier un alias",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "cle",
+            "description": "valeur de l'alias (le MBNO, le MCOD ou le SHID)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": true,
+            "description": "apikey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "**Modifier les informations client de l'alias de compte**\n\nIl permet de mettre à jour certaines informations du client.\n",
+        "operationId": "modifierAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasModificationDemande"
+              },
+              "examples": {
+                "MAJ_INFOS_CLIENT": {
+                  "$ref": "#/components/examples/MAJ_INFOS_CLIENT"
+                },
+                "MAJ_INFOS_COMPTE_TYPE": {
+                  "$ref": "#/components/examples/MAJ_INFOS_COMPTE_TYPE"
+                },
+                "MAJ_INFOS_COMPTE_PRECONFIRMATION": {
+                  "$ref": "#/components/examples/MAJ_INFOS_COMPTE_PRECONFIRMATION"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-services-dev-modifierAlias/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "responses": {
+          "200": {
+            "description": "Alias modifiée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasCreationReponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de modifier l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "demandeur-invalid": {
+                    "$ref": "#/components/examples/ModificationAliasDemandeurNonValid"
+                  },
+                  "revendication-en-cours": {
+                    "$ref": "#/components/examples/ModificationAliasEnCourDeRevendication"
+                  },
+                  "preConfirmation-alias-pp": {
+                    "$ref": "#/components/examples/ModificationAliasPPpreConfirmation"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'alias à modifié n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Entrées d'alias"
+        ],
+        "summary": "Supprimer un alias",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cle",
+            "in": "path",
+            "description": "valeur de l'alias (le MBNO, le MCOD ou le SHID)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "**Demander la suppression de l'alias de compte**\n",
+        "operationId": "supprimerAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasSuppressionDemande"
+              },
+              "examples": {
+                "FERMETURE_COMPTE_CLIENT": {
+                  "$ref": "#/components/examples/FERMETURE_COMPTE_CLIENT"
+                },
+                "DEMANDE_CLIENT": {
+                  "$ref": "#/components/examples/DEMANDE_CLIENT"
+                },
+                "MAJ_AGENCE_CLIENT": {
+                  "$ref": "#/components/examples/MAJ_AGENCE_CLIENT"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-services-dev-supprimerAlias/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "responses": {
+          "204": {
+            "description": "L'alias a été supprimée avec succès"
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/responses/AutorisationsManquantes"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de supprimer l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "en-cours-de-revendication": {
+                    "$ref": "#/components/examples/SuppressionAliasEnCourDeRevendication"
+                  },
+                  "demandeur-invalid": {
+                    "$ref": "#/components/examples/SuppressionAliasDemandeurNonValid"
+                  },
+                  "cle-body-different-de-cle-url": {
+                    "$ref": "#/components/examples/SuppressionAliasLaCleDuBodyEstDifferentDeCeluiDeUrl"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'alias à supprimé n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/revendications": {
+      "post": {
+        "tags": [
+          "Revendications d'alias"
+        ],
+        "summary": "Revendiquer une alias",
+        "description": "Envoyer une demande de revendication d'un alias de compte de type MBNO",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": true,
+            "description": "apikey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "201"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-revendication-dev-enregistrerRevendication/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "requestBody": {
+          "description": "Pour effectuer une revendication, le client doit fournir la valeur de l'alias.\n",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevendicationCreationDemande"
+              }
+            },
+            "application/xml": {
+              "schema": {
+                "$ref": "#/components/schemas/RevendicationCreationDemande"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "La revendication est créée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseCreationRevendication"
+                },
+                "examples": {
+                  "enregistrement-revendication": {
+                    "$ref": "#/components/examples/rev-ok"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Format invalid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "invalid-request-body": {
+                    "$ref": "#/components/examples/Problem7807ExempleBadRequestJSON"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de revendiquer cet alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "statut-invalid": {
+                    "$ref": "#/components/examples/StatutAliasNonValidPourLaRevendication"
+                  },
+                  "revendication-en-cours": {
+                    "$ref": "#/components/examples/TypeAliasNonValidPourLaRevendication"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'alias à modifié n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/revendications/{id}": {
+      "get": {
+        "tags": [
+          "Revendications d'alias"
+        ],
+        "summary": "Récupérer une revendication",
+        "description": "Récupère une revendication à partir de son identifiant",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant de la revendication",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-api-key",
+            "required": true,
+            "description": "apikey",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "operationId": "recupererRevendication",
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-revendication-dev-recuperer/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "responses": {
+          "200": {
+            "description": "Succès de l'opération",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Revendication"
+                },
+                "examples": {
+                  "revendication-initier": {
+                    "$ref": "#/components/examples/rev-initier"
+                  },
+                  "revendication-rejeter": {
+                    "$ref": "#/components/examples/rev-rejeter"
+                  },
+                  "revendication-accepter-client": {
+                    "$ref": "#/components/examples/rev-accepter-client"
+                  },
+                  "revendication-accepter-participant": {
+                    "$ref": "#/components/examples/rev-accepter-participant"
+                  },
+                  "revendication-verrouiller": {
+                    "$ref": "#/components/examples/rev-verrouiller"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de recuperer cette revendication",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "statut-invalid": {
+                    "$ref": "#/components/examples/ExpediteurNonValidPourRecupererLaRevendication"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La revendication demandée n'existe pas"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/revendications/{id}/acceptations": {
+      "put": {
+        "tags": [
+          "Revendications d'alias"
+        ],
+        "summary": "Accepter une revendication",
+        "description": "Accepter la revendication.\n\nCette opération est effectuée par le participant détenteur de l'alias\n",
+        "operationId": "accepterRevendication",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant de la revendication",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevendicationAcceptation"
+              },
+              "examples": {
+                "acceptation-client": {
+                  "$ref": "#/components/examples/request-client"
+                },
+                "acceptation-participant": {
+                  "$ref": "#/components/examples/request-participant"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-revendication-dev-modifierRevendication/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "responses": {
+          "200": {
+            "description": "Revendication acceptée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseAcceptationRevendication"
+                },
+                "examples": {
+                  "revendication-accepter-client": {
+                    "$ref": "#/components/examples/rev-accepter-client"
+                  },
+                  "revendication-accepter-participant": {
+                    "$ref": "#/components/examples/rev-accepter-participant"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de modifier la revendication",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "statut-invalid": {
+                    "$ref": "#/components/examples/StatutRevendicationNonValidPourEffectuerCetteAction"
+                  },
+                  "action-reserve-au-detenteur": {
+                    "$ref": "#/components/examples/RevendicationRejeterActionReserveAuDetenteur"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La revendication à modifié n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "503": {
+            "description": "Le service est en maintenance"
+          }
+        }
+      }
+    },
+    "/revendications/{id}/rejets": {
+      "put": {
+        "tags": [
+          "Revendications d'alias"
+        ],
+        "summary": "Rejeter une revendication",
+        "description": "Rejeter la revendication.\nCette opération est effectuée par le participant détenteur de l'alias\n",
+        "operationId": "rejeterRevendication",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x-jws-signature",
+            "required": true,
+            "description": "Signature du message",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Identifiant de la revendication",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevendicationAction"
+              }
+            }
+          },
+          "required": true
+        },
+        "x-amazon-apigateway-integration": {
+          "responses": {
+            "default": {
+              "statusCode": "200"
+            }
+          },
+          "uri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-revendication-dev-modifierRevendication/invocations",
+          "credentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "passthroughBehavior": "when_no_match",
+          "httpMethod": "POST",
+          "type": "aws_proxy"
+        },
+        "responses": {
+          "200": {
+            "description": "Revendication rejetée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseRejetRevendication"
+                },
+                "examples": {
+                  "revendication-rejeter": {
+                    "$ref": "#/components/examples/rev-rejeter"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "description": "Authorisation manquante",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "authorisation-manquant": {
+                    "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+                  },
+                  "signature-invalide": {
+                    "$ref": "#/components/examples/SignatureInvalide"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Interdiction de modifier la revendication",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "statut-invalid": {
+                    "$ref": "#/components/examples/StatutRevendicationNonValidPourEffectuerCetteAction"
+                  },
+                  "action-reserve-au-detenteur": {
+                    "$ref": "#/components/examples/RevendicationRejeterActionReserveAuDetenteur"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La revendication à modifié n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "503": {
+            "description": "Le service est en maintenance"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Fonction_Prefix": {
+        "name": "Fonction_Prefix",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "default": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:alias-services-${ENV}"
+        },
+        "description": "le prefix des fonction lambda"
+      }
+    },
+    "schemas": {
+      "Problem7807": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Référence URI qui identifie le type de problème",
+            "example": "about:blank"
+          },
+          "title": {
+            "type": "string",
+            "description": "Un bref résumé du problème",
+            "example": "Bad Request"
+          },
+          "status": {
+            "type": "integer",
+            "description": "Le code d'état HTTP pour cette occurrence du problème",
+            "example": 400
+          },
+          "detail": {
+            "type": "string",
+            "description": "Explication spécifique à cette occurrence du problème"
+          },
+          "invalid-params": {
+            "type": "array",
+            "description": "Liste des paramètres invalides",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Nom du paramètre invalide"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Raison de l'invalidité du paramètre"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Pays": {
+        "type": "string",
+        "enum": [
+          "CI",
+          "SN",
+          "ML",
+          "GW",
+          "BF",
+          "NE",
+          "BJ",
+          "TG"
+        ]
+      },
+      "PaysDuMonde": {
+        "type": "string",
+        "enum": [
+          "AF",
+          "AX",
+          "AL",
+          "DZ",
+          "AS",
+          "AD",
+          "AO",
+          "AI",
+          "AQ",
+          "AG",
+          "AR",
+          "AM",
+          "AW",
+          "AU",
+          "AT",
+          "AZ",
+          "BS",
+          "BH",
+          "BD",
+          "BB",
+          "BY",
+          "BE",
+          "BZ",
+          "BJ",
+          "BM",
+          "BT",
+          "BO",
+          "BA",
+          "BW",
+          "BV",
+          "BR",
+          "IO",
+          "BN",
+          "BG",
+          "BF",
+          "BI",
+          "KH",
+          "CM",
+          "CA",
+          "CV",
+          "KY",
+          "CF",
+          "TD",
+          "CL",
+          "CN",
+          "CX",
+          "CC",
+          "CO",
+          "KM",
+          "CG",
+          "CD",
+          "CK",
+          "CR",
+          "CI",
+          "HR",
+          "CU",
+          "CY",
+          "CZ",
+          "DK",
+          "DJ",
+          "DM",
+          "DO",
+          "EC",
+          "EG",
+          "SV",
+          "GQ",
+          "ER",
+          "EE",
+          "ET",
+          "FK",
+          "FO",
+          "FJ",
+          "FI",
+          "FR",
+          "GF",
+          "PF",
+          "TF",
+          "GA",
+          "GM",
+          "GE",
+          "DE",
+          "GH",
+          "GI",
+          "GR",
+          "GL",
+          "GD",
+          "GP",
+          "GU",
+          "GT",
+          "GG",
+          "GN",
+          "GW",
+          "GY",
+          "HT",
+          "HM",
+          "VA",
+          "HN",
+          "HK",
+          "HU",
+          "IS",
+          "IN",
+          "ID",
+          "IR",
+          "IQ",
+          "IE",
+          "IM",
+          "IL",
+          "IT",
+          "JM",
+          "JP",
+          "JE",
+          "JO",
+          "KZ",
+          "KE",
+          "KI",
+          "KP",
+          "KR",
+          "KW",
+          "KG",
+          "LA",
+          "LV",
+          "LB",
+          "LS",
+          "LR",
+          "LY",
+          "LI",
+          "LT",
+          "LU",
+          "MO",
+          "MK",
+          "MG",
+          "MW",
+          "MY",
+          "MV",
+          "ML",
+          "MT",
+          "MH",
+          "MQ",
+          "MR",
+          "MU",
+          "YT",
+          "MX",
+          "FM",
+          "MD",
+          "MC",
+          "MN",
+          "MS",
+          "MA",
+          "MZ",
+          "MM",
+          "NA",
+          "NR",
+          "NP",
+          "NL",
+          "AN",
+          "NC",
+          "NZ",
+          "NI",
+          "NE",
+          "NG",
+          "NU",
+          "NF",
+          "MP",
+          "NO",
+          "OM",
+          "PK",
+          "PW",
+          "PS",
+          "PA",
+          "PG",
+          "PY",
+          "PE",
+          "PH",
+          "PN",
+          "PL",
+          "PT",
+          "PR",
+          "QA",
+          "RE",
+          "RO",
+          "RU",
+          "RW",
+          "SH",
+          "KN",
+          "LC",
+          "PM",
+          "VC",
+          "WS",
+          "SM",
+          "ST",
+          "SA",
+          "SN",
+          "CS",
+          "SC",
+          "SL",
+          "SG",
+          "SK",
+          "SI",
+          "SB",
+          "SO",
+          "ZA",
+          "GS",
+          "ES",
+          "LK",
+          "SD",
+          "SR",
+          "SJ",
+          "SZ",
+          "SE",
+          "CH",
+          "SY",
+          "TW",
+          "TJ",
+          "TZ",
+          "TH",
+          "TL",
+          "TG",
+          "TK",
+          "TO",
+          "TT",
+          "TN",
+          "TR",
+          "TM",
+          "TC",
+          "TV",
+          "UG",
+          "UA",
+          "AE",
+          "GB",
+          "US",
+          "UM",
+          "UY",
+          "UZ",
+          "VU",
+          "VE",
+          "VN",
+          "VG",
+          "VI",
+          "WF",
+          "EH",
+          "YE",
+          "ZM",
+          "ZW"
+        ]
+      },
+      "PaysUEMOA": {
+        "type": "string",
+        "enum": [
+          "CI",
+          "SN",
+          "ML",
+          "GW",
+          "BF",
+          "NE",
+          "BJ",
+          "TG"
+        ]
+      },
+      "Genre": {
+        "type": "string",
+        "enum": [
+          "1",
+          "2"
+        ],
+        "description": "- 1 pour dire Masculin\n- 2 pour dire Féminin\n"
+      },
+      "CategorieClient": {
+        "type": "string",
+        "enum": [
+          "P",
+          "B",
+          "G",
+          "C"
+        ],
+        "description": "- P pour dire Personne physique\n- B pour dire Personne morale\n- G pour dire Gouvernement\n- C pour dire Commercant\n"
+      },
+      "Client": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "maxLength": 35,
+            "example": "Banque Centrale des Etats de l'Afrique de L'Ouest",
+            "description": "Pour une entreprise il s'agit du nom du mandataire"
+          },
+          "nationalite": {
+            "$ref": "#/components/schemas/PaysDuMonde"
+          },
+          "paysResidence": {
+            "$ref": "#/components/schemas/PaysUEMOA"
+          },
+          "telephone": {
+            "type": "string",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
+            "example": "+221773242452"
+          },
+          "email": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "pi@bceao.int"
+          },
+          "adresse": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "Dakar, Avenue Abdoulaye FADIGA"
+          },
+          "codePostale": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+"
+          },
+          "photo": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "description": "le lien de la photo de profil de l'utilisateur"
+          },
+          "ville": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "maxLength": 35,
+            "description": "la ville d'activité de l'entreprise ou de residense du client"
+          }
+        }
+      },
+      "ClientParticulier": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Client"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "categorie": {
+                "type": "string",
+                "pattern": "P",
+                "description": "- P pour dire Personne physique\n"
+              },
+              "genre": {
+                "$ref": "#/components/schemas/Genre"
+              },
+              "identificationNationale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "X XXXX XXXX XXXXXX",
+                "description": "Numéro d'identification nationale unique dans le pays du client"
+              },
+              "numeroPasseport": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "XXXXXXXXXX"
+              },
+              "dateNaissance": {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                "format": "date",
+                "description": "Date au format ISO 8601. Obligatoire pour les banques."
+              },
+              "paysNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Pays de naissance. Obligatoire pour les banques."
+              },
+              "villeNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Ville de naissance. Obligatoire pour les banques.",
+                "example": "BOBO"
+              },
+              "nomMere": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "Rokhaya DIOP",
+                "description": ""
+              }
+            }
+          }
+        ],
+        "anyOf": [
+          {
+            "title": "Client particulier avec identificationNationale",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "identificationNationale"
+            ]
+          },
+          {
+            "title": "Client particulier avec numeroPasseport",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "numeroPasseport"
+            ]
+          }
+        ]
+      },
+      "ClientParticulierSansIdentification": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "Banque Centrale des Etats de l'Afrique de L'Ouest",
+            "description": "Pour une entreprise il s'agit de la dénomination sociale"
+          },
+          "categorie": {
+            "type": "string",
+            "pattern": "P",
+            "description": "- P pour dire Personne physique\n"
+          },
+          "paysResidence": {
+            "$ref": "#/components/schemas/PaysUEMOA"
+          },
+          "telephone": {
+            "type": "string",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$",
+            "example": "+221773242452"
+          }
+        },
+        "required": [
+          "nom",
+          "categorie",
+          "paysResidence",
+          "telephone"
+        ]
+      },
+      "ClientCommercantAvecRCCM": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Client"
+          },
+          {
+            "type": "object",
+            "title": "Commerçant avec un RCCM",
+            "properties": {
+              "categorie": {
+                "type": "string",
+                "pattern": "C",
+                "description": "- C pour dire Commercant\n"
+              },
+              "genre": {
+                "$ref": "#/components/schemas/Genre"
+              },
+              "identificationNationale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "X XXXX XXXX XXXXXX",
+                "description": "Numéro d'identification nationale unique dans le pays du client"
+              },
+              "numeroPasseport": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "dateNaissance": {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                "format": "date",
+                "description": "Date au format ISO 8601. Obligatoire pour les banques."
+              },
+              "paysNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Pays de naissance. Obligatoire pour les banques",
+                "example": "BF"
+              },
+              "villeNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Ville de naissance. Obligatoire pour les banques"
+              },
+              "nomMere": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "Rokhaya DIOP",
+                "description": ""
+              },
+              "identificationRCCM": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Numéro d'identification attribuée dans le registre du commerce du pays"
+              }
+            }
+          }
+        ],
+        "anyOf": [
+          {
+            "title": "Client commerçant avec identificationNationale",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "identificationNationale"
+            ]
+          },
+          {
+            "title": "Client commerçant avec numeroPasseport",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "numeroPasseport"
+            ]
+          }
+        ]
+      },
+      "ClientCommercantAvecIdentificationFiscale": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Client"
+          },
+          {
+            "type": "object",
+            "title": "Commerçant avec une identification Fiscale",
+            "properties": {
+              "categorie": {
+                "type": "string",
+                "pattern": "C",
+                "description": "- C pour dire Commercant\n"
+              },
+              "genre": {
+                "$ref": "#/components/schemas/Genre"
+              },
+              "identificationNationale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "X XXXX XXXX XXXXXX",
+                "description": "Numéro d'identification nationale unique dans le pays du client"
+              },
+              "numeroPasseport": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "dateNaissance": {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                "format": "date",
+                "description": "Date au format ISO 8601. Obligatoire pour les banques."
+              },
+              "paysNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Pays de naissance. Obligatoire pour les banques",
+                "example": "BF"
+              },
+              "villeNaissance": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Ville de naissance. Obligatoire pour les banques"
+              },
+              "nomMere": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "example": "Rokhaya DIOP",
+                "description": ""
+              },
+              "identificationFiscale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Numéro d'identification fiscale unique dans le pays"
+              }
+            }
+          }
+        ],
+        "anyOf": [
+          {
+            "title": "Client commerçant avec identificationNationale",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "identificationNationale"
+            ]
+          },
+          {
+            "title": "Client commerçant avec numeroPasseport",
+            "required": [
+              "nom",
+              "nationalite",
+              "paysResidence",
+              "telephone",
+              "categorie",
+              "genre",
+              "numeroPasseport"
+            ]
+          }
+        ]
+      },
+      "ClientEntreprise": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Client"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "categorie": {
+                "type": "string",
+                "pattern": "B"
+              },
+              "categorieEntreprise": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "codeActivite": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "raisonSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "denominationSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "maxLength": 35
+              },
+              "identificationFiscale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Numéro d'identification fiscale unique dans le pays"
+              }
+            }
+          }
+        ],
+        "required": [
+          "nom",
+          "nationalite",
+          "paysResidence",
+          "telephone",
+          "categorie",
+          "identificationFiscale",
+          "raisonSociale",
+          "denominationSociale",
+          "ville"
+        ]
+      },
+      "ClientGouvernement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Client"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "categorie": {
+                "type": "string",
+                "pattern": "G",
+                "description": "G pour dire Gouvernement"
+              },
+              "categorieEntreprise": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "raisonSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "denominationSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "maxLength": 35
+              },
+              "identificationFiscale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "description": "Numéro d'identification fiscale unique dans le pays"
+              }
+            }
+          }
+        ],
+        "required": [
+          "nom",
+          "nationalite",
+          "paysResidence",
+          "telephone",
+          "categorie",
+          "raisonSociale",
+          "denominationSociale",
+          "ville"
+        ]
+      },
+      "CompteIban": {
+        "type": "object",
+        "title": "Information de compte avec un IBAN",
+        "properties": {
+          "participant": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "SNB001",
+            "description": "Institution financière du client. Elle est identifiée par le code membre du participant\n"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "LLSV",
+              "SVGS",
+              "TRAN",
+              "TAXE"
+            ],
+            "description": "Le type de compte du client\n- CACC pour Compte Courant\n- SVGS pour Compte  épargne\n- LLSV pour Tirelire\n- TRAN pour Compte de transaction\n- TAXE pour Compte tresors créé par la BCEAO\n"
+          },
+          "dateOuverture": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "format": "date",
+            "description": "La date d'ouverture du compte du client"
+          },
+          "iban": {
+            "type": "string",
+            "pattern": "^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$",
+            "description": "Le numéro de compte Iban du client chez le participant"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "participant",
+          "type",
+          "dateOuverture",
+          "iban"
+        ]
+      },
+      "CompteOther": {
+        "type": "object",
+        "title": "Information de compte avec un Other",
+        "properties": {
+          "participant": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "SNB001",
+            "description": "Institution financière du client. Elle est identifiée par le code membre du participant\n"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "LLSV",
+              "SVGS",
+              "TRAN"
+            ],
+            "description": "Le type de compte du client\n- CACC pour Compte Courant\n- SVGS pour Compte  épargne\n- LLSV pour Tirelire\n- TRAN pour Compte de transaction\n"
+          },
+          "dateOuverture": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "format": "date",
+            "description": "La date d'ouverture du compte du client"
+          },
+          "other": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "description": "Le numéro de compte Other du client chez le participant"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "participant",
+          "type",
+          "dateOuverture",
+          "other"
+        ]
+      },
+      "CompteTRAL": {
+        "description": "Informations du compte client",
+        "type": "object",
+        "title": "Information de compte avec un Other",
+        "properties": {
+          "participant": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "example": "SNB001",
+            "description": "Institution financière du client. Elle est identifiée par le code membre du participant\n"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "TRAL",
+            "description": "Le type de compte du client\n- TRAL pour Compte de transaction allégé\n"
+          },
+          "dateOuverture": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+            "format": "date",
+            "description": "La date d'ouverture du compte du client"
+          },
+          "other": {
+            "type": "string",
+            "pattern": "^(?!\\s*$).+",
+            "description": "Le numéro de compte Other du client chez le participant"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "participant",
+          "type",
+          "dateOuverture",
+          "other"
+        ]
+      },
+      "Compte": {
+        "description": "Informations de compte",
+        "allOf": [
+          {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CompteIban"
+              },
+              {
+                "$ref": "#/components/schemas/CompteOther"
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "preConfirmation": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        ]
+      },
+      "AliasMBNO": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "MBNO"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "cle",
+          "type"
+        ]
+      },
+      "AliasMCOD": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "pattern": "^\\d{2,10}$"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "MCOD"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "cle",
+          "type"
+        ]
+      },
+      "AliasSHID": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "pattern": "SHID"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type"
+        ]
+      },
+      "Alias": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "pattern": "MBNO"
+          },
+          "shid": {
+            "type": "string",
+            "description": "A la création d'un alias de type `MBNO` d'un client, le système lui genère un alias de type `SHID` qui sera utiliser pour ses paiement par Qr code.\n"
+          }
+        }
+      },
+      "AliasCreationDemande": {
+        "type": "object",
+        "description": "Contient les informations concernant le client qui détient le compte",
+        "oneOf": [
+          {
+            "title": "Personne morale",
+            "properties": {
+              "client": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientGouvernement"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientEntreprise"
+                  }
+                ]
+              },
+              "compte": {
+                "$ref": "#/components/schemas/Compte"
+              },
+              "alias": {
+                "description": "Les personnes morales ne peuvent créer que des alias de type SHID|MCOD",
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AliasSHID"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AliasMCOD"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "client",
+              "compte",
+              "alias"
+            ]
+          },
+          {
+            "title": "Personne Commercante",
+            "properties": {
+              "client": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecIdentificationFiscale"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecRCCM"
+                  }
+                ]
+              },
+              "compte": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CompteIban"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompteOther"
+                  }
+                ]
+              },
+              "alias": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AliasSHID"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AliasMBNO"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AliasMCOD"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "client",
+              "compte",
+              "alias"
+            ]
+          },
+          {
+            "title": "Personne physique",
+            "properties": {
+              "client": {
+                "$ref": "#/components/schemas/ClientParticulier"
+              },
+              "compte": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CompteIban"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CompteOther"
+                  }
+                ]
+              },
+              "alias": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AliasSHID"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AliasMBNO"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "client",
+              "compte",
+              "alias"
+            ]
+          },
+          {
+            "title": "Personne physique sans identification",
+            "properties": {
+              "client": {
+                "$ref": "#/components/schemas/ClientParticulierSansIdentification"
+              },
+              "compte": {
+                "$ref": "#/components/schemas/CompteTRAL"
+              },
+              "alias": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AliasSHID"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AliasMBNO"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "client",
+              "compte"
+            ]
+          }
+        ]
+      },
+      "AliasCreationReponseSHIDouMCOD": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "client": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientParticulier"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientEntreprise"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientGouvernement"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecIdentificationFiscale"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecRCCM"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "compte": {
+                "$ref": "#/components/schemas/Compte"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "alias": {
+                "type": "object",
+                "properties": {
+                  "cle": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "pattern": "(MBNO|MCOD)"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "AliasCreationReponseMBNO": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "client": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/ClientParticulier"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecIdentificationFiscale"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ClientCommercantAvecRCCM"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "compte": {
+                "$ref": "#/components/schemas/Compte"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "alias": {
+                "$ref": "#/components/schemas/Alias"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "AliasCreationReponseTRAL": {
+        "allOf": [
+          {
+            "type": "object",
+            "properties": {
+              "client": {
+                "$ref": "#/components/schemas/ClientParticulierSansIdentification"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "compte": {
+                "$ref": "#/components/schemas/CompteTRAL"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "alias": {
+                "type": "object",
+                "properties": {
+                  "cle": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "AliasCreationReponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AliasCreationReponseSHIDouMCOD"
+          },
+          {
+            "$ref": "#/components/schemas/AliasCreationReponseMBNO"
+          },
+          {
+            "$ref": "#/components/schemas/AliasCreationReponseTRAL"
+          }
+        ],
+        "xml": {
+          "name": "AliasCreationReponse"
+        }
+      },
+      "AliasRechercheReponse": {
+        "type": "object",
+        "properties": {
+          "client": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientParticulier"
+              },
+              {
+                "$ref": "#/components/schemas/ClientParticulierSansIdentification"
+              },
+              {
+                "$ref": "#/components/schemas/ClientCommercantAvecIdentificationFiscale"
+              },
+              {
+                "$ref": "#/components/schemas/ClientCommercantAvecRCCM"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEntreprise"
+              },
+              {
+                "$ref": "#/components/schemas/ClientGouvernement"
+              }
+            ]
+          },
+          "compte": {
+            "$ref": "#/components/schemas/Compte"
+          },
+          "alias": {
+            "$ref": "#/components/schemas/Alias"
+          }
+        },
+        "xml": {
+          "name": "AliasRechercheReponse"
+        }
+      },
+      "AliasModificationDemande": {
+        "type": "object",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AliasModificationCompteTRAL"
+          },
+          {
+            "$ref": "#/components/schemas/AliasModificationPreconfirmation"
+          },
+          {
+            "$ref": "#/components/schemas/AliasModificationIdentificationNationale"
+          },
+          {
+            "$ref": "#/components/schemas/AliasModificationPasseport"
+          },
+          {
+            "$ref": "#/components/schemas/AliasModificationDonneesClient"
+          }
+        ]
+      },
+      "AliasModificationCompteTRAL": {
+        "title": "Identification de la personne physique (de TRAL vers TRAN)",
+        "properties": {
+          "compte": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "TRAN"
+                ],
+                "description": "Le nouveau type de compte du client ()\n- TRAN pour Compte de transaction\n"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ]
+          },
+          "client": {
+            "type": "object",
+            "oneOf": [
+              {
+                "title": "Avec Une identificationNationale",
+                "properties": {
+                  "identificationNationale": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "maxLength": 35
+                  },
+                  "nationalite": {
+                    "$ref": "#/components/schemas/PaysDuMonde"
+                  },
+                  "genre": {
+                    "$ref": "#/components/schemas/Genre"
+                  },
+                  "nomMere": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "example": "Rokhaya DIOP"
+                  },
+                  "telephone": {
+                    "type": "string",
+                    "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "codePostale": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "adresse": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "paysResidence": {
+                    "$ref": "#/components/schemas/PaysUEMOA"
+                  },
+                  "ville": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "dateNaissance": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+                  },
+                  "paysNaissance": {
+                    "$ref": "#/components/schemas/PaysDuMonde"
+                  },
+                  "villeNaissance": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "maxLength": 35
+                  }
+                },
+                "required": [
+                  "identificationNationale",
+                  "nationalite",
+                  "genre"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "title": "Avec un numeroPasseport",
+                "properties": {
+                  "numeroPasseport": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "maxLength": 35
+                  },
+                  "nationalite": {
+                    "$ref": "#/components/schemas/PaysDuMonde"
+                  },
+                  "genre": {
+                    "$ref": "#/components/schemas/Genre"
+                  },
+                  "nomMere": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "example": "Rokhaya DIOP"
+                  },
+                  "telephone": {
+                    "type": "string",
+                    "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+                  },
+                  "email": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "codePostale": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "photo": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "adresse": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "paysResidence": {
+                    "$ref": "#/components/schemas/PaysUEMOA"
+                  },
+                  "ville": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+"
+                  },
+                  "dateNaissance": {
+                    "type": "string",
+                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+                  },
+                  "paysNaissance": {
+                    "$ref": "#/components/schemas/PaysDuMonde"
+                  },
+                  "villeNaissance": {
+                    "type": "string",
+                    "pattern": "^(?!\\s*$).+",
+                    "maxLength": 35
+                  }
+                },
+                "required": [
+                  "numeroPasseport",
+                  "nationalite",
+                  "genre"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "client",
+          "compte"
+        ]
+      },
+      "AliasModificationPreconfirmation": {
+        "type": "object",
+        "title": "Changement de la preConfirmation pour les clients Personne morale (B ou G)",
+        "properties": {
+          "compte": {
+            "type": "object",
+            "properties": {
+              "preConfirmation": {
+                "type": "boolean",
+                "example": true
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "preConfirmation"
+            ]
+          },
+          "client": {
+            "type": "object",
+            "properties": {
+              "paysResidence": {
+                "$ref": "#/components/schemas/PaysUEMOA"
+              },
+              "ville": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "telephone": {
+                "type": "string",
+                "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+              },
+              "email": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "codePostale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "photo": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "adresse": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "denominationSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              }
+            },
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "title": "modificationPaysResidence",
+                "required": [
+                  "paysResidence"
+                ]
+              },
+              {
+                "title": "modificationVille",
+                "required": [
+                  "ville"
+                ]
+              },
+              {
+                "title": "modificationTelephone",
+                "required": [
+                  "telephone"
+                ]
+              },
+              {
+                "title": "modificationEmail",
+                "required": [
+                  "email"
+                ]
+              },
+              {
+                "title": "modificationCodePostale",
+                "required": [
+                  "codePostale"
+                ]
+              },
+              {
+                "title": "modificationPhoto",
+                "required": [
+                  "photo"
+                ]
+              },
+              {
+                "title": "modificationAdresse",
+                "required": [
+                  "adresse"
+                ]
+              },
+              {
+                "title": "modificationDenominationSociale",
+                "required": [
+                  "denominationSociale"
+                ]
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "compte"
+        ]
+      },
+      "AliasModificationIdentificationNationale": {
+        "type": "object",
+        "title": "Mise à jour de l'identification nationale",
+        "properties": {
+          "client": {
+            "type": "object",
+            "properties": {
+              "identificationNationale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "maxLength": 35
+              },
+              "paysResidence": {
+                "$ref": "#/components/schemas/PaysUEMOA"
+              },
+              "ville": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "telephone": {
+                "type": "string",
+                "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+              },
+              "email": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "codePostale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "photo": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "adresse": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "identificationNationale"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "client"
+        ]
+      },
+      "AliasModificationPasseport": {
+        "type": "object",
+        "title": "Mise à jour du numéro de passeport",
+        "properties": {
+          "client": {
+            "type": "object",
+            "properties": {
+              "numeroPasseport": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+",
+                "maxLength": 35
+              },
+              "paysResidence": {
+                "$ref": "#/components/schemas/PaysUEMOA"
+              },
+              "ville": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "telephone": {
+                "type": "string",
+                "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+              },
+              "email": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "codePostale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "photo": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "adresse": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "numeroPasseport"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "client"
+        ]
+      },
+      "AliasModificationDonneesClient": {
+        "type": "object",
+        "title": "Mises à jour des données d'un client (P C B ou G)",
+        "properties": {
+          "client": {
+            "type": "object",
+            "properties": {
+              "paysResidence": {
+                "$ref": "#/components/schemas/PaysUEMOA"
+              },
+              "ville": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "telephone": {
+                "type": "string",
+                "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+              },
+              "email": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "codePostale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "photo": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "adresse": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              },
+              "denominationSociale": {
+                "type": "string",
+                "pattern": "^(?!\\s*$).+"
+              }
+            },
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "title": "modificationPaysResidence",
+                "required": [
+                  "paysResidence"
+                ]
+              },
+              {
+                "title": "modificationVille",
+                "required": [
+                  "ville"
+                ]
+              },
+              {
+                "title": "modificationTelephone",
+                "required": [
+                  "telephone"
+                ]
+              },
+              {
+                "title": "modificationEmail",
+                "required": [
+                  "email"
+                ]
+              },
+              {
+                "title": "modificationCodePostale",
+                "required": [
+                  "codePostale"
+                ]
+              },
+              {
+                "title": "modificationPhoto",
+                "required": [
+                  "photo"
+                ]
+              },
+              {
+                "title": "modificationAdresse",
+                "required": [
+                  "adresse"
+                ]
+              },
+              {
+                "title": "modificationDenominationSociale",
+                "required": [
+                  "denominationSociale"
+                ]
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "client"
+        ]
+      },
+      "AliasSuppressionRaison": {
+        "type": "string",
+        "enum": [
+          "FERMETURE_COMPTE_CLIENT",
+          "DEMANDE_CLIENT",
+          "MAJ_AGENCE_CLIENT"
+        ],
+        "description": "- DEMANDE_CLIENT Lorsque la demande de suppression est effectué par le client.\n- FERMETURE_COMPTE_CLIENT Fermeture du compte client\n- MAJ_AGENCE_CLIENT Modification de l'agence du compte\n"
+      },
+      "AliasSuppressionDemande": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "description": "la valeur de l'alias à supprimer. Il doit être égale à l'alias contenu dans l'url"
+          },
+          "raison": {
+            "$ref": "#/components/schemas/AliasSuppressionRaison"
+          }
+        },
+        "required": [
+          "cle",
+          "raison"
+        ]
+      },
+      "RevendicationCreationDemande": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "type": "string",
+            "example": "+2210101010101",
+            "description": "Valeur de l'alias qui doit être un MBNO",
+            "pattern": "^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$"
+          }
+        },
+        "xml": {
+          "name": "revendicationCreationDemande"
+        },
+        "required": [
+          "alias"
+        ]
+      },
+      "RevendicationStatut": {
+        "type": "string",
+        "enum": [
+          "INITIEE",
+          "ACCEPTEE",
+          "REJETEE"
+        ],
+        "description": "- INITIEE   - A la création de la demande\n- ACCEPTEE  - A l'acceptation de la demande par le client détenteur\n- REJETEE   - Au rejet la demande par le client détenteur\n"
+      },
+      "ReponseCreationRevendication": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RevendicationCreationDemande"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "l'identifiant de la revendication",
+                "type": "string"
+              },
+              "statut": {
+                "pattern": "INITIEE"
+              },
+              "detenteur": {
+                "type": "string",
+                "description": "le participant qui detient l'alias au moment de la revendication"
+              },
+              "revendicateur": {
+                "type": "string",
+                "description": "le participant ayant effectué la demande de revendication"
+              },
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "ReponseAcceptationRevendication": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RevendicationCreationDemande"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "l'identifiant de la revendication",
+                "type": "string"
+              },
+              "statut": {
+                "pattern": "ACCEPTEE"
+              },
+              "detenteur": {
+                "type": "string",
+                "description": "le participant qui detient l'alias au moment de la revendication"
+              },
+              "revendicateur": {
+                "type": "string",
+                "description": "le participant ayant effectué la demande de revendication"
+              },
+              "actionAuteur": {
+                "type": "string",
+                "description": "Indique si la revendication a été accepter par le client detenteur ou le participant"
+              },
+              "actionDate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date à laquelle le participant effectue l'action dans son système, au format ISO 8601"
+              },
+              "dateVerrouillage": {
+                "type": "string",
+                "format": "date-time",
+                "default": null,
+                "description": "Date de verouillage de l'alias revendiqué, au format ISO 8601. Sa valeur est null par defaut, elle est definit au verrouillade de l'alias revendiquer, par le système"
+              },
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de creation de la revendication, au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date d'acceptaion de la revendication de la revendication, au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "ReponseRejetRevendication": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RevendicationCreationDemande"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "l'identifiant de la revendication",
+                "type": "string"
+              },
+              "statut": {
+                "pattern": "REJETEE"
+              },
+              "detenteur": {
+                "type": "string",
+                "description": "le participant qui detient l'alias au moment de la revendication"
+              },
+              "revendicateur": {
+                "type": "string",
+                "description": "le participant ayant effectué la demande de revendication"
+              },
+              "actionDate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date à laquelle le participant effectue l'action dans son système, au format ISO 8601"
+              },
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de creation de la revendication, au format ISO 8601"
+              },
+              "dateVerrouillage": {
+                "type": "string",
+                "format": "date-time",
+                "default": null,
+                "description": "Date de verouillage de l'alias revendiqué, au format ISO 8601. Sa valeur est null par defaut, elle est definit au verrouillade de l'alias revendiquer, par le système"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de rejet de la revendication, au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "Revendication": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RevendicationCreationDemande"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "l'identifiant de la revendication",
+                "type": "string"
+              },
+              "statut": {
+                "$ref": "#/components/schemas/RevendicationStatut"
+              },
+              "detenteur": {
+                "type": "string",
+                "description": "le participant qui detient l'alias au moment de la revendication"
+              },
+              "revendicateur": {
+                "type": "string",
+                "description": "le participant ayant effectué la demande de revendication"
+              },
+              "actionAuteur": {
+                "type": "string",
+                "description": "Indique si la revendication a été accepter par le client detenteur ou le participant"
+              },
+              "actionDate": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date à laquelle le participant effectue l'action dans son système, au format ISO 8601"
+              },
+              "dateCreation": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de creation de la revendication, au format ISO 8601"
+              },
+              "dateVerrouillage": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de verouillage de l'alias revendiqué, au format ISO 8601"
+              },
+              "dateModification": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de fin de traitement de la revendication, au format ISO 8601"
+              }
+            }
+          }
+        ]
+      },
+      "RevendicationAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifiant de la revendication",
+            "example": "+22111000458_1741263133994"
+          },
+          "actionDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de l'action effectuée"
+          }
+        },
+        "required": [
+          "id",
+          "actionDate"
+        ]
+      },
+      "RevendicationAcceptation": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RevendicationAction"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "actionAuteur": {
+                "type": "string",
+                "enum": [
+                  "CLIENT",
+                  "PARTICIPANT"
+                ],
+                "description": "- CLIENT     - le client a accepté la revendication de son propre gré\n- PARTICIPANT  - le participant a accepté la revendication à la fin de la période de clôture.\n"
+              }
+            },
+            "required": [
+              "actionAuteur"
+            ]
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "myAuthorizer": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "custom",
+        "x-amazon-apigateway-authorizer": {
+          "type": "request",
+          "authorizerUri": "arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:pisfn-alias-api-authorizer-dev-check/invocations",
+          "authorizerCredentials": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/AliasApiExecutionRole",
+          "authorizerResultTtlInSeconds": 0
+        }
+      }
+    },
+    "responses": {
+      "FormatInvalide": {
+        "description": "La requête est malformée",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleBadRequestJSON"
+              }
+            }
+          }
+        }
+      },
+      "AutorisationsManquantes": {
+        "description": "Autorisations manquantes",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+              }
+            }
+          }
+        }
+      },
+      "ProblemeServeur": {
+        "description": "Erreur inattendue du serveur",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleInternalServerErrorJSON"
+              }
+            }
+          }
+        }
+      },
+      "LimiteUtilisationDepasse": {
+        "description": "Erreur inattendue",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807Exemple429JSON"
+              }
+            }
+          }
+        }
+      },
+      "RessourceInexistant": {
+        "description": "La ressource n'existe pas dans le système",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleNotFoundJSON"
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "Problem7807ExempleBadRequestJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Bad Request",
+          "status": 400,
+          "detail": "Invalid request body"
+        }
+      },
+      "Problem7807ExempleUnauthorizedJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Unauthorized",
+          "status": 401,
+          "detail": "Autorisations insuffisantes"
+        }
+      },
+      "Problem7807ExempleNotFoundJSON": {
+        "summary": "Problème ressource inexistant",
+        "value": {
+          "type": "about:blank",
+          "title": "NotFound",
+          "status": 404,
+          "detail": "La ressource n'existe pas dans le système"
+        }
+      },
+      "Problem7807ExempleInternalServerErrorJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Internal Server Error",
+          "status": 500,
+          "detail": "Une erreur inattendue a empêché le serveur de traiter la requête."
+        }
+      },
+      "Problem7807Exemple429JSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Too Many Requests",
+          "status": 429,
+          "detail": "Dépassement du quota d’appels API: envoie de trop de requêtes en un temps donné."
+        }
+      },
+      "SignatureInvalide": {
+        "summary": "Opération refusé - signature invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Unauthorized",
+          "status": 401,
+          "detail": "La signature du message est invalide",
+          "invalid-params": {
+            "name": "x-jws-signature",
+            "reason": "La signature du message est invalide"
+          }
+        }
+      },
+      "CreationAliasDonneesIdentificationPersonnePhysiqueManquantPourLesBanque": {
+        "summary": "Création d'alias personne physique rejeté pour une banque - les données d'identifications sont manquants",
+        "value": {
+          "type": "about:blank",
+          "title": "Bad Request",
+          "status": 400,
+          "detail": "Les données d'identifications du client sont manquants",
+          "invalid-params": {
+            "name": "client.dateNaissance - client.paysNaissance - client.villeNaissance - client.identificationNationale - client.numeroPasseport",
+            "reason": "identificationNationale ou numeroPasseport, dateNaissance, paysNaissance et villeNaissance sont obligatoires pour les personnes physique"
+          }
+        }
+      },
+      "CreationAliasIbanNeDebutePasParLeCodePaysDuParticipant": {
+        "summary": "Création d'alias rejeté - code pays iban invalid",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 400,
+          "detail": "L'iban doit debuter par le code pays de l'institution",
+          "invalid-params": {
+            "name": "compte.iban",
+            "reason": "Code pays iban invalid"
+          }
+        }
+      },
+      "CreationAliasParticipantNonDetenteurCompteClient": {
+        "summary": "Création d'alias rejeté - le demandeur n'est pas le detenteur du compte client",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "le code membre de l'expediteur est different de celui du detenteur du compte",
+          "invalid-params": {
+            "name": "compte.participant",
+            "reason": "le participant demandeur doit être le detenteur du compte client"
+          }
+        }
+      },
+      "CreationAliasDepassementDeLimitPP": {
+        "summary": "Création d'alias personne physique rejeté - depassement de limite",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": {
+            "alias": {
+              "cle": "+22177XXXXXXX",
+              "type": "MBNO",
+              "shid": "b81ae80b-04ee-409a-a22e-2e3030889e4e"
+            },
+            "client": {
+              "nom": "TRAORE Mariam",
+              "genre": "2",
+              "categorie": "P",
+              "nationalite": "CI",
+              "paysResidence": "SN",
+              "telephone": "+221XXXXXXXXX",
+              "email": " xxxx@email.com",
+              "adresse": "Dakar, Avenue Abdoulaye FADIGA",
+              "codePostale": "00000",
+              "passeport": "23498765",
+              "dateNaissance": "31/12/1992",
+              "paysNaissance": "SN",
+              "villeNaissance": "Dakar",
+              "nomMere": " Maman Ndiaye"
+            },
+            "compte": {
+              "participant": "SNB001",
+              "other": "123456789",
+              "type": "CACC",
+              "dateOuverture": "2022-09-23"
+            }
+          },
+          "invalid-params": {
+            "name": "alias.cle",
+            "reason": "Vous ne pouvez pas créer plus d'un alias dans le système"
+          }
+        }
+      },
+      "CreationAliasDepassementDeLimitPM": {
+        "summary": "Création d'alias personne morale rejeté - depassement de limite",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": [
+            "b81ae80b-04ee-409a-a22e-2e3030889e4e",
+            "c61ae80b-2467-rt56-a22e-2e34dget9e4e"
+          ],
+          "invalid-params": {
+            "name": "alias.cle",
+            "reason": "Votre limite de création d'alias dans le système est de 20.\nPour des besoins spéciques, vueillez vous rapproché de votre institution pour d'éventuel depacement de ce quota\n"
+          }
+        }
+      },
+      "CreationAliasTypeCompteInvalid": {
+        "summary": "Création d'alias rejeté - type de compte invalid ",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Le type de compte utilisé n'est pas autorisé pour votre categorie d'institution",
+          "invalid-params": {
+            "name": "compte.type",
+            "reason": "Type de compte non autorisé"
+          }
+        }
+      },
+      "CreationAliasMcodPourPP": {
+        "summary": "Création d'alias rejeté - l'alias MCOD est reservé aux entreprises",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "L'alias de type 'MCOD' ne peut être créé que par les entreprises(B) et les gouvernements(G)",
+          "invalid-params": {
+            "name": "alias.type - client.categorie",
+            "reason": "Vous n'êtes pas autorisé a créé ce type d'alias"
+          }
+        }
+      },
+      "CreationAliasMbnoPourPM": {
+        "summary": "Création d'alias rejeté - l'alias MBNO est reservé au personne physique",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "L'alias de type 'MBNO' ne peut être créé que par les personnes physique",
+          "invalid-params": {
+            "name": "alias.type - client.categorie",
+            "reason": "Vous n'êtes pas autorisé a créé ce type d'alias"
+          }
+        }
+      },
+      "CreationAliasAlreadyExist": {
+        "summary": "Création d'alias rejeté - l'alias existe deja dans le système pour un autre client",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Un alias avec la même clé existe déjà dans le système",
+          "invalid-params": {
+            "name": "alias.cle",
+            "reason": "Un alias avec la même clé existe déjà dans le système"
+          }
+        }
+      },
+      "CreationAliasAlreadyExistPourLeMemeClient": {
+        "summary": "Création d'alias rejeté - l'alias existant appartient au client demandeur",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": {
+            "alias": {
+              "cle": "+22177XXXXXXX",
+              "type": "MBNO",
+              "shid": "b81ae80b-04ee-409a-a22e-2e3030889e4e"
+            },
+            "client": {
+              "nom": "Khadidja DIOP",
+              "genre": "2",
+              "categorie": "P",
+              "nationalite": "CI",
+              "paysResidence": "SN",
+              "telephone": "+221XXXXXXXXX",
+              "email": " xxxx@email.com",
+              "adresse": "Dakar, Avenue Abdoulaye FADIGA",
+              "codePostale": "00000",
+              "passeport": "23498765",
+              "dateNaissance": "31/12/1992",
+              "paysNaissance": "SN",
+              "villeNaissance": "Dakar",
+              "nomMere": " Maman Ndiaye"
+            },
+            "compte": {
+              "participant": "SNB001",
+              "other": "123456789",
+              "type": "CACC",
+              "dateOuverture": "2022-09-23"
+            }
+          },
+          "invalid-params": {
+            "name": "alias.cle",
+            "reason": "Un alias avec la même clé existe déjà dans le système"
+          }
+        }
+      },
+      "RechercheAliasFormatEndToEndIdInvalid": {
+        "summary": "Modification d'alias rejeté - le demandeur doit être le detenteur de l'alias",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 400,
+          "detail": "Le format du endToEndId est invalid",
+          "invalid-params": {
+            "name": "x-pi-EndToEndId",
+            "reason": "Le format du endToEndId est invalid"
+          }
+        }
+      },
+      "RechercheAliasDateEndToEndIdInvalid": {
+        "summary": "Modification d'alias rejeté - le demandeur doit être le detenteur de l'alias",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 400,
+          "detail": "La date du endToEndId doit être inferieur à 24H",
+          "invalid-params": {
+            "name": "x-pi-EndToEndId",
+            "reason": "La date contenue dans le endToEndId est invalide"
+          }
+        }
+      },
+      "ModificationAliasDemandeurNonValid": {
+        "summary": "Modification d'alias rejeté - le demandeur doit être le detenteur de l'alias",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "le participant demandeur doit être le detenteur du compte client",
+          "invalid-params": {
+            "name": "compte.participant",
+            "reason": "le participant demandeur doit être le detenteur du compte client"
+          }
+        }
+      },
+      "ModificationAliasEnCourDeRevendication": {
+        "summary": "Modification d'alias rejeté - l'alias est en cours de revendication",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "l'état actuelle de l'alias ne permet pas la modification",
+          "invalid-params": {
+            "name": "alias.statut",
+            "reason": "Statut invalid"
+          }
+        }
+      },
+      "ModificationAliasPPpreConfirmation": {
+        "summary": "Modification d'alias rejeté - tentative de modification de l'attribut 'preConfirmation' pour un alias n'appartenant pas à une entreprise ",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "l'attribut 'prevalidation' n'est accessible que pour des alias d'entreprise",
+          "invalid-params": {
+            "name": "compte.preConfirmation",
+            "reason": "l'attribut 'preConfirmation' ne peut être modifier que pour des alias d'entreprise"
+          }
+        }
+      },
+      "SuppressionAliasDemandeurNonValid": {
+        "summary": "Suppression d'alias rejeté - le demandeur doit être le detenteur du compte client",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "le participant demandeur doit être le detenteur du compte client",
+          "invalid-params": {
+            "name": "compte.participant",
+            "reason": "le participant demandeur doit être le detenteur du compte client"
+          }
+        }
+      },
+      "SuppressionAliasEnCourDeRevendication": {
+        "summary": "Suppression d'alias rejeté - l'alias est en cours de revendication",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "l'état actuelle de l'alias ne permet pas la suppression",
+          "invalid-params": {
+            "name": "alias.statut",
+            "reason": "Statut invalid"
+          }
+        }
+      },
+      "SuppressionAliasLaCleDuBodyEstDifferentDeCeluiDeUrl": {
+        "summary": "Suppression d'alias rejeté - la cle du body est different de celui de l'url",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "l'alias contenu dans la requête est différent de celui de l'url",
+          "invalid-params": {
+            "name": "cle",
+            "reason": "Cle invalid"
+          }
+        }
+      },
+      "TypeAliasNonValidPourLaRevendication": {
+        "summary": "Revendication rejeté - Type d'alias invalid pour une revendication",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "la revendication ne peut porté que sur des alias de type MBNO",
+          "invalid-params": {
+            "name": "alias.type",
+            "reason": "Type d'alias invalid"
+          }
+        }
+      },
+      "StatutAliasNonValidPourLaRevendication": {
+        "summary": "Revendication rejeté - statut de l'alias invalid pour une revendication",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "l'état actuelle de l'alias ne permet pas la revendication",
+          "invalid-params": {
+            "name": "alias.revendication",
+            "reason": "statut invalid"
+          }
+        }
+      },
+      "StatutRevendicationNonValidPourEffectuerCetteAction": {
+        "summary": "Action rejeté - statut de la revendication non invalid",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "L'état actuelle de la revendication ne permet pas cette action",
+          "invalid-params": {
+            "name": "revendication.statut",
+            "reason": "statut invalid"
+          }
+        }
+      },
+      "RevendicationRejeterActionReserveAuDetenteur": {
+        "summary": "Action rejeté - Action reservé au detenteur de l'alias",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Seul le detenteur de l'alias, peut effectuer cette opération",
+          "invalid-params": {
+            "name": "revendication.detenteur",
+            "reason": "action auteur invalid"
+          }
+        }
+      },
+      "RevendicationRejeterActionReserveAuRevendicateur": {
+        "summary": "Action rejeté - Action reservé au revendicateur de l'alias",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Seul le revendicateur de l'alias, peut effectuer cette opération",
+          "invalid-params": {
+            "name": "revendication.revendicateur",
+            "reason": "action auteur invalid"
+          }
+        }
+      },
+      "ExpediteurNonValidPourRecupererLaRevendication": {
+        "summary": "Expediteur invalid",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "le code membre du demandeur doit être celui du detenteur ou du revendicateur de l'alias",
+          "invalid-params": {
+            "name": "revendicateur, detenteur",
+            "reason": "le participant demandeur doit être le detenteur ou du revendicateur de l'alias"
+          }
+        }
+      },
+      "pp-shid": {
+        "summary": "Création d’un alias de type SHID par une personne physique",
+        "value": {
+          "alias": {
+            "type": "SHID"
+          },
+          "client": {
+            "nationalite": "SN",
+            "ville": "Dakar",
+            "categorie": "P",
+            "dateNaissance": "1993-02-24",
+            "paysNaissance": "SN",
+            "photo": "https://ibb.co/5FWFXbL",
+            "telephone": "+22100000000",
+            "villeNaissance": "DAKAR",
+            "nomMere": "Rokhaya DIOP",
+            "nom": "Moussa Diallo",
+            "codePostale": "9999",
+            "identificationNationale": "1619199102649",
+            "adresse": "Dakar Avenue Abdoulaye FADIGA",
+            "genre": "1",
+            "paysResidence": "SN",
+            "email": "darcia@example.com"
+          },
+          "compte": {
+            "participant": "CIC001",
+            "other": "+225XXXXXXXXX",
+            "type": "TRAN",
+            "dateOuverture": "2022-08-12"
+          }
+        }
+      },
+      "pc-mbno": {
+        "summary": "Création d’un alias de type MBNO par une personne commerçante",
+        "value": {
+          "alias": {
+            "cle": "+2210101010101",
+            "type": "MBNO"
+          },
+          "client": {
+            "nationalite": "SN",
+            "ville": "Dakar",
+            "categorie": "C",
+            "dateNaissance": "1993-02-24T00:00:00.000Z",
+            "paysNaissance": "SN",
+            "photo": "https://ibb.co/5FWFXbL",
+            "telephone": "+22100000000",
+            "villeNaissance": "DAKAR",
+            "nom": "Moussa Diallo",
+            "codePostale": "9999",
+            "identificationNationale": "1619199102649",
+            "adresse": "Dakar Avenue Abdoulaye FADIGA",
+            "genre": "1",
+            "paysResidence": "SN",
+            "email": "darcia@example.com"
+          },
+          "compte": {
+            "participant": "SNB000",
+            "iban": "SN01SN9600838589802587897892",
+            "type": "CACC",
+            "dateOuverture": "2022-09-23"
+          }
+        }
+      },
+      "pc-shid-idFiscale": {
+        "summary": "Création d’un alias de type MBNO par une personne commerçante",
+        "value": {
+          "alias": {
+            "cle": "+2210101010101",
+            "type": "MBNO"
+          },
+          "client": {
+            "nationalite": "SN",
+            "ville": "Dakar",
+            "categorie": "C",
+            "dateNaissance": "1993-02-24T00:00:00.000Z",
+            "paysNaissance": "SN",
+            "photo": "https://ibb.co/5FWFXbL",
+            "telephone": "+22100000000",
+            "villeNaissance": "DAKAR",
+            "nom": "Moussa Diallo",
+            "codePostale": "9999",
+            "identificationNationale": "1619199102649",
+            "adresse": "Dakar Avenue Abdoulaye FADIGA",
+            "genre": "1",
+            "paysResidence": "SN",
+            "email": "darcia@example.com",
+            "identificationFiscale": "FISN456789ZGTE222"
+          },
+          "compte": {
+            "participant": "SNB000",
+            "iban": "SN01SN9600838589802587897892",
+            "type": "CACC",
+            "dateOuverture": "2022-09-23"
+          }
+        }
+      },
+      "pp-mbno": {
+        "summary": "Création d’un alias de type MBNO par une personne physique",
+        "value": {
+          "alias": {
+            "cle": "+221770000000",
+            "type": "MBNO"
+          },
+          "client": {
+            "nationalite": "SN",
+            "ville": "Dakar",
+            "categorie": "P",
+            "dateNaissance": "1993-02-24",
+            "paysNaissance": "SN",
+            "photo": "https://ibb.co/5FWFXbL",
+            "telephone": "+22100000000",
+            "villeNaissance": "DAKAR",
+            "nomMere": "Rokhaya DIOP",
+            "nom": "Moussa Diallo",
+            "codePostale": "9999",
+            "identificationNationale": "1619199102649",
+            "adresse": "Dakar Avenue Abdoulaye FADIGA",
+            "genre": "1",
+            "paysResidence": "SN",
+            "email": "darcia@example.com"
+          },
+          "compte": {
+            "participant": "SNB000",
+            "iban": "SN01SN9600838589802587897892",
+            "type": "CACC",
+            "dateOuverture": "2022-09-23"
+          }
+        }
+      },
+      "pm-mcod": {
+        "summary": "Création d’un alias de type MCOD pour une personne morale",
+        "value": {
+          "alias": {
+            "type": "MCOD",
+            "cle": "12345"
+          },
+          "client": {
+            "nom": "Mandataire Nom",
+            "categorie": "B",
+            "nationalite": "CI",
+            "paysResidence": "CI",
+            "telephone": "+22100000000",
+            "email": "contact-us@efashion.com",
+            "adresse": "Abidjan, Plateau",
+            "raisonSociale": "PI Commerce fashion SA",
+            "denominationSociale": "efashion",
+            "identificationFiscale": "12369874523652",
+            "photo": "https://bceao.int/themes/medianet/image/png/logo_fr.png",
+            "ville": "Abidjan"
+          },
+          "compte": {
+            "participant": "CIB000",
+            "iban": "CI01SN9600838589802587897892",
+            "type": "CACC",
+            "dateOuverture": "2022-09-23",
+            "preConfirmation": true
+          }
+        }
+      },
+      "pm-shid": {
+        "summary": "Création d’un alias de type SHID pour une personne morale",
+        "value": {
+          "alias": {
+            "type": "SHID"
+          },
+          "client": {
+            "nom": "Mandataire Nom",
+            "categorie": "B",
+            "nationalite": "CI",
+            "paysResidence": "CI",
+            "telephone": "+22100000000",
+            "email": "contact-us@efashion.com",
+            "adresse": "Abidjan, Plateau",
+            "raisonSociale": "PI Commerce fashion SA",
+            "denominationSociale": "efashion",
+            "identificationFiscale": "12369874523652",
+            "photo": "https://bceao.int/themes/medianet/image/png/logo_fr.png",
+            "ville": "Abidjan"
+          },
+          "compte": {
+            "participant": "SNB000",
+            "iban": "SN01SN9600838589802587897892",
+            "type": "CACC",
+            "dateOuverture": "2022-09-23",
+            "preConfirmation": "true"
+          }
+        }
+      },
+      "pp-tral": {
+        "summary": "Création d’un alias pour un compte de type TRAL",
+        "value": {
+          "alias": {
+            "cle": "+221770000000",
+            "type": "MBNO"
+          },
+          "client": {
+            "nom": "Khadidja DIOP",
+            "categorie": "P",
+            "paysResidence": "SN",
+            "telephone": "+221770000000"
+          },
+          "compte": {
+            "participant": "SNB001",
+            "other": "123456789",
+            "type": "TRAL",
+            "dateOuverture": "2022-09-23"
+          }
+        }
+      },
+      "pm-taxe": {
+        "summary": "Création d’un alias de type SHID avec le type de compte TAXE",
+        "value": {
+          "alias": {
+            "type": "SHID"
+          },
+          "client": {
+            "nom": "Mandataire Nom",
+            "categorie": "G",
+            "nationalite": "CI",
+            "paysResidence": "CI",
+            "telephone": "+22100000000",
+            "email": "contact-us@efashion.com",
+            "adresse": "Abidjan, Plateau",
+            "raisonSociale": "PI Commerce fashion SA",
+            "denominationSociale": "efashion",
+            "identificationFiscale": "12369874523652",
+            "photo": "https://bceao.int/themes/medianet/image/png/logo_fr.png",
+            "ville": "Abidjan"
+          },
+          "compte": {
+            "participant": "SNF000",
+            "iban": "SN01SN9600838589802587897892",
+            "type": "TAXE",
+            "dateOuverture": "2022-09-23"
+          }
+        }
+      },
+      "MAJ_INFOS_CLIENT": {
+        "summary": "Modification suite au changement du pays de résidence",
+        "value": {
+          "client": {
+            "paysResidence": "CI",
+            "ville": "Yamoussoukro"
+          }
+        }
+      },
+      "MAJ_INFOS_COMPTE_TYPE": {
+        "summary": "Modification de l'attribut type de compte",
+        "value": {
+          "compte": {
+            "type": "TRAN"
+          },
+          "client": {
+            "nationalite": "SN",
+            "nomMere": "Rokhaya DIOP",
+            "telephone": "+221051230002",
+            "codePostale": "BP 04 Dakar",
+            "photo": "logo.png",
+            "adresse": "Nord foire mariste",
+            "paysResidence": "CI",
+            "ville": "ABIDJAN",
+            "email": "test@bceao.int",
+            "identificationNationale": "SNT0101990032425555590",
+            "genre": "2"
+          }
+        }
+      },
+      "MAJ_INFOS_COMPTE_PRECONFIRMATION": {
+        "summary": "Modification de l'attribut preConfirmation pour les personne morales",
+        "value": {
+          "compte": {
+            "preConfirmation": true
+          }
+        }
+      },
+      "FERMETURE_COMPTE_CLIENT": {
+        "summary": "Modification suite à une demande de changement de compte du client",
+        "value": {
+          "cle": "41657da6-9758-4229-9c65-112374400121",
+          "raison": "FERMETURE_COMPTE_CLIENT"
+        }
+      },
+      "DEMANDE_CLIENT": {
+        "summary": "Modification suite à une demande de l'utilisateur",
+        "value": {
+          "cle": "41657da6-9758-4229-9c65-112374400121",
+          "raison": "DEMANDE_CLIENT"
+        }
+      },
+      "MAJ_AGENCE_CLIENT": {
+        "summary": "Modification suite à un changement d'agence",
+        "value": {
+          "cle": "41657da6-9758-4229-9c65-112374400121",
+          "raison": "MAJ_AGENCE_CLIENT"
+        }
+      },
+      "rev-ok": {
+        "summary": "Enregistrement d'une revendication",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "INITIE",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-06T12:12:13.994Z"
+        }
+      },
+      "rev-initier": {
+        "summary": "Revendication à l'état INITIE",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "INITIEE",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-06T12:12:13.994Z"
+        }
+      },
+      "rev-rejeter": {
+        "summary": "Revendication à l'état REJETEE",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "REJETEE",
+          "actionDate": "2025-03-07T16:12:12.050Z",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-07T16:12:13.001Z"
+        }
+      },
+      "rev-accepter-client": {
+        "summary": "Revendication ACCEPTEE par le client detenteur",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "ACCEPTEE",
+          "actionAuteur": "CLIENT",
+          "actionDate": "2025-03-07T16:12:12.000Z",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-07T16:12:13.001Z"
+        }
+      },
+      "rev-accepter-participant": {
+        "summary": "Revendication ACCEPTEE par le participant detenteur",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "ACCEPTEE",
+          "actionAuteur": "PARTICIPANT",
+          "actionDate": "2025-03-07T16:12:12.001Z",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-07T16:12:13.001Z"
+        }
+      },
+      "rev-verrouiller": {
+        "summary": "Revendication avec verrouillage de l'alias",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "alias": "+22111000458",
+          "revendicateur": "BFC000",
+          "detenteur": "SNB000",
+          "statut": "INITIEE",
+          "dateCreation": "2025-03-06T12:12:13.994Z",
+          "dateModification": "2025-03-06T12:12:13.994Z",
+          "dateVerrouillage": "2025-03-07T16:12:13.050Z"
+        }
+      },
+      "request-client": {
+        "summary": "Revendication ACCEPTEE par client detenteur",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "actionAuteur": "CLIENT",
+          "actionDate": "2025-03-07T16:12:12.000Z"
+        }
+      },
+      "request-participant": {
+        "summary": "Revendication ACCEPTEE par participant detenteur",
+        "value": {
+          "id": "+22111000458-1741263133994",
+          "actionAuteur": "PARTICIPANT",
+          "actionDate": "2025-03-07T16:12:12.000Z"
+        }
+      }
+    }
+  }
+}

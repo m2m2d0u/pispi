@@ -29,6 +29,12 @@ public class ClientInfo {
     @Size(max = 140)
     private String raisonSociale;
 
+    @Size(max = 35)
+    private String denominationSociale;
+
+    /** Genre: "1" = Masculin, "2" = Féminin. Obligatoire pour PP et C. */
+    private String genre;
+
     @NotNull
     private TypeClient typeClient;
 
@@ -42,6 +48,10 @@ public class ClientInfo {
 
     @Size(max = 140)
     private String lieuNaissance;
+
+    /** Pays de naissance au format ISO 3166 alpha-2. Obligatoire pour PP de participant de type banque avec typeCompte ≠ TRAL. */
+    @Size(max = 2)
+    private String paysNaissance;
 
     @Size(max = 2)
     private String nationalite;

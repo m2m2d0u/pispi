@@ -182,7 +182,8 @@ public class AliasService {
         payload.put("telephoneClient", c.getTelephone());
         payload.put("paysResidenceClient", c.getPays());
         payload.put("participant", properties.getCodeMembre());
-        payload.put("iban", request.getNumeroCompte());
+        // CIE002 is an E-type (electronic money) participant — use 'other', not 'iban' (banks only)
+        payload.put("other", request.getNumeroCompte());
         payload.put("typeCompte", request.getTypeCompte().name());
         payload.put("dateOuvertureCompte", request.getDateOuvertureCompte());
 
@@ -199,18 +200,23 @@ public class AliasService {
         }
 
         // Optional client fields
+        if (c.getGenre() != null) payload.put("genreClient", c.getGenre());
         if (c.getRaisonSociale() != null) payload.put("raisonSociale", c.getRaisonSociale());
+        if (c.getDenominationSociale() != null) payload.put("denominationSociale", c.getDenominationSociale());
         if (c.getDateNaissance() != null) payload.put("dateNaissanceClient", c.getDateNaissance());
         if (c.getLieuNaissance() != null) payload.put("villeNaissanceClient", c.getLieuNaissance());
+        if (c.getPaysNaissance() != null) payload.put("paysNaissanceClient", c.getPaysNaissance());
         if (c.getNationalite() != null) payload.put("nationaliteClient", c.getNationalite());
         if (c.getAdresse() != null) payload.put("adresseClient", c.getAdresse());
         if (c.getVille() != null) payload.put("villeClient", c.getVille());
         if (c.getEmail() != null) payload.put("emailClient", c.getEmail());
         if (c.getCodePostal() != null) payload.put("codePostaleClient", c.getCodePostal());
         if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
-        if (request.getPreConfirmation() != null) payload.put("preConfirmation", request.getPreConfirmation());
+        // preConfirmation is only valid for type B (personne morale) clients per BCEAO data model
+        if (c.getTypeClient() == TypeClient.B && request.getPreConfirmation() != null)
+            payload.put("preConfirmation", request.getPreConfirmation());
 
-        // Merchant: denominationSociale maps to merchant name; codeActivite to MCC category
+        // Merchant: nomMarchand overrides denominationSociale; codeActivite maps to MCC category
         if (request.getMarchand() != null) {
             if (request.getMarchand().getNomMarchand() != null) payload.put("denominationSociale", request.getMarchand().getNomMarchand());
             if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("codeActivite", request.getMarchand().getCategorieCodeMarchand());

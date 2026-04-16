@@ -19,7 +19,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AliasCreationRequest {
 
-    @NotBlank @Size(max = 50)
+    // Optional for SHID (PI generates the SHID); required for MBNO and MCOD
+    @Size(max = 50)
     private String alias;
 
     @NotNull
