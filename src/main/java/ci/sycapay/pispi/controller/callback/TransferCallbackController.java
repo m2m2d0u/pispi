@@ -1,6 +1,5 @@
 package ci.sycapay.pispi.controller.callback;
 
-import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiTransferRepository;
@@ -8,6 +7,8 @@ import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -36,12 +37,12 @@ public class TransferCallbackController {
     @Operation(summary = "Receive inbound transfer (PACS.008)", description = "Called by the AIP when another participant sends a credit transfer to this PI. Saves the transfer locally and forwards a webhook event to the backend.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementCallbackPayload.class)))
     @PostMapping("/transferts")
-    public ApiResponse<Void> receiveTransfer(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveTransfer(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 201, null);
 
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(msgId)
@@ -60,18 +61,18 @@ public class TransferCallbackController {
         transferRepository.save(transfer);
 
         webhookService.notify(WebhookEventType.TRANSFER_RECEIVED, endToEndId, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive transfer result (PACS.002)", description = "Called by the AIP to deliver the final accept/reject outcome of an outbound transfer. Updates local transfer status and forwards a webhook event.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementResultatCallbackPayload.class)))
     @PostMapping("/transferts/reponses")
-    public ApiResponse<Void> receiveTransferResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveTransferResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 201, null);
 
         transferRepository.findByEndToEndId(endToEndId).ifPresent(transfer -> {
             String statut = (String) payload.get("statutTransaction");
@@ -83,21 +84,21 @@ public class TransferCallbackController {
         });
 
         webhookService.notify(WebhookEventType.TRANSFER_RESULT, endToEndId, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive message rejection (ADMI.002)", description = "Called by the AIP when a previously submitted message is structurally rejected. Logs the rejection and fires a MESSAGE_REJECTED webhook event.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RejetCallbackPayload.class)))
     @PostMapping("/transferts/echecs")
-    public ApiResponse<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         if (msgId == null) msgId = (String) payload.get("reference");
 
         log.warn("ADMI.002 rejection received [msgId={}]", msgId);
-        if (msgId != null && messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 200, null);
+        if (msgId != null && messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 201, null);
 
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

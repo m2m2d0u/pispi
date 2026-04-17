@@ -1,6 +1,5 @@
 package ci.sycapay.pispi.controller.callback;
 
-import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiCompensation;
 import ci.sycapay.pispi.entity.PiGuarantee;
 import ci.sycapay.pispi.entity.PiInvoice;
@@ -12,11 +11,11 @@ import ci.sycapay.pispi.service.WebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -49,11 +48,11 @@ public class ReportCallbackController {
     @Operation(summary = "Receive transaction statement (CAMT.052)", description = "Called by the AIP to deliver the transaction statement requested via POST /api/v1/reports/transactions. Persists the report and fires a TRANSACTION_REPORT webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ReleveCallbackPayload.class)))
     @PostMapping("/rapports/telechargements/reponses")
-    public ApiResponse<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_052, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_052, MessageDirection.INBOUND, payload, 201, null);
 
         try {
             PiTransactionReport report = PiTransactionReport.builder()
@@ -71,18 +70,18 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.TRANSACTION_REPORT, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive compensation report (CAMT.053)", description = "Called by the AIP to deliver clearing/settlement balances requested via POST /api/v1/reports/compensation. Each balance entry is persisted as a PiCompensation record.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = CompensationCallbackPayload.class)))
     @PostMapping("/reglements/soldes")
     @SuppressWarnings("unchecked")
-    public ApiResponse<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_053, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_053, MessageDirection.INBOUND, payload, 201, null);
 
         List<Map<String, Object>> soldes = (List<Map<String, Object>>) payload.get("soldes");
         if (soldes != null) {
@@ -102,17 +101,17 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.COMPENSATION_REPORT, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive guarantee update (CAMT.010)", description = "Called by the AIP to push an update to this participant's guarantee (collateral) position. Persists a PiGuarantee record and fires a GUARANTEE_UPDATED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = GarantieCallbackPayload.class)))
     @PostMapping("/notifications/garantie")
-    public ApiResponse<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_010, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_010, MessageDirection.INBOUND, payload, 201, null);
 
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
@@ -131,18 +130,18 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive invoice report (CAMT.086)", description = "Called by the AIP to deliver the billing invoice requested via POST /api/v1/reports/invoices. Each invoice line item is persisted as a PiInvoice record.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = FactureCallbackPayload.class)))
     @PostMapping("/rapports/factures/reponses")
     @SuppressWarnings("unchecked")
-    public ApiResponse<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_086, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_086, MessageDirection.INBOUND, payload, 201, null);
 
         try {
             List<Map<String, Object>> groupes = (List<Map<String, Object>>) payload.get("listeGroupeFacture");
@@ -174,6 +173,6 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.INVOICE_RECEIVED, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

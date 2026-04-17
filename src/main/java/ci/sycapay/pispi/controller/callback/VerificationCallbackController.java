@@ -1,6 +1,5 @@
 package ci.sycapay.pispi.controller.callback;
 
-import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.entity.PiIdentityVerification;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
@@ -8,6 +7,8 @@ import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import ci.sycapay.pispi.dto.callback.VerificationCallbackPayload;
@@ -32,12 +33,12 @@ public class VerificationCallbackController {
     @Operation(summary = "Receive inbound verification request (ACMT.023)", description = "Called by the AIP when another participant requests identity verification for an account held at this PI. Saves the request locally and fires a VERIFICATION_RECEIVED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationCallbackPayload.class)))
     @PostMapping("/verifications-identites")
-    public ApiResponse<Void> receiveVerification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveVerification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.INBOUND, payload, 201, null);
 
         PiIdentityVerification verification = PiIdentityVerification.builder()
                 .msgId(msgId)
@@ -54,18 +55,18 @@ public class VerificationCallbackController {
         repository.save(verification);
 
         webhookService.notify(WebhookEventType.VERIFICATION_RECEIVED, endToEndId, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive verification result (ACMT.024)", description = "Called by the AIP to deliver the result of a verification request this PI initiated. Updates local verification status and fires a VERIFICATION_RESULT webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VerificationResultatCallbackPayload.class)))
     @PostMapping("/verifications-identites/reponses")
-    public ApiResponse<Void> receiveVerificationResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<Void> receiveVerificationResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.INBOUND, payload, 201, null);
 
         repository.findByEndToEndId(endToEndId).ifPresent(v -> {
             Boolean result = (Boolean) payload.get("resultatVerification");
@@ -77,6 +78,6 @@ public class VerificationCallbackController {
         });
 
         webhookService.notify(WebhookEventType.VERIFICATION_RESULT, endToEndId, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

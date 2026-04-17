@@ -87,7 +87,7 @@ public class ApiResponse<T> {
     public static ApiResponse<Void> accepted() {
         return ApiResponse.<Void>builder()
                 .success(true)
-                .status(202)
+                .status(201)
                 .message("Accepted")
                 .timestamp(LocalDateTime.now().toString())
                 .build();

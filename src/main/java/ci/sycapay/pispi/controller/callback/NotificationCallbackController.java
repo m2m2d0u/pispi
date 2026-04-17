@@ -11,6 +11,7 @@ import ci.sycapay.pispi.service.WebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,6 +42,29 @@ public class NotificationCallbackController {
     private final WebhookService webhookService;
     private final ObjectMapper objectMapper;
 
+    @Operation(summary = "Receive connectivity PING (ADMI.004)", description = "Called by the AIP to test connectivity. Saves the PING notification locally and fires a PI_NOTIFICATION webhook.")
+    @PostMapping("/notifications/test-connectivite")
+    public ResponseEntity<ApiResponse<Void>> receiveConnectivityPing(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        String msgId = (String) payload.get("msgId");
+        log.info("ADMI.004 PING received [msgId={}]", msgId);
+
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 201, null);
+
+        PiNotification notification = PiNotification.builder()
+                .msgId(msgId)
+                .direction(MessageDirection.INBOUND)
+                .evenement("PING")
+                .evenementDescription((String) payload.get("evenementDescription"))
+                .evenementDate(payload.get("evenementDate") != null ? parseDateTime(payload.get("evenementDate")) : LocalDateTime.now())
+                .messageType(IsoMessageType.ADMI_004)
+                .build();
+        notificationRepository.save(notification);
+
+        webhookService.notify(WebhookEventType.PI_NOTIFICATION, null, msgId, payload);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
     @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally and fires a PI_NOTIFICATION webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notifications/info-warn")
@@ -49,8 +73,8 @@ public class NotificationCallbackController {
         String evenement = (String) payload.get("evenement");
         log.info("ADMI.004 received [msgId={}, evenement={}]", msgId, evenement);
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 202, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 201, null);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
@@ -63,7 +87,7 @@ public class NotificationCallbackController {
         notificationRepository.save(notification);
 
         webhookService.notify(WebhookEventType.PI_NOTIFICATION, null, msgId, payload);
-        return ResponseEntity.accepted().body(ApiResponse.accepted());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive acknowledgment (ADMI.011)", description = "Called by the AIP to acknowledge receipt of a notification previously sent by this PI. Saves the acknowledgment record locally.")
@@ -75,8 +99,8 @@ public class NotificationCallbackController {
         String evenement = (String) payload.get("evenement");
         log.info("ADMI.011 received [msgId={}, msgIdDemande={}, evenement={}]", msgId, msgIdDemande, evenement);
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 202, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 201, null);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
@@ -92,7 +116,7 @@ public class NotificationCallbackController {
         notificationRepository.save(notification);
 
         webhookService.notify(WebhookEventType.NOTIFICATION_ACK, null, msgId, payload);
-        return ResponseEntity.accepted().body(ApiResponse.accepted());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Operation(summary = "Receive sponsor relation update (REDA.017)", description = "Called by the AIP to notify this PI of a change in the sponsor/guarantee relationship (ceiling amount, validity dates). Persists a PiGuarantee record with the new ceiling and fires a GUARANTEE_UPDATED webhook.")
@@ -101,8 +125,8 @@ public class NotificationCallbackController {
     public ResponseEntity<ApiResponse<Void>> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
-        messageLogService.log(msgId, null, IsoMessageType.REDA_017, MessageDirection.INBOUND, payload, 202, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
+        messageLogService.log(msgId, null, IsoMessageType.REDA_017, MessageDirection.INBOUND, payload, 201, null);
 
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
@@ -120,7 +144,7 @@ public class NotificationCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ResponseEntity.accepted().body(ApiResponse.accepted());
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
 }
