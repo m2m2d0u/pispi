@@ -11,6 +11,7 @@ import ci.sycapay.pispi.service.WebhookService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -43,13 +44,13 @@ public class NotificationCallbackController {
     @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally and fires a PI_NOTIFICATION webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notifications/info-warn")
-    public ApiResponse<Void> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ApiResponse<Void>> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String evenement = (String) payload.get("evenement");
         log.info("ADMI.004 received [msgId={}, evenement={}]", msgId, evenement);
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
+        messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 202, null);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
@@ -62,20 +63,20 @@ public class NotificationCallbackController {
         notificationRepository.save(notification);
 
         webhookService.notify(WebhookEventType.PI_NOTIFICATION, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.accepted().body(ApiResponse.accepted());
     }
 
     @Operation(summary = "Receive acknowledgment (ADMI.011)", description = "Called by the AIP to acknowledge receipt of a notification previously sent by this PI. Saves the acknowledgment record locally.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = AccuseCallbackPayload.class)))
     @PostMapping("/notifications/accuse-reception")
-    public ApiResponse<Void> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ApiResponse<Void>> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String msgIdDemande = (String) payload.get("msgIdDemande");
         String evenement = (String) payload.get("evenement");
         log.info("ADMI.011 received [msgId={}, msgIdDemande={}, evenement={}]", msgId, msgIdDemande, evenement);
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
+        messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 202, null);
 
         PiNotification notification = PiNotification.builder()
                 .msgId(msgId)
@@ -91,17 +92,17 @@ public class NotificationCallbackController {
         notificationRepository.save(notification);
 
         webhookService.notify(WebhookEventType.NOTIFICATION_ACK, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.accepted().body(ApiResponse.accepted());
     }
 
     @Operation(summary = "Receive sponsor relation update (REDA.017)", description = "Called by the AIP to notify this PI of a change in the sponsor/guarantee relationship (ceiling amount, validity dates). Persists a PiGuarantee record with the new ceiling and fires a GUARANTEE_UPDATED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RelationCallbackPayload.class)))
     @PostMapping("/notifications/relation")
-    public ApiResponse<Void> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+    public ResponseEntity<ApiResponse<Void>> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ApiResponse.ok(null);
-        messageLogService.log(msgId, null, IsoMessageType.REDA_017, MessageDirection.INBOUND, payload, 200, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().body(ApiResponse.accepted());
+        messageLogService.log(msgId, null, IsoMessageType.REDA_017, MessageDirection.INBOUND, payload, 202, null);
 
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
@@ -119,7 +120,7 @@ public class NotificationCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ApiResponse.ok("Callback received", null);
+        return ResponseEntity.accepted().body(ApiResponse.accepted());
     }
 
 }
