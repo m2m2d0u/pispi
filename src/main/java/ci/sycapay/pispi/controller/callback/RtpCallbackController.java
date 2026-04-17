@@ -40,8 +40,8 @@ public class RtpCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013, MessageDirection.INBOUND, payload, 202, null);
 
         PiRequestToPay rtp = PiRequestToPay.builder()
                 .msgId(msgId)
@@ -59,7 +59,7 @@ public class RtpCallbackController {
         rtpRepository.save(rtp);
 
         webhookService.notify(WebhookEventType.RTP_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive RTP result (PAIN.014)", description = "Called by the AIP to deliver the payee's reject decision on a Request-to-Pay this PI initiated. Updates local RTP status and fires an RTP_RESULT webhook.")
@@ -69,8 +69,8 @@ public class RtpCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014, MessageDirection.INBOUND, payload, 202, null);
 
         rtpRepository.findByEndToEndId(endToEndId).ifPresent(rtp -> {
             rtp.setStatut(RtpStatus.RJCT);
@@ -80,6 +80,6 @@ public class RtpCallbackController {
         });
 
         webhookService.notify(WebhookEventType.RTP_RESULT, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 }

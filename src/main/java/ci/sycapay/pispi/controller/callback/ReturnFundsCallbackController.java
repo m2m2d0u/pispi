@@ -43,8 +43,8 @@ public class ReturnFundsCallbackController {
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056, MessageDirection.INBOUND, payload, 202, null);
 
         PiReturnRequest req = PiReturnRequest.builder()
                 .msgId(msgId)
@@ -57,7 +57,7 @@ public class ReturnFundsCallbackController {
         returnRequestRepository.save(req);
 
         webhookService.notify(WebhookEventType.RETURN_REQUEST_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive return rejection (CAMT.029)", description = "Called by the AIP when the receiving PI rejects a return-of-funds request initiated by this PI. Updates local return request status to RJCR.")
@@ -67,8 +67,8 @@ public class ReturnFundsCallbackController {
         String msgId = (String) payload.get("msgId");
         String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_029, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_029, MessageDirection.INBOUND, payload, 202, null);
 
         returnRequestRepository.findByIdentifiantDemande(identifiantDemande).ifPresent(req -> {
             req.setStatut(ReturnRequestStatus.RJCR);
@@ -78,7 +78,7 @@ public class ReturnFundsCallbackController {
         });
 
         webhookService.notify(WebhookEventType.RETURN_RESULT, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive return execution (PACS.004)", description = "Called by the AIP when the receiving PI accepts a return and transfers funds back. Saves the return execution record locally and fires a RETURN_EXECUTED webhook.")
@@ -88,8 +88,8 @@ public class ReturnFundsCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_004, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_004, MessageDirection.INBOUND, payload, 202, null);
 
         PiReturnExecution execution = PiReturnExecution.builder()
                 .msgId(msgId)
@@ -102,6 +102,6 @@ public class ReturnFundsCallbackController {
         returnExecutionRepository.save(execution);
 
         webhookService.notify(WebhookEventType.RETURN_EXECUTED, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 }

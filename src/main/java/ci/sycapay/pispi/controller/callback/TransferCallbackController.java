@@ -41,8 +41,8 @@ public class TransferCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 202, null);
 
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(msgId)
@@ -61,7 +61,7 @@ public class TransferCallbackController {
         transferRepository.save(transfer);
 
         webhookService.notify(WebhookEventType.TRANSFER_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive transfer result (PACS.002)", description = "Called by the AIP to deliver the final accept/reject outcome of an outbound transfer. Updates local transfer status and forwards a webhook event.")
@@ -71,8 +71,8 @@ public class TransferCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 202, null);
 
         transferRepository.findByEndToEndId(endToEndId).ifPresent(transfer -> {
             String statut = (String) payload.get("statutTransaction");
@@ -84,7 +84,7 @@ public class TransferCallbackController {
         });
 
         webhookService.notify(WebhookEventType.TRANSFER_RESULT, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive message rejection (ADMI.002)", description = "Called by the AIP when a previously submitted message is structurally rejected. Logs the rejection and fires a MESSAGE_REJECTED webhook event.")
@@ -95,10 +95,10 @@ public class TransferCallbackController {
         if (msgId == null) msgId = (String) payload.get("reference");
 
         log.warn("ADMI.002 rejection received [msgId={}]", msgId);
-        if (msgId != null && messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 201, null);
+        if (msgId != null && messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 202, null);
 
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 }

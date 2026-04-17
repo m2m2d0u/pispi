@@ -51,8 +51,8 @@ public class ReportCallbackController {
     public ResponseEntity<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_052, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_052, MessageDirection.INBOUND, payload, 202, null);
 
         try {
             PiTransactionReport report = PiTransactionReport.builder()
@@ -70,7 +70,7 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.TRANSACTION_REPORT, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive compensation report (CAMT.053)", description = "Called by the AIP to deliver clearing/settlement balances requested via POST /api/v1/reports/compensation. Each balance entry is persisted as a PiCompensation record.")
@@ -80,8 +80,8 @@ public class ReportCallbackController {
     public ResponseEntity<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_053, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_053, MessageDirection.INBOUND, payload, 202, null);
 
         List<Map<String, Object>> soldes = (List<Map<String, Object>>) payload.get("soldes");
         if (soldes != null) {
@@ -101,7 +101,7 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.COMPENSATION_REPORT, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive guarantee update (CAMT.010)", description = "Called by the AIP to push an update to this participant's guarantee (collateral) position. Persists a PiGuarantee record and fires a GUARANTEE_UPDATED webhook.")
@@ -110,8 +110,8 @@ public class ReportCallbackController {
     public ResponseEntity<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_010, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_010, MessageDirection.INBOUND, payload, 202, null);
 
         try {
             PiGuarantee guarantee = PiGuarantee.builder()
@@ -130,7 +130,7 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.GUARANTEE_UPDATED, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive invoice report (CAMT.086)", description = "Called by the AIP to deliver the billing invoice requested via POST /api/v1/reports/invoices. Each invoice line item is persisted as a PiInvoice record.")
@@ -140,8 +140,8 @@ public class ReportCallbackController {
     public ResponseEntity<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_086, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, null, IsoMessageType.CAMT_086, MessageDirection.INBOUND, payload, 202, null);
 
         try {
             List<Map<String, Object>> groupes = (List<Map<String, Object>>) payload.get("listeGroupeFacture");
@@ -173,6 +173,6 @@ public class ReportCallbackController {
         }
 
         webhookService.notify(WebhookEventType.INVOICE_RECEIVED, null, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 }

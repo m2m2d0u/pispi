@@ -37,8 +37,8 @@ public class VerificationCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.INBOUND, payload, 202, null);
 
         PiIdentityVerification verification = PiIdentityVerification.builder()
                 .msgId(msgId)
@@ -55,7 +55,7 @@ public class VerificationCallbackController {
         repository.save(verification);
 
         webhookService.notify(WebhookEventType.VERIFICATION_RECEIVED, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive verification result (ACMT.024)", description = "Called by the AIP to deliver the result of a verification request this PI initiated. Updates local verification status and fires a VERIFICATION_RESULT webhook.")
@@ -65,8 +65,8 @@ public class VerificationCallbackController {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
-        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.status(HttpStatus.CREATED).build();
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.INBOUND, payload, 201, null);
+        if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.INBOUND, payload, 202, null);
 
         repository.findByEndToEndId(endToEndId).ifPresent(v -> {
             Boolean result = (Boolean) payload.get("resultatVerification");
@@ -78,6 +78,6 @@ public class VerificationCallbackController {
         });
 
         webhookService.notify(WebhookEventType.VERIFICATION_RESULT, endToEndId, msgId, payload);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+        return ResponseEntity.accepted().build();
     }
 }
