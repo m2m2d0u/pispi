@@ -21,6 +21,7 @@ import java.util.Map;
 
 import ci.sycapay.pispi.dto.callback.AccuseCallbackPayload;
 import ci.sycapay.pispi.dto.callback.NotificationCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RejetCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RelationCallbackPayload;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,7 +47,7 @@ public class NotificationCallbackController {
     @PostMapping("/notifications/test-connectivite")
     public ResponseEntity<ApiResponse<Void>> receiveConnectivityPing(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        log.info("ADMI.004 PING received [msgId={}]", msgId);
+        log.info("ADMI.004 received connectivity: {}", payload);
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 202, null);
@@ -69,9 +70,9 @@ public class NotificationCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notifications/info-warn")
     public ResponseEntity<ApiResponse<Void>> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("ADMI.004 received info-warn: {}", payload);
         String msgId = (String) payload.get("msgId");
         String evenement = (String) payload.get("evenement");
-        log.info("ADMI.004 received [msgId={}, evenement={}]", msgId, evenement);
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 202, null);
@@ -94,10 +95,10 @@ public class NotificationCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = AccuseCallbackPayload.class)))
     @PostMapping("/notifications/accuse-reception")
     public ResponseEntity<ApiResponse<Void>> receiveAcknowledgment(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("ADMI.011 received: {}", payload);
         String msgId = (String) payload.get("msgId");
         String msgIdDemande = (String) payload.get("msgIdDemande");
         String evenement = (String) payload.get("evenement");
-        log.info("ADMI.011 received [msgId={}, msgIdDemande={}, evenement={}]", msgId, msgIdDemande, evenement);
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, null, IsoMessageType.ADMI_011, MessageDirection.INBOUND, payload, 202, null);
@@ -123,6 +124,8 @@ public class NotificationCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RelationCallbackPayload.class)))
     @PostMapping("/notifications/relation")
     public ResponseEntity<ApiResponse<Void>> receiveRelation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("REDA.017 received [msgId={}]", payload);
+
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();

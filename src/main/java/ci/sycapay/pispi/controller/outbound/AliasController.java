@@ -54,9 +54,8 @@ public class AliasController {
     @Operation(summary = "Search an alias in the RAC", description = "Queries the AIP RAC for the account linked to a given alias. Returns the raw AIP response including account number, type, and client info.")
     @GetMapping("/search")
     public ApiResponse<Map<String, Object>> searchAlias(
-            @Parameter(description = "Type of alias") @RequestParam TypeAlias typeAlias,
             @Parameter(description = "The alias value to search") @RequestParam String alias) {
-        return ApiResponse.ok(aliasService.searchAlias(typeAlias, alias));
+        return ApiResponse.ok(aliasService.searchAlias(alias));
     }
 
     @Operation(summary = "List local active aliases", description = "Returns a paginated list of all ACTIVE aliases registered by this participant, stored in the local database.")

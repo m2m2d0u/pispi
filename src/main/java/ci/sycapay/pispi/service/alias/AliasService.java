@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
-import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Slf4j
 @Service
@@ -226,7 +225,7 @@ public class AliasService {
                 .build();
     }
 
-    public Map<String, Object> searchAlias(TypeAlias typeAlias, String alias) {
+    public Map<String, Object> searchAlias(String alias) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 

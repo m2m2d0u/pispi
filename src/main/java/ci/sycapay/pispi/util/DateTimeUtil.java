@@ -49,9 +49,13 @@ public final class DateTimeUtil {
         if (dateValue == null) {
             return null;
         }
+        String dateString = String.valueOf(dateValue);
         try {
-            String dateString = String.valueOf(dateValue);
             return LocalDate.parse(dateString, DateTimeFormatter.ISO_DATE);
+        } catch (Exception ignored) {
+        }
+        try {
+            return LocalDateTime.parse(dateString, DateTimeFormatter.ISO_DATE_TIME).toLocalDate();
         } catch (Exception e) {
             log.warn("Failed to parse date: {}", dateValue, e);
             return null;
