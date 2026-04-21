@@ -148,6 +148,9 @@ public class AliasService {
                 .dateNaissance(c.getDateNaissance() != null ? LocalDate.parse(c.getDateNaissance()) : null)
                 .nationalite(c.getNationalite())
                 .pays(c.getPays())
+                .adresse(c.getAdresse())
+                .ville(c.getVille())
+                .codePostal(c.getCodePostal())
                 .telephone(c.getTelephone())
                 .email(c.getEmail())
                 .numeroCompte(request.getNumeroCompte())
@@ -267,6 +270,11 @@ public class AliasService {
      */
     private void applyModifiableFields(PiAlias target, ClientInfo c, boolean applyPassport) {
         if (c.getPays() != null) target.setPays(c.getPays());
+        if (c.getAdresse() != null) target.setAdresse(c.getAdresse());
+        if (c.getVille() != null) target.setVille(c.getVille());
+        if (c.getCodePostal() != null) target.setCodePostal(c.getCodePostal());
+        if (c.getLieuNaissance() != null) target.setLieuNaissance(c.getLieuNaissance());
+        if (c.getDateNaissance() != null) target.setDateNaissance(LocalDate.parse(c.getDateNaissance()));
         if (c.getTelephone() != null) target.setTelephone(c.getTelephone());
         if (c.getEmail() != null) target.setEmail(c.getEmail());
         if (c.getRaisonSociale() != null) target.setRaisonSociale(c.getRaisonSociale());
@@ -444,6 +452,8 @@ public class AliasService {
         if (c.getAdresse() != null) payload.put("adresseClient", c.getAdresse());
         if (c.getVille() != null) payload.put("villeClient", c.getVille());
         if (c.getCodePostal() != null) payload.put("codePostalClient", c.getCodePostal());
+        if (c.getLieuNaissance() != null) payload.put("villeNaissanceClient", c.getLieuNaissance());
+        if (c.getDateNaissance() != null) payload.put("dateNaissanceClient", c.getDateNaissance());
 
         // B/G constraint enforced by validateModificationConstraints; safe to pass through.
         if (c.getRaisonSociale() != null) {

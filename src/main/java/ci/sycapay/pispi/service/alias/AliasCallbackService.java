@@ -292,6 +292,15 @@ public class AliasCallbackService {
         String paysResidence = (String) payload.get("paysResidence");
         if (paysResidence != null) alias.setPays(paysResidence);
 
+        String adresse = (String) payload.get("adresse");
+        if (adresse != null) alias.setAdresse(adresse);
+
+        String ville = (String) payload.get("ville");
+        if (ville != null) alias.setVille(ville);
+
+        String codePostal = (String) payload.get("codePostal");
+        if (codePostal != null) alias.setCodePostal(codePostal);
+
         if (resolvedId != null) {
             alias.setIdentifiant(resolvedId.value);
             alias.setTypeIdentifiant(resolvedId.type);
