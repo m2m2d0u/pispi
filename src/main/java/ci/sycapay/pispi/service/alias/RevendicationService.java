@@ -130,8 +130,8 @@ public class RevendicationService {
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
-        payload.put("actionDate", DateTimeUtil.nowIso());
-        payload.put("actionAuteur", "PARTICIPANT");
+        payload.put("dateAction", DateTimeUtil.nowIso());
+        payload.put("auteurAction", "PARTICIPANT");
         aipClient.post("/revendications/acceptation", payload);
 
 
@@ -151,7 +151,7 @@ public class RevendicationService {
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
-        payload.put("actionDate", DateTimeUtil.nowIso());
+        payload.put("dateAction", DateTimeUtil.nowIso());
         aipClient.post("/revendications/rejet", payload);
 
 //        claim.setStatut(StatutRevendication.REJETEE);
