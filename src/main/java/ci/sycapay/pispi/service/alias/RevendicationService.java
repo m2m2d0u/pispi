@@ -37,6 +37,7 @@ public class RevendicationService {
         aipClient.post("/revendications/creation", payload);
 
         return RevendicationResponse.builder()
+                .alias(alias)
                 .statut(StatutRevendication.INITIEE)
                 .build();
     }
@@ -46,6 +47,7 @@ public class RevendicationService {
         String alias = (String) payload.get("alias");
         String identifiantRevendication = (String) payload.get("identifiantRevendication");
         String detenteur = (String) payload.get("detenteur");
+        String revendicateur = (String) payload.get("revendicateur");
         String statutStr = (String) payload.get("statut");
         StatutRevendication statut = statutStr != null ? StatutRevendication.valueOf(statutStr) : StatutRevendication.INITIEE;
 
@@ -54,7 +56,7 @@ public class RevendicationService {
                         .aliasValue(alias)
                         .identifiantRevendication(identifiantRevendication)
                         .direction(MessageDirection.OUTBOUND)
-                        .revendicateur(properties.getCodeMembre())
+                        .revendicateur(revendicateur != null ? revendicateur : properties.getCodeMembre())
                         .build());
 
         claim.setDetenteur(detenteur);
@@ -62,6 +64,55 @@ public class RevendicationService {
         repository.save(claim);
 
         webhookService.notify(WebhookEventType.CLAIM_RECEIVED, null, identifiantRevendication, payload);
+    }
+
+    @Transactional
+    public void processClaimAcceptationResponse(Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
+        String statutStr = (String) payload.get("statut");
+        StatutRevendication statut = statutStr != null ? StatutRevendication.valueOf(statutStr) : StatutRevendication.ACCEPTEE;
+
+        repository.findByIdentifiantRevendication(identifiantRevendication).ifPresent(claim -> {
+            claim.setStatut(statut);
+            claim.setDateAction(parseDateTime(payload.get("dateAction")));
+            claim.setAuteurAction((String) payload.get("auteurAction"));
+            repository.save(claim);
+        });
+
+        webhookService.notify(WebhookEventType.CLAIM_RECEIVED, null, identifiantRevendication, payload);
+    }
+
+    @Transactional
+    public void processClaimRejetResponse(Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
+        String statutStr = (String) payload.get("statut");
+        StatutRevendication statut = statutStr != null ? StatutRevendication.valueOf(statutStr) : StatutRevendication.REJETEE;
+
+        repository.findByIdentifiantRevendication(identifiantRevendication).ifPresent(claim -> {
+            claim.setStatut(statut);
+            claim.setDateAction(parseDateTime(payload.get("dateAction")));
+            repository.save(claim);
+        });
+
+        webhookService.notify(WebhookEventType.CLAIM_RECEIVED, null, identifiantRevendication, payload);
+    }
+
+    @Transactional
+    public void processClaimRecuperationResponse(Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
+        String statutStr = (String) payload.get("statut");
+        String detenteur = (String) payload.get("detenteur");
+        String revendicateur = (String) payload.get("revendicateur");
+        StatutRevendication statut = statutStr != null ? StatutRevendication.valueOf(statutStr) : null;
+
+        repository.findByIdentifiantRevendication(identifiantRevendication).ifPresent(claim -> {
+            if (statut != null) claim.setStatut(statut);
+            if (detenteur != null) claim.setDetenteur(detenteur);
+            if (revendicateur != null) claim.setRevendicateur(revendicateur);
+            claim.setDateAction(parseDateTime(payload.get("dateAction")));
+            claim.setAuteurAction((String) payload.get("auteurAction"));
+            repository.save(claim);
+        });
     }
 
     public RevendicationResponse getClaimStatus(String identifiantRevendication) {
@@ -74,39 +125,50 @@ public class RevendicationService {
     }
 
     public RevendicationResponse acceptClaim(String identifiantRevendication) {
+//        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
+//                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
+
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
         payload.put("actionDate", DateTimeUtil.nowIso());
         payload.put("actionAuteur", "PARTICIPANT");
         aipClient.post("/revendications/acceptation", payload);
 
-        return RevendicationResponse.builder()
-                .identifiantRevendication(identifiantRevendication)
-                .statut(StatutRevendication.ACCEPTEE)
-                .build();
+
+//        claim.setStatut(StatutRevendication.ACCEPTEE);
+//        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
+//        claim.setAuteurAction("PARTICIPANT");
+//        repository.save(claim);
+
+//        return toResponse(claim);
+        return null;
     }
 
     @Transactional
     public RevendicationResponse rejectClaim(String identifiantRevendication) {
-        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
-                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
+//        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
+//                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
         payload.put("actionDate", DateTimeUtil.nowIso());
         aipClient.post("/revendications/rejet", payload);
 
-        claim.setStatut(StatutRevendication.REJETEE);
-        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
-        repository.save(claim);
+//        claim.setStatut(StatutRevendication.REJETEE);
+//        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
+//        repository.save(claim);
 
-        return toResponse(claim);
+//        return toResponse(claim);
+        return null;
     }
 
     private RevendicationResponse toResponse(PiAliasRevendication c) {
         return RevendicationResponse.builder()
                 .identifiantRevendication(c.getIdentifiantRevendication())
+                .alias(c.getAliasValue())
                 .statut(c.getStatut())
+                .detenteur(c.getDetenteur())
+                .revendicateur(c.getRevendicateur())
                 .dateAction(formatDateTime(c.getDateAction()))
                 .auteurAction(c.getAuteurAction())
                 .build();

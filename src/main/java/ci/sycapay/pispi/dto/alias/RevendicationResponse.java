@@ -13,7 +13,14 @@ import lombok.NoArgsConstructor;
 public class RevendicationResponse {
 
     private String identifiantRevendication;
+    private String alias;
     private StatutRevendication statut;
+    private String detenteur;
+    private String revendicateur;
+    private String dateCreation;
+    private String dateModification;
     private String dateAction;
     private String auteurAction;
+    private String raisonRejet;
+    private String informationsAdditionnelles;
 }

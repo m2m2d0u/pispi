@@ -133,24 +133,30 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim recovery response")
     @PostMapping("/revendications/recuperation/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimRecoveryResponse(@RequestBody Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim recovery response received: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        revendicationService.processClaimRecuperationResponse(payload);
         return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive claim acceptance response")
     @PostMapping("/revendications/acceptation/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimAcceptanceResponse(@RequestBody Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim acceptance response received: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        revendicationService.processClaimAcceptationResponse(payload);
         return ResponseEntity.accepted().build();
     }
 
     @Operation(summary = "Receive claim rejection response")
     @PostMapping("/revendications/rejet/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimRejectionResponse(@RequestBody Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim rejection response received: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        revendicationService.processClaimRejetResponse(payload);
         return ResponseEntity.accepted().build();
     }
 
