@@ -4,12 +4,10 @@ import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.service.MessageLogService;
-import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.service.alias.AliasCallbackService;
-import ci.sycapay.pispi.enums.WebhookEventType;
+import ci.sycapay.pispi.service.alias.RevendicationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +23,7 @@ public class MiscCallbackController {
 
     private final MessageLogService messageLogService;
     private final AliasCallbackService aliasCallbackService;
+    private final RevendicationService revendicationService;
 
     // ---- Notification failures ----
 
@@ -124,8 +123,10 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim response")
     @PostMapping("/revendications/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimResponse(@RequestBody Map<String, Object> payload) {
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim response received: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
+        revendicationService.processClaimResponse(payload);
         return ResponseEntity.accepted().build();
     }
 

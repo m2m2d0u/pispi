@@ -6,11 +6,12 @@ import ci.sycapay.pispi.dto.alias.RevendicationResponse;
 import ci.sycapay.pispi.entity.PiAliasRevendication;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.StatutRevendication;
+import ci.sycapay.pispi.enums.WebhookEventType;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRevendicationRepository;
+import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +21,6 @@ import java.util.Map;
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RevendicationService {
@@ -28,26 +28,40 @@ public class RevendicationService {
     private final PiAliasRevendicationRepository repository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
+    private final WebhookService webhookService;
 
-    @Transactional
     public RevendicationResponse initiateClaim(String alias) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("alias", alias);
 
-        Map<String, Object> response = aipClient.post("/revendications/creation", payload);
+        aipClient.post("/revendications/creation", payload);
 
-        String identifiant = response != null ? String.valueOf(response.get("identifiantRevendication")) : null;
-
-        PiAliasRevendication claim = PiAliasRevendication.builder()
-                .identifiantRevendication(identifiant)
-                .aliasValue(alias)
-                .direction(MessageDirection.OUTBOUND)
-                .revendicateur(properties.getCodeMembre())
+        return RevendicationResponse.builder()
                 .statut(StatutRevendication.INITIEE)
                 .build();
+    }
+
+    @Transactional
+    public void processClaimResponse(Map<String, Object> payload) {
+        String alias = (String) payload.get("alias");
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
+        String detenteur = (String) payload.get("detenteur");
+        String statutStr = (String) payload.get("statut");
+        StatutRevendication statut = statutStr != null ? StatutRevendication.valueOf(statutStr) : StatutRevendication.INITIEE;
+
+        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
+                .orElse(PiAliasRevendication.builder()
+                        .aliasValue(alias)
+                        .identifiantRevendication(identifiantRevendication)
+                        .direction(MessageDirection.OUTBOUND)
+                        .revendicateur(properties.getCodeMembre())
+                        .build());
+
+        claim.setDetenteur(detenteur);
+        claim.setStatut(statut);
         repository.save(claim);
 
-        return toResponse(claim);
+        webhookService.notify(WebhookEventType.CLAIM_RECEIVED, null, identifiantRevendication, payload);
     }
 
     public RevendicationResponse getClaimStatus(String identifiantRevendication) {
@@ -59,23 +73,17 @@ public class RevendicationService {
         return toResponse(claim);
     }
 
-    @Transactional
     public RevendicationResponse acceptClaim(String identifiantRevendication) {
-        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
-                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
-
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
-        payload.put("dateAction", DateTimeUtil.nowIso());
-        payload.put("auteurAction", "PARTICIPANT");
+        payload.put("actionDate", DateTimeUtil.nowIso());
+        payload.put("actionAuteur", "PARTICIPANT");
         aipClient.post("/revendications/acceptation", payload);
 
-        claim.setStatut(StatutRevendication.ACCEPTEE);
-        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
-        claim.setAuteurAction("PARTICIPANT");
-        repository.save(claim);
-
-        return toResponse(claim);
+        return RevendicationResponse.builder()
+                .identifiantRevendication(identifiantRevendication)
+                .statut(StatutRevendication.ACCEPTEE)
+                .build();
     }
 
     @Transactional
@@ -85,7 +93,7 @@ public class RevendicationService {
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
-        payload.put("dateAction", DateTimeUtil.nowIso());
+        payload.put("actionDate", DateTimeUtil.nowIso());
         aipClient.post("/revendications/rejet", payload);
 
         claim.setStatut(StatutRevendication.REJETEE);

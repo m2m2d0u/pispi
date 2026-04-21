@@ -89,6 +89,8 @@ public class ReportCallbackController {
                 PiCompensation compensation = PiCompensation.builder()
                         .msgId(msgId)
                         .soldeId((String) solde.get("id"))
+                        .dateDebutCompense(parseDateTime(solde.get("dateDebutCompense")))
+                        .dateFinCompense(parseDateTime(solde.get("dateFinCompense")))
                         .participant((String) solde.get("participant"))
                         .participantSponsor((String) solde.get("participantSponsor"))
                         .balanceType(solde.get("balanceType") != null ? TypeBalanceCompense.valueOf((String) solde.get("balanceType")) : null)
