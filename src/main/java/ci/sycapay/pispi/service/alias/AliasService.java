@@ -198,40 +198,44 @@ public class AliasService {
 
     @Transactional
     public AliasResponse modifyAlias(AliasCreationRequest request) {
-        String codeMembre = properties.getCodeMembre();
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
-
-        // 1. Find alias in PI-RAC
         PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
                 request.getAlias(), request.getTypeAlias(), AliasStatus.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Alias", request.getAlias()));
 
         ClientInfo c = request.getClient();
-
-        // 2. Validate modification constraints per PI-RAC rules
         validateModificationConstraints(alias, c);
 
-        // 3. Update modifiable client fields locally
-        if (c.getNom() != null) alias.setNom(c.getNom());
-        if (c.getPrenom() != null) alias.setPrenom(c.getPrenom());
-        // Only update raisonSociale for B/G clients (validated above)
-        if (c.getRaisonSociale() != null && (alias.getTypeClient() == TypeClient.B || alias.getTypeClient() == TypeClient.G)) {
-            alias.setRaisonSociale(c.getRaisonSociale());
+        // Mirror the edits onto every ACTIVE alias sharing this identifiant so the
+        // MBNO/SHID pair (and any MCOD) stays in lockstep. BCEAO only accepts one
+        // modification call and cascades internally; we reflect that locally.
+        List<PiAlias> affected = loadClientAliases(alias);
+        boolean applyPassport = alias.getTypeIdentifiant() == CodeSystemeIdentification.CCPT
+                && c.getIdentifiant() != null;
+        for (PiAlias row : affected) {
+            applyModifiableFields(row, c, applyPassport);
         }
-        if (c.getPays() != null) alias.setPays(c.getPays());
-        if (c.getTelephone() != null) alias.setTelephone(c.getTelephone());
-        if (c.getEmail() != null) alias.setEmail(c.getEmail());
-        if (request.getNumeroCompte() != null) alias.setNumeroCompte(request.getNumeroCompte());
-        if (request.getTypeCompte() != null) alias.setTypeCompte(request.getTypeCompte());
-        aliasRepository.save(alias);
+        aliasRepository.saveAll(affected);
 
-        // 4. Build and send request to PI-RAC
         Map<String, Object> payload = buildModificationPayload(alias, request);
-        messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY, MessageDirection.OUTBOUND, payload, null, null);
+        String endToEndId = alias.getEndToEndId();
+        messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY,
+                MessageDirection.OUTBOUND, payload, null, null);
 
-        aipClient.post("/alias/modification", payload);
+        try {
+            aipClient.post("/alias/modification", payload);
+        } catch (AipCommunicationException e) {
+            Throwable cause = e.getCause();
+            Integer httpStatus = null;
+            String errorBody = e.getMessage();
+            if (cause instanceof HttpStatusCodeException httpEx) {
+                httpStatus = httpEx.getStatusCode().value();
+                errorBody = httpEx.getResponseBodyAsString();
+            }
+            messageLogService.logError(endToEndId, IsoMessageType.RAC_MODIFY,
+                    Map.of("aipError", errorBody != null ? errorBody : "unknown"), httpStatus, errorBody);
+            throw e;
+        }
 
-        // 5. Return EN_COURS - callback will update dateModificationRac
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
                 .statut(StatutOperationAlias.EN_COURS)
@@ -241,12 +245,41 @@ public class AliasService {
     }
 
     /**
+     * Returns every ACTIVE alias row for this client (same identifiant). Falls back
+     * to a singleton list when the alias has no identifiant (TRAL case) so the
+     * modification path still works for unidentified clients.
+     */
+    private List<PiAlias> loadClientAliases(PiAlias primary) {
+        if (primary.getIdentifiant() == null) {
+            return List.of(primary);
+        }
+        List<PiAlias> rows = aliasRepository.findAllByIdentifiantAndStatut(
+                primary.getIdentifiant(), AliasStatus.ACTIVE);
+        return rows.isEmpty() ? List.of(primary) : rows;
+    }
+
+    /**
+     * Applies only the fields BCEAO's ModificationAlias schema actually accepts:
+     * contact details (pays, telephone, email), denominationSociale for B/G clients,
+     * and the passport number for CCPT-identified clients. Fields like nom/prenom
+     * and account details (numeroCompte, typeCompte) are immutable on PI and are
+     * intentionally ignored here to avoid local/remote divergence.
+     */
+    private void applyModifiableFields(PiAlias target, ClientInfo c, boolean applyPassport) {
+        if (c.getPays() != null) target.setPays(c.getPays());
+        if (c.getTelephone() != null) target.setTelephone(c.getTelephone());
+        if (c.getEmail() != null) target.setEmail(c.getEmail());
+        if (c.getRaisonSociale() != null) target.setRaisonSociale(c.getRaisonSociale());
+        if (applyPassport) target.setIdentifiant(c.getIdentifiant());
+    }
+
+    /**
      * Validates PI-RAC modification constraints:
      * - denominationSociale can only be modified for B and G clients
-     * - Cannot change identification type (NIDN ↔ CCPT)
+     * - Identifier type is immutable (no NIDN ↔ CCPT ↔ TXID changes)
+     * - Identifier value is only mutable for CCPT (passport renewals)
      */
     private void validateModificationConstraints(PiAlias alias, ClientInfo requestClient) {
-        // 1. denominationSociale/raisonSociale can only be modified for B and G clients
         if (requestClient.getRaisonSociale() != null || requestClient.getDenominationSociale() != null) {
             if (alias.getTypeClient() != TypeClient.B && alias.getTypeClient() != TypeClient.G) {
                 throw new InvalidStateException(
@@ -254,42 +287,41 @@ public class AliasService {
             }
         }
 
-        // 2. Cannot change identification type from NIDN to CCPT or vice versa
-        if (requestClient.getTypeIdentifiant() != null && alias.getTypeIdentifiant() != null) {
-            CodeSystemeIdentification originalType = alias.getTypeIdentifiant();
-            CodeSystemeIdentification requestedType = requestClient.getTypeIdentifiant();
+        if (requestClient.getTypeIdentifiant() != null
+                && alias.getTypeIdentifiant() != null
+                && requestClient.getTypeIdentifiant() != alias.getTypeIdentifiant()) {
+            throw new InvalidStateException(
+                    "Cannot change identification type from " + alias.getTypeIdentifiant()
+                            + " to " + requestClient.getTypeIdentifiant()
+                            + ". Original identification type must be preserved.");
+        }
 
-            // NIDN ↔ CCPT change is not allowed
-            if ((originalType == CodeSystemeIdentification.NIDN && requestedType == CodeSystemeIdentification.CCPT) ||
-                (originalType == CodeSystemeIdentification.CCPT && requestedType == CodeSystemeIdentification.NIDN)) {
-                throw new InvalidStateException(
-                        "Cannot change identification type from " + originalType + " to " + requestedType +
-                        ". Original identification type must be preserved.");
-            }
+        if (requestClient.getIdentifiant() != null
+                && alias.getIdentifiant() != null
+                && !requestClient.getIdentifiant().equals(alias.getIdentifiant())
+                && alias.getTypeIdentifiant() != CodeSystemeIdentification.CCPT) {
+            throw new InvalidStateException(
+                    "Identifier value can only be updated for CCPT (passport) clients");
         }
     }
 
     @Transactional
     public AliasResponse deleteAlias(TypeAlias typeAlias, String aliasValue, CodeRaisonSuppression raisonSuppression) {
-        String codeMembre = properties.getCodeMembre();
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
+                        aliasValue, typeAlias, AliasStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Alias", aliasValue));
 
-        // 1. Find alias and mark as PENDING deletion
-//        PiAlias alias = aliasRepository.findByAliasValueAndTypeAliasAndStatut(aliasValue, typeAlias, AliasStatus.ACTIVE)
-//                .orElseThrow(() -> new ResourceNotFoundException("Alias", aliasValue));
+        String endToEndId = alias.getEndToEndId();
 
-        // Keep alias ACTIVE until callback confirms deletion
-
-        // 2. Build and send request to PI-RAC
         Map<String, Object> payload = new HashMap<>();
         payload.put("endToEndId", endToEndId);
         payload.put("alias", aliasValue);
         payload.put("raisonSuppression", raisonSuppression.name());
 
-        messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE, MessageDirection.OUTBOUND, payload, null, null);
+        messageLogService.log(null, endToEndId, IsoMessageType.RAC_DELETE,
+                MessageDirection.OUTBOUND, payload, null, null);
         aipClient.post("/alias/suppression", payload);
 
-        // 3. Return EN_COURS - callback will update status to DELETED and set dateSuppressionRac
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
                 .statut(StatutOperationAlias.EN_COURS)
@@ -413,8 +445,8 @@ public class AliasService {
         if (c.getVille() != null) payload.put("villeClient", c.getVille());
         if (c.getCodePostal() != null) payload.put("codePostalClient", c.getCodePostal());
 
-        // denominationSociale only allowed for B and G clients
-        if (c.getRaisonSociale() != null && (alias.getTypeClient() == TypeClient.B || alias.getTypeClient() == TypeClient.G)) {
+        // B/G constraint enforced by validateModificationConstraints; safe to pass through.
+        if (c.getRaisonSociale() != null) {
             payload.put("denominationSociale", c.getRaisonSociale());
         }
 

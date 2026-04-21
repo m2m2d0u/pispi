@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,36 +125,39 @@ public class AliasCallbackService {
             return;
         }
 
-        // Find by alias value and ACTIVE status
-        Optional<PiAlias> aliasOpt = aliasRepository.findByAliasValueAndTypeAliasAndStatut(
-                alias, null, AliasStatus.ACTIVE);
-
-        // If not found with null type, try to find by alias value only
-        if (aliasOpt.isEmpty()) {
-            aliasOpt = findByAliasValue(alias);
-        }
-
+        Optional<PiAlias> aliasOpt = findByAliasValue(alias);
         if (aliasOpt.isEmpty()) {
             log.warn("Alias not found for modification: {}", alias);
             return;
         }
 
         PiAlias aliasEntity = aliasOpt.get();
+        boolean success = "SUCCES".equalsIgnoreCase(statut);
+        LocalDateTime parsedDate = dateModification != null ? parseDateTime(dateModification) : null;
 
-        if (dateModification != null) {
-            aliasEntity.setDateModificationRac(parseDateTime(dateModification));
+        // BCEAO modification cascades to the MBNO/SHID pair on PI's side; mirror
+        // dateModificationRac across the client's ACTIVE aliases so local state
+        // doesn't diverge from PI.
+        List<PiAlias> affected = aliasEntity.getIdentifiant() != null
+                ? aliasRepository.findAllByIdentifiantAndStatut(aliasEntity.getIdentifiant(), AliasStatus.ACTIVE)
+                : List.of(aliasEntity);
+        if (affected.isEmpty()) affected = List.of(aliasEntity);
+
+        if (parsedDate != null) {
+            for (PiAlias row : affected) {
+                row.setDateModificationRac(parsedDate);
+            }
+            aliasRepository.saveAll(affected);
         }
 
-        if (!"SUCCES".equalsIgnoreCase(statut)) {
-            log.warn("Alias modification failed for {}: {}", alias, payload);
+        if (success) {
+            log.info("Alias {} modified successfully ({} row(s) updated)", alias, affected.size());
         } else {
-            log.info("Alias {} modified successfully", alias);
+            log.warn("Alias modification failed for {}: {}", alias, payload);
         }
-
-        aliasRepository.save(aliasEntity);
 
         webhookService.notify(
-                "SUCCES".equalsIgnoreCase(statut) ? WebhookEventType.ALIAS_MODIFIED : WebhookEventType.ALIAS_FAILED,
+                success ? WebhookEventType.ALIAS_MODIFIED : WebhookEventType.ALIAS_FAILED,
                 aliasEntity.getEndToEndId(),
                 null,
                 payload
@@ -206,13 +210,15 @@ public class AliasCallbackService {
 
     /**
      * Process alias search callback response.
-     * Updates existing alias or creates new one with data from PI-RAC.
+     * Upserts the returned alias and enriches the webhook with the client's
+     * other ACTIVE aliases (the MBNO/SHID pair, any MCOD, etc.) pulled from
+     * the local store.
      *
      * Response example: {nationalite=CI, other=+2250707070710, ville=Abidjan, categorie=P,
      *                   dateNaissance=1990-01-15, typeCompte=TRAN, telephone=+2250707070710,
      *                   endToEndId=ECIE002..., nom=Diallo, participant=CIE002,
-     *                   identificationNationale=CMI123456789, valeurAlias=59041c28-...,
-     *                   typeAlias=SHID, statut=SUCCES, paysResidence=CI, email=...}
+     *                   identificationNationale=CMI123456789, valeurAlias=+2250707070710,
+     *                   typeAlias=MBNO, statut=SUCCES, paysResidence=CI, email=...}
      */
     @Transactional
     public void processSearchResponse(Map<String, Object> payload) {
@@ -226,22 +232,25 @@ public class AliasCallbackService {
         String endToEndId = (String) payload.get("endToEndId");
         String aliasValue = (String) payload.get("valeurAlias");
         String typeAliasStr = (String) payload.get("typeAlias");
-        String identifiant = (String) payload.get("identificationFiscale");
 
         if (endToEndId == null || aliasValue == null) {
             log.warn("Alias search response missing required fields: {}", payload);
             return;
         }
 
-        // Try to find existing alias by endToEndId or aliasValue
-        Optional<PiAlias> existingOpt = aliasRepository.findByIdentifiantAndTypeAlias(identifiant, TypeAlias.valueOf(typeAliasStr));
+        ResolvedIdentifier resolvedId = resolveIdentifier(payload);
+        TypeAlias typeAlias = parseTypeAlias(typeAliasStr);
+
+        Optional<PiAlias> existingOpt = Optional.empty();
+        if (resolvedId != null && typeAlias != null) {
+            existingOpt = aliasRepository.findByIdentifiantAndTypeAlias(resolvedId.value, typeAlias);
+        }
         if (existingOpt.isEmpty()) {
             existingOpt = findByAliasValue(aliasValue);
         }
 
         PiAlias alias;
         boolean isNew = false;
-
         if (existingOpt.isPresent()) {
             alias = existingOpt.get();
             log.info("Updating existing alias {} with search response data", aliasValue);
@@ -252,16 +261,10 @@ public class AliasCallbackService {
             log.info("Creating new alias {} from search response", aliasValue);
         }
 
-        // Map response fields to entity
         alias.setAliasValue(aliasValue);
         alias.setStatut(AliasStatus.ACTIVE);
-
-        if (typeAliasStr != null) {
-            try {
-                alias.setTypeAlias(TypeAlias.valueOf(typeAliasStr));
-            } catch (IllegalArgumentException e) {
-                log.warn("Unknown alias type: {}", typeAliasStr);
-            }
+        if (typeAlias != null) {
+            alias.setTypeAlias(typeAlias);
         }
 
         // Client info
@@ -289,21 +292,9 @@ public class AliasCallbackService {
         String paysResidence = (String) payload.get("paysResidence");
         if (paysResidence != null) alias.setPays(paysResidence);
 
-        // Identification
-        String identificationNationale = (String) payload.get("identificationNationale");
-        if (identificationNationale != null) {
-            alias.setIdentifiant(identificationNationale);
-            alias.setTypeIdentifiant(CodeSystemeIdentification.NIDN);
-        }
-        String numeroPasseport = (String) payload.get("numeroPasseport");
-        if (numeroPasseport != null) {
-            alias.setIdentifiant(numeroPasseport);
-            alias.setTypeIdentifiant(CodeSystemeIdentification.CCPT);
-        }
-        String identificationFiscale = (String) payload.get("identificationFiscale");
-        if (identificationFiscale != null) {
-            alias.setIdentifiant(identificationFiscale);
-            alias.setTypeIdentifiant(CodeSystemeIdentification.TXID);
+        if (resolvedId != null) {
+            alias.setIdentifiant(resolvedId.value);
+            alias.setTypeIdentifiant(resolvedId.type);
         }
 
         // Date of birth
@@ -343,16 +334,79 @@ public class AliasCallbackService {
         }
 
         aliasRepository.save(alias);
-
         log.info("Alias {} {} from search response", aliasValue, isNew ? "created" : "updated");
+
+        Map<String, Object> enrichedPayload = enrichWithSiblings(payload, alias);
 
         webhookService.notify(
                 WebhookEventType.ALIAS_SEARCH_RESULT,
                 alias.getEndToEndId(),
                 null,
-                payload
+                enrichedPayload
         );
     }
+
+    /**
+     * BCEAO sends the client identifier on one of three fields depending on its type
+     * (NIDN → identificationNationale, CCPT → numeroPasseport, TXID → identificationFiscale).
+     * Return the first one present so both lookup and persistence use the right value.
+     */
+    private ResolvedIdentifier resolveIdentifier(Map<String, Object> payload) {
+        String nidn = (String) payload.get("identificationNationale");
+        if (nidn != null) return new ResolvedIdentifier(nidn, CodeSystemeIdentification.NIDN);
+        String ccpt = (String) payload.get("numeroPasseport");
+        if (ccpt != null) return new ResolvedIdentifier(ccpt, CodeSystemeIdentification.CCPT);
+        String txid = (String) payload.get("identificationFiscale");
+        if (txid != null) return new ResolvedIdentifier(txid, CodeSystemeIdentification.TXID);
+        return null;
+    }
+
+    private TypeAlias parseTypeAlias(String value) {
+        if (value == null) return null;
+        try {
+            return TypeAlias.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            log.warn("Unknown alias type: {}", value);
+            return null;
+        }
+    }
+
+    /**
+     * Adds an {@code aliasesLies} array to the webhook payload listing the same
+     * client's other ACTIVE aliases (e.g. the SHID companion of a searched MBNO).
+     * Returns the original payload untouched when the client has no siblings.
+     */
+    private Map<String, Object> enrichWithSiblings(Map<String, Object> payload, PiAlias primary) {
+        if (primary.getIdentifiant() == null || primary.getId() == null) {
+            return payload;
+        }
+        List<Map<String, Object>> siblings = aliasRepository
+                .findAllByIdentifiantAndStatut(primary.getIdentifiant(), AliasStatus.ACTIVE)
+                .stream()
+                .filter(a -> !a.getId().equals(primary.getId()))
+                .map(this::toSiblingSummary)
+                .toList();
+        if (siblings.isEmpty()) {
+            return payload;
+        }
+        Map<String, Object> enriched = new HashMap<>(payload);
+        enriched.put("aliasesLies", siblings);
+        return enriched;
+    }
+
+    private Map<String, Object> toSiblingSummary(PiAlias a) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("endToEndId", a.getEndToEndId());
+        summary.put("typeAlias", a.getTypeAlias() != null ? a.getTypeAlias().name() : null);
+        summary.put("valeurAlias", a.getAliasValue());
+        summary.put("statut", a.getStatut() != null ? a.getStatut().name() : null);
+        if (a.getDateCreationRac() != null) {
+            summary.put("dateCreation", a.getDateCreationRac().toString());
+        }
+        return summary;
+    }
+
+    private record ResolvedIdentifier(String value, CodeSystemeIdentification type) {}
 
     /**
      * Find alias by value (regardless of type and status).

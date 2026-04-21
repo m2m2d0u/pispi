@@ -30,4 +30,6 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
 
     Optional<PiAlias> findByIdentifiantAndTypeAliasAndStatutIn(
             String identifiant, TypeAlias typeAlias, List<AliasStatus> statuts);
+
+    List<PiAlias> findAllByIdentifiantAndStatut(String identifiant, AliasStatus statut);
 }
