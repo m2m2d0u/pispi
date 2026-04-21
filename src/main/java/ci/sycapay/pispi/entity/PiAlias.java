@@ -18,7 +18,7 @@ public class PiAlias {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "end_to_end_id", unique = true, nullable = false, length = 35)
+    @Column(name = "end_to_end_id", nullable = false, length = 35)
     private String endToEndId;
 
     @Column(name = "alias_value", length = 50)  // nullable for SHID - PI-RAC generates the value

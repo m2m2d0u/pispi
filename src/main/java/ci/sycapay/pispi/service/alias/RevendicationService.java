@@ -125,8 +125,8 @@ public class RevendicationService {
     }
 
     public RevendicationResponse acceptClaim(String identifiantRevendication) {
-//        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
-//                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
+        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
+                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
@@ -135,31 +135,29 @@ public class RevendicationService {
         aipClient.post("/revendications/acceptation", payload);
 
 
-//        claim.setStatut(StatutRevendication.ACCEPTEE);
-//        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
-//        claim.setAuteurAction("PARTICIPANT");
-//        repository.save(claim);
+        claim.setStatut(StatutRevendication.ACCEPTEE);
+        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
+        claim.setAuteurAction("PARTICIPANT");
+        repository.save(claim);
 
-//        return toResponse(claim);
-        return null;
+        return toResponse(claim);
     }
 
     @Transactional
     public RevendicationResponse rejectClaim(String identifiantRevendication) {
-//        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
-//                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
+        PiAliasRevendication claim = repository.findByIdentifiantRevendication(identifiantRevendication)
+                .orElseThrow(() -> new ResourceNotFoundException("Revendication", identifiantRevendication));
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("identifiantRevendication", identifiantRevendication);
         payload.put("dateAction", DateTimeUtil.nowIso());
         aipClient.post("/revendications/rejet", payload);
 
-//        claim.setStatut(StatutRevendication.REJETEE);
-//        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
-//        repository.save(claim);
+        claim.setStatut(StatutRevendication.REJETEE);
+        claim.setDateAction(parseDateTime(DateTimeUtil.nowIso()));
+        repository.save(claim);
 
-//        return toResponse(claim);
-        return null;
+        return toResponse(claim);
     }
 
     private RevendicationResponse toResponse(PiAliasRevendication c) {

@@ -20,7 +20,14 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
 
     Optional<PiAlias> findByEndToEndId(String endToEndId);
 
+    List<PiAlias> findAllByEndToEndId(String endToEndId);
+
+    Optional<PiAlias> findByEndToEndIdAndTypeAlias(String endToEndId, TypeAlias typeAlias);
+
     Optional<PiAlias> findByIdentifiant(String identifiant);
 
     Optional<PiAlias> findByIdentifiantAndTypeAlias(String identifiant, TypeAlias typeAlias);
+
+    Optional<PiAlias> findByIdentifiantAndTypeAliasAndStatutIn(
+            String identifiant, TypeAlias typeAlias, List<AliasStatus> statuts);
 }

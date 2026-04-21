@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,15 +36,19 @@ public class AliasCallbackService {
 
     /**
      * Process alias creation callback response.
-     * Response example: {dateCreation=2026-04-16T20:11:38.886Z, idCreationAlias=ECIE00220260416201136HIKYZWUGL1K8IH,
-     *                   alias=5411001, type=MCOD, statut=SUCCES}
+     *
+     * A single PI callback may resolve more than one local row: an MBNO creation
+     * is paired with a SHID row that shares the same idCreationAlias, and PI
+     * returns the generated SHID value on the {@code shid} field of the same
+     * response. We load every row for the endToEndId and update them together:
+     *  - On SUCCES: MBNO keeps its phone-number value; SHID takes the {@code shid}
+     *    value from the payload. Both become ACTIVE with the same dateCreation.
+     *  - On failure: all rows sharing the endToEndId are marked FAILED.
      */
     @Transactional
     public void processCreationResponse(Map<String, Object> payload) {
         String idCreationAlias = (String) payload.get("idCreationAlias");
         String statut = (String) payload.get("statut");
-        String aliasValue = (String) payload.get("alias");
-        String typeStr = (String) payload.get("type");
         String dateCreation = payload.get("dateCreation") != null
                 ? String.valueOf(payload.get("dateCreation")) : null;
 
@@ -52,47 +57,56 @@ public class AliasCallbackService {
             return;
         }
 
-        Optional<PiAlias> aliasOpt = aliasRepository.findByEndToEndId(idCreationAlias);
-        if (aliasOpt.isEmpty()) {
-            log.warn("Alias not found for idCreationAlias: {}", idCreationAlias);
+        List<PiAlias> aliases = aliasRepository.findAllByEndToEndId(idCreationAlias);
+        if (aliases.isEmpty()) {
+            log.warn("No alias found for idCreationAlias: {}", idCreationAlias);
             return;
         }
 
-        PiAlias alias = aliasOpt.get();
+        String aliasValue = (String) payload.get("alias");
+        String shidValue = (String) payload.get("shid");
+        LocalDateTime parsedDate = dateCreation != null ? parseDateTime(dateCreation) : null;
+        boolean success = "SUCCES".equalsIgnoreCase(statut);
 
-        // Update with actual values from PI-RAC
-        if (aliasValue != null) {
-            alias.setAliasValue(aliasValue);
-        }
-        if (typeStr != null) {
-            try {
-                alias.setTypeAlias(TypeAlias.valueOf(typeStr));
-            } catch (IllegalArgumentException e) {
-                log.warn("Unknown alias type: {}", typeStr);
+        for (PiAlias alias : aliases) {
+            if (success) {
+                String valueForRow = valueFor(alias.getTypeAlias(), aliasValue, shidValue);
+                if (valueForRow != null) {
+                    alias.setAliasValue(valueForRow);
+                }
+                if (parsedDate != null) {
+                    alias.setDateCreationRac(parsedDate);
+                }
+                alias.setStatut(AliasStatus.ACTIVE);
+                log.info("Alias {} ({}) activated (e2e={})",
+                        alias.getAliasValue(), alias.getTypeAlias(), idCreationAlias);
+            } else {
+                alias.setStatut(AliasStatus.FAILED);
+                log.warn("Alias {} ({}) creation failed (e2e={}): {}",
+                        alias.getAliasValue(), alias.getTypeAlias(), idCreationAlias, payload);
             }
         }
-        if (dateCreation != null) {
-            alias.setDateCreationRac(parseDateTime(dateCreation));
-        }
 
-        // Set status based on response
-        if ("SUCCES".equalsIgnoreCase(statut)) {
-            alias.setStatut(AliasStatus.ACTIVE);
-            log.info("Alias {} activated successfully", aliasValue);
-        } else {
-            alias.setStatut(AliasStatus.FAILED);
-            log.warn("Alias creation failed for {}: {}", idCreationAlias, payload);
-        }
+        aliasRepository.saveAll(aliases);
 
-        aliasRepository.save(alias);
-
-        // Notify via webhook
         webhookService.notify(
-                "SUCCES".equalsIgnoreCase(statut) ? WebhookEventType.ALIAS_CREATED : WebhookEventType.ALIAS_FAILED,
-                alias.getEndToEndId(),
+                success ? WebhookEventType.ALIAS_CREATED : WebhookEventType.ALIAS_FAILED,
+                idCreationAlias,
                 null,
                 payload
         );
+    }
+
+    /**
+     * SHID rows take the PI-generated value from {@code shid}. MBNO/MCOD rows keep
+     * what was submitted unless the payload includes an {@code alias} field to echo.
+     * Returning {@code null} leaves the row's current value untouched.
+     */
+    private String valueFor(TypeAlias type, String aliasField, String shidField) {
+        if (type == TypeAlias.SHID) {
+            return shidField != null ? shidField : aliasField;
+        }
+        return aliasField;
     }
 
     /**
