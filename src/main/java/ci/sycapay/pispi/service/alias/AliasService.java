@@ -13,6 +13,7 @@ import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.service.MessageLogService;
+import ci.sycapay.pispi.util.AliasCodeGenerator;
 import ci.sycapay.pispi.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpStatusCodeException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,10 +138,18 @@ public class AliasService {
                                         String aliasValue,
                                         String codeMembre) {
         ClientInfo c = request.getClient();
+
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        long todayCount = aliasRepository.countByCodeMembreParticipantAndCreatedAtBetween(
+                codeMembre, startOfDay, endOfDay);
+        String codification = AliasCodeGenerator.generate(codeMembre, typeAlias, todayCount);
+
         PiAlias alias = PiAlias.builder()
                 .endToEndId(endToEndId)
                 .aliasValue(aliasValue)
                 .typeAlias(typeAlias)
+                .codification(codification)
                 .typeClient(c.getTypeClient())
                 .nom(c.getNom())
                 .prenom(c.getPrenom())
@@ -357,7 +368,9 @@ public class AliasService {
                 properties.getCodeMembre(), AliasStatus.ACTIVE, pageable)
                 .map(a -> AliasResponse.builder()
                         .endToEndId(a.getEndToEndId())
+                        .codification(a.getCodification())
                         .alias(a.getAliasValue())
+                        .typeAlias(a.getTypeAlias())
                         .dateCreation(formatDateTime(a.getDateCreationRac()))
                         .build());
     }

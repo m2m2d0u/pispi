@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class AliasResponse {
 
     private String endToEndId;
+    private String codification;
     private StatutOperationAlias statut;
     private String alias;
     private TypeAlias typeAlias;

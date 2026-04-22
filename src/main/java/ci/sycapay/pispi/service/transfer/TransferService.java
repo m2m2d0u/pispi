@@ -2,17 +2,28 @@ package ci.sycapay.pispi.service.transfer;
 
 import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
+import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.transfer.TransferAcceptRejectRequest;
 import ci.sycapay.pispi.dto.transfer.TransferRequest;
 import ci.sycapay.pispi.dto.transfer.TransferResponse;
+import ci.sycapay.pispi.entity.PiAlias;
+import ci.sycapay.pispi.entity.PiMessageLog;
 import ci.sycapay.pispi.entity.PiTransfer;
+import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.TransferStatus;
+import java.time.LocalDateTime;
+import ci.sycapay.pispi.enums.TypeClient;
+import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
+import ci.sycapay.pispi.repository.PiAliasRepository;
+import ci.sycapay.pispi.repository.PiMessageLogRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.util.IdGenerator;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
+import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
 
 @Slf4j
 @Service
@@ -31,17 +43,23 @@ import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
 public class TransferService {
 
     private final PiTransferRepository transferRepository;
+    private final PiMessageLogRepository messageLogRepository;
+    private final PiAliasRepository aliasRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public TransferResponse initiateTransfer(TransferRequest request) {
+        ResolvedClient payeur = resolveClientFromSearchLog(request.getEndToEndIdSearchPayeur(), "payeur");
+        ResolvedClient paye = resolveClientFromCodification(request.getCodificationPaye(), "paye");
+
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
-        Map<String, Object> aipPayload = buildPacs008Payload(msgId, endToEndId, request);
+        Map<String, Object> aipPayload = buildPacs008Payload(msgId, endToEndId, request, payeur, paye);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.OUTBOUND, aipPayload, null, null);
 
         PiTransfer transfer = PiTransfer.builder()
@@ -54,16 +72,24 @@ public class TransferService {
                 .devise("XOF")
                 .codeMembrePayeur(codeMembre)
                 .codeMembrePaye(request.getCodeMembreParticipantPaye())
-                .numeroComptePayeur(request.getNumeroCompteClientPayeur())
-                .typeComptePayeur(request.getTypeCompteClientPayeur())
-                .numeroComptePaye(request.getNumeroCompteClientPaye())
-                .typeComptePaye(request.getTypeCompteClientPaye())
-                .nomClientPayeur(request.getClientPayeur().getNom())
-                .prenomClientPayeur(request.getClientPayeur().getPrenom())
-                .nomClientPaye(request.getClientPaye().getNom())
-                .prenomClientPaye(request.getClientPaye().getPrenom())
+                .numeroComptePayeur(payeur.other())
+                .typeComptePayeur(payeur.typeCompte())
+                .typeClientPayeur(payeur.clientInfo().getTypeClient())
+                .nomClientPayeur(payeur.clientInfo().getNom())
+                .prenomClientPayeur(payeur.clientInfo().getPrenom())
+                .telephonePayeur(payeur.clientInfo().getTelephone())
+                .numeroComptePaye(paye.other())
+                .typeComptePaye(paye.typeCompte())
+                .typeClientPaye(paye.clientInfo().getTypeClient())
+                .nomClientPaye(paye.clientInfo().getNom())
+                .prenomClientPaye(paye.clientInfo().getPrenom())
+                .telephonePaye(paye.clientInfo().getTelephone())
                 .motif(request.getMotif())
-                .referenceClient(request.getReferenceClient())
+                .referenceClient(request.getIdentifiantTransaction())
+                .montantAchat(request.getMontantAchat())
+                .montantRetrait(request.getMontantRetrait())
+                .fraisRetrait(request.getFraisRetrait())
+                .dateHeureExecution(LocalDateTime.now())
                 .statut(TransferStatus.PEND)
                 .build();
         transferRepository.save(transfer);
@@ -124,67 +150,222 @@ public class TransferService {
         aipClient.post("/transferts/statut", pacs028);
     }
 
-    private Map<String, Object> buildPacs008Payload(String msgId, String endToEndId, TransferRequest request) {
+    // -------------------------------------------------------------------------
+    // Client resolution
+    // -------------------------------------------------------------------------
+
+    private ResolvedClient resolveClientFromCodification(String codification, String side) {
+        PiAlias alias = aliasRepository.findByCodification(codification)
+                .orElseThrow(() -> new ResourceNotFoundException("Alias", codification));
+
+        if (alias.getNumeroCompte() == null || alias.getTypeCompte() == null) {
+            throw new IllegalStateException(
+                    "Alias " + codification + " incomplet : numeroCompte ou typeCompte manquant");
+        }
+
+        ClientInfo.ClientInfoBuilder builder = ClientInfo.builder()
+                .nom(alias.getNom())
+                .typeClient(alias.getTypeClient())
+                .pays(alias.getPays())
+                .telephone(alias.getTelephone());
+
+        if (alias.getNationalite() != null) builder.nationalite(alias.getNationalite());
+        if (alias.getAdresse() != null) builder.adresse(alias.getAdresse());
+        if (alias.getVille() != null) builder.ville(alias.getVille());
+        if (alias.getDateNaissance() != null) builder.dateNaissance(alias.getDateNaissance().toString());
+        if (alias.getLieuNaissance() != null) builder.lieuNaissance(alias.getLieuNaissance());
+        if (alias.getIdentifiant() != null) {
+            builder.identifiant(alias.getIdentifiant())
+                   .typeIdentifiant(alias.getTypeIdentifiant());
+        }
+        if (alias.getEmail() != null) builder.email(alias.getEmail());
+
+        log.info("Client {} résolu depuis la codification [{}]", side, codification);
+        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte());
+    }
+
+    private ResolvedClient resolveClientFromSearchLog(String endToEndIdSearch, String side) {
+        PiMessageLog entry = messageLogRepository
+                .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
+                        endToEndIdSearch, MessageDirection.INBOUND, IsoMessageType.RAC_SEARCH)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Résultat de recherche d'alias introuvable pour endToEndId", endToEndIdSearch));
+
+        Map<String, Object> data;
+        try {
+            data = objectMapper.readValue(entry.getPayload(), new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new IllegalStateException("Impossible de lire le payload du log [endToEndId=" + endToEndIdSearch + "]", e);
+        }
+
+        String nom = getString(data, "nom");
+        String telephone = getString(data, "telephone");
+        String paysResidence = getString(data, "paysResidence");
+        String categorie = getString(data, "categorie");
+        String other = getString(data, "other");
+        String typeCompteStr = getString(data, "typeCompte");
+
+        if (nom == null || telephone == null || paysResidence == null || categorie == null
+                || other == null || typeCompteStr == null) {
+            throw new IllegalStateException(
+                    "Payload du résultat de recherche incomplet pour le " + side + " [endToEndId=" + endToEndIdSearch + "]");
+        }
+
+        TypeClient typeClient;
+        try {
+            typeClient = TypeClient.valueOf(categorie);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Catégorie client inconnue: " + categorie);
+        }
+
+        TypeCompte typeCompte;
+        try {
+            typeCompte = TypeCompte.valueOf(typeCompteStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("Type de compte inconnu: " + typeCompteStr);
+        }
+
+        ClientInfo.ClientInfoBuilder builder = ClientInfo.builder()
+                .nom(nom)
+                .typeClient(typeClient)
+                .pays(paysResidence)
+                .telephone(telephone);
+
+        String genre = getString(data, "genre");
+        if (genre != null) builder.genre(genre);
+
+        String adresse = getString(data, "adresse");
+        if (adresse != null) builder.adresse(adresse);
+
+        String ville = getString(data, "ville");
+        if (ville != null) builder.ville(ville);
+
+        String dateNaissance = getString(data, "dateNaissance");
+        if (dateNaissance != null) builder.dateNaissance(dateNaissance);
+
+        String paysNaissance = getString(data, "paysNaissance");
+        if (paysNaissance != null) builder.paysNaissance(paysNaissance);
+
+        String villeNaissance = getString(data, "villeNaissance");
+        if (villeNaissance != null) builder.lieuNaissance(villeNaissance);
+
+        String nationalite = getString(data, "nationalite");
+        if (nationalite != null) builder.nationalite(nationalite);
+
+        String identificationNationale = getString(data, "identificationNationale");
+        if (identificationNationale != null) {
+            builder.identifiant(identificationNationale)
+                   .typeIdentifiant(CodeSystemeIdentification.NIDN);
+        }
+
+        String email = getString(data, "email");
+        if (email != null) builder.email(email);
+
+        log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch); // NOSONAR — log is the Slf4j logger here
+        return new ResolvedClient(builder.build(), other, typeCompte);
+    }
+
+    private static String getString(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return val instanceof String s && !s.isBlank() ? s : null;
+    }
+
+    // -------------------------------------------------------------------------
+    // PACS.008 payload builder
+    // -------------------------------------------------------------------------
+
+    private Map<String, Object> buildPacs008Payload(String msgId, String endToEndId,
+                                                     TransferRequest request,
+                                                     ResolvedClient payeur,
+                                                     ResolvedClient paye) {
         Map<String, Object> payload = new HashMap<>();
+
         payload.put("msgId", msgId);
         payload.put("endToEndId", endToEndId);
-        payload.put("typeTransaction", request.getTypeTransaction().name());
+
         payload.put("canalCommunication", request.getCanalCommunication().getCode());
-        payload.put("montant", request.getMontant());
-        payload.put("devise", "XOF");
         payload.put("codeMembreParticipantPayeur", properties.getCodeMembre());
         payload.put("codeMembreParticipantPaye", request.getCodeMembreParticipantPaye());
-        payload.put("numeroCompteClientPayeur", request.getNumeroCompteClientPayeur());
-        payload.put("typeCompteClientPayeur", request.getTypeCompteClientPayeur().name());
-        payload.put("numeroCompteClientPaye", request.getNumeroCompteClientPaye());
-        payload.put("typeCompteClientPaye", request.getTypeCompteClientPaye().name());
-        payload.put("clientPayeur", buildClientMap(request.getClientPayeur()));
-        payload.put("clientPaye", buildClientMap(request.getClientPaye()));
-        if (request.getDateHeureExecution() != null) payload.put("dateHeureExecution", request.getDateHeureExecution());
-        if (request.getMotif() != null) payload.put("motif", request.getMotif());
-        if (request.getReferenceClient() != null) payload.put("referenceClient", request.getReferenceClient());
+        payload.put("montant", request.getMontant().toBigInteger().toString());
+        payload.put("dateHeureAcceptation", nowIso());
+
+        // Payeur — required
+        payload.put("nomClientPayeur", payeur.clientInfo().getNom());
+        payload.put("typeClientPayeur", payeur.clientInfo().getTypeClient().name());
+        payload.put("paysClientPayeur", payeur.clientInfo().getPays());
+        payload.put("typeCompteClientPayeur", payeur.typeCompte().name());
+        payload.put("deviseCompteClientPayeur", "XOF");
+        payload.put("otherClientPayeur", payeur.other());
+
+        // Payeur — optional
+        if (payeur.clientInfo().getAdresse() != null)
+            payload.put("adresseClientPayeur", payeur.clientInfo().getAdresse());
+        if (payeur.clientInfo().getVille() != null)
+            payload.put("villeClientPayeur", payeur.clientInfo().getVille());
+        if (payeur.clientInfo().getDateNaissance() != null)
+            payload.put("dateNaissanceClientPayeur", payeur.clientInfo().getDateNaissance());
+        if (payeur.clientInfo().getLieuNaissance() != null)
+            payload.put("villeNaissanceClientPayeur", payeur.clientInfo().getLieuNaissance());
+        if (payeur.clientInfo().getPaysNaissance() != null)
+            payload.put("paysNaissanceClientPayeur", payeur.clientInfo().getPaysNaissance());
+        if (payeur.clientInfo().getTypeIdentifiant() != null)
+            payload.put("systemeIdentificationClientPayeur", payeur.clientInfo().getTypeIdentifiant().name());
+        if (payeur.clientInfo().getIdentifiant() != null)
+            payload.put("numeroIdentificationClientPayeur", payeur.clientInfo().getIdentifiant());
+        if (request.getAliasClientPayeur() != null)
+            payload.put("aliasClientPayeur", request.getAliasClientPayeur());
+
+        // Payé — required
+        payload.put("nomClientPaye", paye.clientInfo().getNom());
+        payload.put("typeClientPaye", paye.clientInfo().getTypeClient().name());
+        payload.put("paysClientPaye", paye.clientInfo().getPays());
+        payload.put("typeCompteClientPaye", paye.typeCompte().name());
+        payload.put("deviseCompteClientPaye", "XOF");
+        payload.put("otherClientPaye", paye.other());
+
+        // Payé — optional
+        if (paye.clientInfo().getAdresse() != null)
+            payload.put("adresseClientPaye", paye.clientInfo().getAdresse());
+        if (paye.clientInfo().getVille() != null)
+            payload.put("villeClientPaye", paye.clientInfo().getVille());
+        if (paye.clientInfo().getDateNaissance() != null)
+            payload.put("dateNaissanceClientPaye", paye.clientInfo().getDateNaissance());
+        if (paye.clientInfo().getLieuNaissance() != null)
+            payload.put("villeNaissanceClientPaye", paye.clientInfo().getLieuNaissance());
+        if (paye.clientInfo().getPaysNaissance() != null)
+            payload.put("paysNaissanceClientPaye", paye.clientInfo().getPaysNaissance());
+        if (paye.clientInfo().getTypeIdentifiant() != null)
+            payload.put("systemeIdentificationClientPaye", paye.clientInfo().getTypeIdentifiant().name());
+        if (paye.clientInfo().getIdentifiant() != null)
+            payload.put("numeroIdentificationClientPaye", paye.clientInfo().getIdentifiant());
+        if (request.getAliasClientPaye() != null)
+            payload.put("aliasClientPaye", request.getAliasClientPaye());
+
+        // Optional transfer fields
+        if (request.getTypeTransaction() != null)
+            payload.put("typeTransaction", request.getTypeTransaction().name());
+        if (request.getMotif() != null)
+            payload.put("motif", request.getMotif());
+        if (request.getIdentifiantTransaction() != null)
+            payload.put("identifiantTransaction", request.getIdentifiantTransaction());
+        if (request.getReferenceBulk() != null)
+            payload.put("referenceBulk", request.getReferenceBulk());
+
         if (request.getDocument() != null) {
-            Map<String, Object> doc = new HashMap<>();
-            if (request.getDocument().getCodeTypeDocument() != null) doc.put("codeTypeDocument", request.getDocument().getCodeTypeDocument().name());
-            if (request.getDocument().getIdentifiantDocument() != null) doc.put("identifiantDocument", request.getDocument().getIdentifiantDocument());
-            if (request.getDocument().getLibelleDocument() != null) doc.put("libelleDocument", request.getDocument().getLibelleDocument());
-            payload.put("document", doc);
+            if (request.getDocument().getCodeTypeDocument() != null)
+                payload.put("typeDocumentReference", request.getDocument().getCodeTypeDocument().name());
+            if (request.getDocument().getIdentifiantDocument() != null)
+                payload.put("numeroDocumentReference", request.getDocument().getIdentifiantDocument());
         }
-        if (request.getMarchand() != null) payload.put("marchand", buildMarchandMap(request.getMarchand()));
-        if (request.getMontantAchat() != null) payload.put("montantAchat", request.getMontantAchat());
-        if (request.getMontantRetrait() != null) payload.put("montantRetrait", request.getMontantRetrait());
-        if (request.getFraisRetrait() != null) payload.put("fraisRetrait", request.getFraisRetrait());
+
+        if (request.getMontantAchat() != null)
+            payload.put("montantAchat", request.getMontantAchat().toBigInteger().toString());
+        if (request.getMontantRetrait() != null)
+            payload.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
+        if (request.getFraisRetrait() != null)
+            payload.put("fraisRetrait", request.getFraisRetrait().toBigInteger().toString());
+
         return payload;
-    }
-
-    private Map<String, Object> buildClientMap(ci.sycapay.pispi.dto.common.ClientInfo client) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("nom", client.getNom());
-        map.put("typeClient", client.getTypeClient().name());
-        map.put("typeIdentifiant", client.getTypeIdentifiant().name());
-        map.put("identifiant", client.getIdentifiant());
-        map.put("telephone", client.getTelephone());
-        if (client.getPrenom() != null) map.put("prenom", client.getPrenom());
-        if (client.getAutrePrenom() != null) map.put("autrePrenom", client.getAutrePrenom());
-        if (client.getRaisonSociale() != null) map.put("raisonSociale", client.getRaisonSociale());
-        if (client.getDateNaissance() != null) map.put("dateNaissance", client.getDateNaissance());
-        if (client.getLieuNaissance() != null) map.put("lieuNaissance", client.getLieuNaissance());
-        if (client.getNationalite() != null) map.put("nationalite", client.getNationalite());
-        if (client.getAdresse() != null) map.put("adresse", client.getAdresse());
-        if (client.getVille() != null) map.put("ville", client.getVille());
-        if (client.getPays() != null) map.put("pays", client.getPays());
-        if (client.getEmail() != null) map.put("email", client.getEmail());
-        return map;
-    }
-
-    private Map<String, Object> buildMarchandMap(ci.sycapay.pispi.dto.common.MerchantInfo marchand) {
-        Map<String, Object> map = new HashMap<>();
-        if (marchand.getCodeMarchand() != null) map.put("codeMarchand", marchand.getCodeMarchand());
-        if (marchand.getCategorieCodeMarchand() != null) map.put("categorieCodeMarchand", marchand.getCategorieCodeMarchand());
-        if (marchand.getNomMarchand() != null) map.put("nomMarchand", marchand.getNomMarchand());
-        if (marchand.getVilleMarchand() != null) map.put("villeMarchand", marchand.getVilleMarchand());
-        if (marchand.getPaysMarchand() != null) map.put("paysMarchand", marchand.getPaysMarchand());
-        return map;
     }
 
     private TransferResponse toResponse(PiTransfer t) {
@@ -200,4 +381,7 @@ public class TransferService {
                 .createdAt(t.getCreatedAt() != null ? t.getCreatedAt().toString() : null)
                 .build();
     }
+
+    /** Holds the resolved client data ready to use in the PACS.008 payload. */
+    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte) {}
 }

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
+@ToString
 public class PiTransfer {
 
     @Id
@@ -111,6 +112,9 @@ public class PiTransfer {
 
     @Column(name = "msg_id_reponse", length = 35)
     private String msgIdReponse;
+
+    @Column(name = "date_heure_execution", nullable = false)
+    private LocalDateTime dateHeureExecution;
 
     @Column(name = "date_heure_irrevocabilite")
     private LocalDateTime dateHeureIrrevocabilite;

@@ -53,11 +53,11 @@ public class TransferController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());
     }
 
-    @Operation(summary = "Accept an incoming transfer", description = "Sends a PACS.002 ACCC (accepted) response to the AIP for an inbound transfer received via callback.")
+    @Operation(summary = "Accept an incoming transfer", description = "Sends a PACS.002 ACSP (accepted settlement in process) response to the AIP for an inbound transfer received via callback.")
     @PostMapping("/incoming/{endToEndId}/accept")
     public ApiResponse<TransferResponse> acceptIncoming(@Parameter(description = "End-to-end identifier of the inbound transfer") @PathVariable String endToEndId) {
         TransferAcceptRejectRequest req = TransferAcceptRejectRequest.builder()
-                .statutTransaction(ci.sycapay.pispi.enums.StatutTransaction.ACCC)
+                .statutTransaction(ci.sycapay.pispi.enums.StatutTransaction.ACSP)
                 .build();
         return ApiResponse.ok(transferService.acceptOrReject(endToEndId, req));
     }

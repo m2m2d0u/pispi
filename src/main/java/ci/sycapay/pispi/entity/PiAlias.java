@@ -82,6 +82,9 @@ public class PiAlias {
     @Column(name = "type_compte", length = 10)
     private TypeCompte typeCompte;
 
+    @Column(name = "codification", length = 30, unique = true)
+    private String codification;
+
     @Column(name = "code_membre_participant", length = 6)
     private String codeMembreParticipant;
 

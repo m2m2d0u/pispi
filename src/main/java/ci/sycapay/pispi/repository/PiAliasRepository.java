@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,4 +35,9 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
     List<PiAlias> findAllByIdentifiantAndStatut(String identifiant, AliasStatus statut);
 
     Optional<PiAlias> findByAliasValue(String aliasValue);
+
+    Optional<PiAlias> findByCodification(String codification);
+
+    long countByCodeMembreParticipantAndCreatedAtBetween(
+            String codeMembre, LocalDateTime from, LocalDateTime to);
 }

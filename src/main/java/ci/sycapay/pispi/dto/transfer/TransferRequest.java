@@ -1,10 +1,7 @@
 package ci.sycapay.pispi.dto.transfer;
 
-import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.common.DocumentInfo;
-import ci.sycapay.pispi.dto.common.MerchantInfo;
 import ci.sycapay.pispi.enums.CanalCommunication;
-import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.enums.TypeTransaction;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -30,40 +27,32 @@ public class TransferRequest {
     @NotNull @Positive
     private BigDecimal montant;
 
-    private String dateHeureExecution;
-
     @NotBlank @Size(min = 6, max = 6)
     private String codeMembreParticipantPaye;
 
-    @NotBlank @Size(max = 34)
-    private String numeroCompteClientPayeur;
+    /** endToEndId d'une recherche d'alias (RAC_SEARCH) inbound pour le payeur. */
+    @NotBlank
+    private String endToEndIdSearchPayeur;
 
-    @NotNull
-    private TypeCompte typeCompteClientPayeur;
+    /** Codification interne de l'alias du payé (ex: CIE002-MB-20260422-00001). */
+    @NotBlank @Size(max = 30)
+    private String codificationPaye;
 
-    @NotBlank @Size(max = 34)
-    private String numeroCompteClientPaye;
-
-    @NotNull
-    private TypeCompte typeCompteClientPaye;
-
-    @Valid @NotNull
-    private ClientInfo clientPayeur;
-
-    @Valid @NotNull
-    private ClientInfo clientPaye;
+    // Optional alias identifiers (when transfer is alias-based)
+    private String aliasClientPayeur;
+    private String aliasClientPaye;
 
     @Size(max = 140)
     private String motif;
 
     @Size(max = 35)
-    private String referenceClient;
+    private String identifiantTransaction;
+
+    @Size(max = 35)
+    private String referenceBulk;
 
     @Valid
     private DocumentInfo document;
-
-    @Valid
-    private MerchantInfo marchand;
 
     private BigDecimal montantAchat;
     private BigDecimal montantRetrait;
