@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "c2f4a8e1-3b17-4d9a-ae52-8f6c1d0b3e77",
+    "_postman_id": "1a3393cd-e9df-4df8-8ef4-06ac47ea0ad1",
     "name": "PI-SPI — Transfers",
     "description": "Collection de tests pour les opérations de virement (PACS.008 / PACS.002 / PACS.028 / ADMI.002) du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/transfers`                              — initier un virement (PACS.008)\n- `GET    /api/v1/transfers/{endToEndId}`                 — consulter un virement\n- `GET    /api/v1/transfers`                              — lister les virements (paginé)\n- `POST   /api/v1/transfers/{endToEndId}/status`          — interroger le statut (PACS.028)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/accept` — accepter un virement entrant (PACS.002 ACSP)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/reject` — rejeter un virement entrant (PACS.002 RJCT)\n\n**Callbacks AIP → PI-SPI**\n- `POST   /transferts`          — réception virement entrant (PACS.008)\n- `POST   /transferts/reponses` — résultat virement (PACS.002)\n- `POST   /transferts/echecs`   — rejet structurel (ADMI.002)\n\n**Résolution automatique des participants**\n- `endToEndIdSearchPayeur` : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement les informations du payeur depuis `pi_message_log`.\n- `codificationPaye` : codification interne de l'alias du payé (ex: `CIE002-MB-20260422-00001`) — PI-SPI reconstruit automatiquement les informations du bénéficiaire depuis `pi_alias`.\n\n**typeTransaction (enum)** : `PRMG` (paiement marchand/gouvernement) | `DISP` (disponibilité/virement libre)\n\n**canalCommunication (enum)** : `ORDRE_TRANSFERT` (999) | `QR_CODE` (731) | `ADRESSE_PAIEMENT` (633) | `QR_CODE_STATIQUE` (000) | `QR_CODE_DYNAMIQUE` (400) | `API_BUSINESS` (733) | `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `PARTICULIER` (631) | `USSD` (300)\n\n**statutTransaction (VirementReponse)** : `ACSP` (accepté en cours de règlement) | `RJCT` (rejeté)\n\n**Localisation GPS obligatoire** : les canaux `QR_CODE` (731), `ADRESSE_PAIEMENT` (633), `QR_CODE_STATIQUE` (000), `QR_CODE_DYNAMIQUE` (400), `FACTURE` (401), `MARCHAND_SUR_SITE` (500), `E_COMMERCE_LIVRAISON` (520), `E_COMMERCE_IMMEDIAT` (521) et `PARTICULIER` (631) requièrent obligatoirement `latitudePayeur` et `longitudePayeur` (coordonnées GPS du payeur, format décimal WGS-84).\n\n**Champs générés automatiquement par PI-SPI** : `msgId`, `endToEndId`, `dateHeureAcceptation`, `deviseCompteClientPayeur` = XOF, `deviseCompteClientPaye` = XOF, tous les champs client payeur/payé.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -9,7 +9,6 @@
   "item": [
     {
       "name": "Virements sortants",
-      "description": "Initiation de virements depuis ce participant vers un autre participant UEMOA. Le payeur est identifié via l'`endToEndId` d'une recherche d'alias préalable, le payé via sa codification interne. PI-SPI reconstruit automatiquement tous les champs clients, génère `msgId` et `endToEndId`, construit le payload PACS.008 à plat selon le schéma `Virement` de l'AIP et l'envoie via `POST /transferts`.",
       "item": [
         {
           "name": "Initier un virement DISP — Personne physique vers personne physique",
@@ -32,8 +31,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
             },
             "description": "Virement de disponibilité (`DISP`) entre deux personnes physiques via le canal ordre de transfert (`ORDRE_TRANSFERT` → code AIP `999`).\n\n**endToEndIdSearchPayeur** : `endToEndId` retourné par une recherche d'alias RAC_SEARCH inbound pour le payeur. PI-SPI retrouve le log correspondant dans `pi_message_log` et reconstruit nom, téléphone, pays, identifiant, etc.\n\n**codificationPaye** : codification interne de l'alias du payé (format `{CODE_MEMBRE}-{TYPE}-{YYYYMMDD}-{SEQ5}`). PI-SPI retrouve l'alias dans `pi_alias` et reconstruit les informations du bénéficiaire.\n\nPI-SPI génère automatiquement : `msgId`, `endToEndId`, `dateHeureAcceptation`, `deviseCompteClientPayeur` = XOF, `deviseCompteClientPaye` = XOF."
           },
@@ -51,7 +56,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 15000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -60,8 +65,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
             },
             "description": "Paiement marchand (`PRMG`) via présence physique en magasin (`MARCHAND_SUR_SITE` → code AIP `500`).\n\n**codificationPaye** : pointe vers l'alias MCOD ou MBNO du marchand dans `pi_alias`.\n**identifiantTransaction** : référence interne mappée vers `identifiantTransaction` dans le payload AIP.\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal — l'AIP les mappe vers `latitudeClientPayeur` / `longitudeClientPayeur` dans le PACS.008.\n**montantAchat** : montant HT de l'achat (entier XOF)."
           },
@@ -79,7 +90,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"identifiantTransaction\": \"TXN-QR-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"identifiantTransaction\": \"TXN-QR-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -88,10 +99,16 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
             },
-            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**identifiantTransaction** : référence unique de la transaction côté appelant. Obligatoire pour ce canal.\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
+            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**identifiantTransaction** : référence unique de la transaction côté appelant. Obligatoire pour ce canal (l'AIP l'exige pour les canaux 400, 733, 500, 521, 520, 631, 401).\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
           },
           "response": []
         },
@@ -116,8 +133,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
             },
             "description": "Virement B2B inter-UEMOA avec référence de document (`CINV` = facture commerciale).\n\n**canalCommunication** : `API_BUSINESS` — canal 733, intégration API directe entre entreprises.\n**document.codeTypeDocument** : `CINV` (Commercial Invoice) — mappé vers `typeDocumentReference` dans le payload AIP.\n**document.identifiantDocument** : numéro de facture — mappé vers `numeroDocumentReference`.\n\n**codeTypeDocument valides** : `CINV` (facture) | `CMCN` (contrat) | `DISP` (disponibilité) | `PUOR` (bon de commande)"
           },
@@ -144,8 +167,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ]
             },
             "description": "Opération de retrait via USSD (`USSD` → code AIP `300`) avec `montantRetrait` et `fraisRetrait`.\n\n**montantRetrait** et **fraisRetrait** : entiers XOF, mappés vers les champs du même nom dans le payload AIP (pattern `\\d+`)."
           },
@@ -158,8 +187,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/{{transferEndToEndId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "{{transferEndToEndId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "{{transferEndToEndId}}"
+              ]
             },
             "description": "Retourne l'état local du virement identifié par son `endToEndId`.\n\n**Statuts possibles** : `PEND` (en attente) | `ACSP` (accepté) | `ACCC` | `ACSC` | `RJCT` (rejeté) | `TMOT` (timeout)"
           },
@@ -172,8 +208,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers?page=0&size=20&sort=createdAt,desc",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -203,18 +245,26 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/{{transferEndToEndId}}/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "{{transferEndToEndId}}", "status"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "{{transferEndToEndId}}",
+                "status"
+              ]
             },
             "description": "Envoie une demande de statut PACS.028 à l'AIP (`POST /transferts/statut`) pour le virement identifié par `endToEndId`. L'AIP répondra de manière asynchrone via le callback `/transferts/reponses`."
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Initiation de virements depuis ce participant vers un autre participant UEMOA. Le payeur est identifié via l'`endToEndId` d'une recherche d'alias préalable, le payé via sa codification interne. PI-SPI reconstruit automatiquement tous les champs clients, génère `msgId` et `endToEndId`, construit le payload PACS.008 à plat selon le schéma `Virement` de l'AIP et l'envoie via `POST /transferts`."
     },
     {
       "name": "Virements entrants",
-      "description": "Actions sur les virements reçus depuis l'AIP via le callback `/transferts`. Lorsqu'un virement entrant est reçu (statut `PEND`), le participant doit l'accepter (`ACSP`) ou le rejeter (`RJCT`) via PACS.002.",
       "item": [
         {
           "name": "Accepter un virement entrant (PACS.002 ACSP)",
@@ -223,8 +273,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/accept",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "incoming", "{{incomingEndToEndId}}", "accept"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "accept"
+              ]
             },
             "description": "Accepte le virement entrant et envoie `PACS.002` avec `statutTransaction: ACSP` à l'AIP (`POST /transferts/reponses`).\n\n**ACSP** (Accepted Settlement In Process) est le seul statut d'acceptation valide pour `VirementReponse` selon le schéma AIP BCEAO — `ACCC` n'est pas accepté pour les virements."
           },
@@ -251,8 +310,17 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "incoming", "{{incomingEndToEndId}}", "reject"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "reject"
+              ]
             },
             "description": "Rejette le virement entrant avec le code raison `AC01` (numéro de compte incorrect).\n\n**Codes raison fréquents** : `AC01` (compte incorrect) | `AC04` (compte fermé) | `AC06` (compte bloqué) | `AM04` (fonds insuffisants) | `CUST` (refus client)"
           },
@@ -279,8 +347,17 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "incoming", "{{incomingEndToEndId}}", "reject"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "reject"
+              ]
             },
             "description": "Rejette le virement entrant avec le code raison `AC04` (compte fermé)."
           },
@@ -307,18 +384,27 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "incoming", "{{incomingEndToEndId}}", "reject"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "reject"
+              ]
             },
             "description": "Rejette le virement entrant avec le code raison `CUST` (refus à la demande du client)."
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Actions sur les virements reçus depuis l'AIP via le callback `/transferts`. Lorsqu'un virement entrant est reçu (statut `PEND`), le participant doit l'accepter (`ACSP`) ou le rejeter (`RJCT`) via PACS.002."
     },
     {
       "name": "Callbacks AIP → PI-SPI",
-      "description": "Endpoints appelés par la plateforme AIP BCEAO pour pousser les événements de virement vers ce PI. Ces requêtes sont émises par l'AIP — les utiliser en Postman permet de simuler le comportement de l'AIP en environnement de développement.",
       "item": [
         {
           "name": "Recevoir un virement entrant (PACS.008)",
@@ -341,8 +427,12 @@
             },
             "url": {
               "raw": "{{baseUrl}}/transferts",
-              "host": ["{{baseUrl}}"],
-              "path": ["transferts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferts"
+              ]
             },
             "description": "Simule la réception d'un virement PACS.008 envoyé par l'AIP. PI-SPI enregistre le virement en base avec statut `PEND` et déclenche le webhook `TRANSFER_RECEIVED`.\n\n**Note** : `canalCommunication` ici est le code numérique AIP (`999` = ORDRE_TRANSFERT), pas l'enum PI-SPI.\n\nAprès réception, appeler `POST /api/v1/transfers/incoming/{endToEndId}/accept` ou `/reject` pour répondre."
           },
@@ -369,8 +459,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/transferts/reponses",
-              "host": ["{{baseUrl}}"],
-              "path": ["transferts", "reponses"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferts",
+                "reponses"
+              ]
             },
             "description": "Simule la réponse positive de l'AIP (`ACSP`) pour un virement sortant. PI-SPI met à jour le statut local du virement et déclenche le webhook `TRANSFER_RESULT`.\n\n**statutTransaction** : `ACSP` | `RJCT` (les deux seules valeurs acceptées par `VirementReponse` selon le schéma AIP BCEAO)"
           },
@@ -397,8 +492,13 @@
             },
             "url": {
               "raw": "{{baseUrl}}/transferts/reponses",
-              "host": ["{{baseUrl}}"],
-              "path": ["transferts", "reponses"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferts",
+                "reponses"
+              ]
             },
             "description": "Simule un rejet de l'AIP (`RJCT`) pour un virement sortant. PI-SPI met à jour le statut local en `RJCT` avec le `codeRaison` fourni."
           },
@@ -425,14 +525,20 @@
             },
             "url": {
               "raw": "{{baseUrl}}/transferts/echecs",
-              "host": ["{{baseUrl}}"],
-              "path": ["transferts", "echecs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transferts",
+                "echecs"
+              ]
             },
             "description": "Simule un rejet structurel ADMI.002 envoyé par l'AIP lorsqu'un message PACS.008 soumis est invalide (champ manquant, format incorrect, etc.). PI-SPI loggue le rejet et déclenche le webhook `MESSAGE_REJECTED`."
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Endpoints appelés par la plateforme AIP BCEAO pour pousser les événements de virement vers ce PI. Ces requêtes sont émises par l'AIP — les utiliser en Postman permet de simuler le comportement de l'AIP en environnement de développement."
     }
   ],
   "variable": [
