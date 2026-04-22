@@ -264,6 +264,1033 @@
       "description": "Initiation de virements depuis ce participant vers un autre participant UEMOA. Le payeur est identifié via l'`endToEndId` d'une recherche d'alias préalable, le payé via sa codification interne. PI-SPI reconstruit automatiquement tous les champs clients, génère `msgId` et `endToEndId`, construit le payload PACS.008 à plat selon le schéma `Virement` de l'AIP et l'envoie via `POST /transferts`."
     },
     {
+      "name": "Scénarios BCEAO pacs.008",
+      "description": "Scénarios de test pacs.008 organisés par typologie sender → receiver (B2B, B2C, B2P, P2B, P2C, P2P) et par canal de communication BCEAO. Chaque sous-dossier regroupe les variantes d'un même axe. Les scénarios marqués **FF05** attendent un rejet AIP pour incohérence de canal / type client — ils servent à tester la gestion d'erreur côté PI-SPI.\n\n**Variables requises** : `searchPayeurB` (endToEndId d'un RAC_SEARCH pour payeur business), `searchPayeurP` (pour payeur personne physique), `codificationPayeB` / `codificationPayeC` / `codificationPayeP` / `codificationPayeMCOD` (codifications internes des alias payés).",
+      "item": [
+        {
+          "name": "B2B",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 400 (Paiement par QR Code dynamique)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 75000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement B2B par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 75000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2B** — payeur business vers payé business via **QR Code dynamique** (canal `400`).\n\n`identifiantTransaction` et GPS obligatoires pour ce canal. `montantAchat` reflète le ticket HT côté payé."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 400 sans pacs.008 préalable au payé",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 50000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeBFirst}}\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-FIRST-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 50000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2B canal 400 — premier contact**. La codification payée (`codificationPayeBFirst`) pointe vers un alias business vers lequel aucun pacs.008 n'a encore été émis.\n\nUtile pour vérifier que l'AIP accepte un premier crédit vers un payé sans nécessiter de pacs.008 historique de référence."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 35000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 35000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — le canal `MARCHAND_SUR_SITE` (500) est réservé à des scénarios P2B/P2C/B2P (présence physique du payeur au point de vente). Un flux B2B sur ce canal doit être refusé par l'AIP avec `FF05` (LinkedTransactionReferenceInvalid / Transaction channel not applicable for the sender/receiver pair).\n\nVérifie que PI-SPI persiste correctement le statut `ECHEC` + `codeRaison: AIP_ERR` + `detailEchec` via `/messages-iso/echec-envoi`."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 185000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 185000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal `E_COMMERCE_LIVRAISON` (520) incompatible avec un couple B2B. Ce canal suppose un acheteur individuel (protection consommateur). L'AIP doit rejeter avec `FF05`."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 95000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 95000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal `E_COMMERCE_IMMEDIAT` (521) réservé aux consommateurs individuels. Pour les flux B2B, utiliser le canal `API_BUSINESS` (733) à la place."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 733",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 450000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Règlement B2B via intégration API business\",\n  \"identifiantTransaction\": \"TXN-B2B-API-20260422-001\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-API-2026-0123\",\n    \"libelleDocument\": \"Facture API Business\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2B canal `API_BUSINESS` (733)** — intégration directe API entre deux entreprises.\n\n`identifiantTransaction` obligatoire. GPS **non requis** pour 733 (pas de présence physique).\n`document.codeTypeDocument: CINV` pour joindre la référence de facture."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 999 par vérification d'identité avec motif structured",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-B2B-2026-0099\",\n    \"libelleDocument\": \"Facture B2B cacao — 15 tonnes\"\n  },\n  \"montantRetrait\": 1500000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2B canal 999 (`ORDRE_TRANSFERT`) avec motif structured** — ordre de virement B2B précédé d'une vérification d'identité (acct.023/pacs.008 avec typeTransaction DISP).\n\n**Motif structured** : syntaxe `{codeTypeDoc}/{refDoc}/{libelle}` — ici `CINV/FACT-B2B-2026-0099/15T-CACAO`. Mappé vers `RmtInf/Strd` dans le pacs.008 AIP (alternative à `RmtInf/Ustrd` pour motif libre).\n\n**Règle BCEAO DISP** : `montant` = 1 franc symbolique, montant réel dans `montantRetrait`."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "B2C",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2C' avec le canal 400 (Paiement par QR Code dynamique)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 28000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Règlement B2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 28000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2C** — entreprise règle un artisan/commerçant individuel (type C) via **QR Code dynamique** (canal `400`).\n\nTypique : règlement de prestataire indépendant, achat dans une échoppe, etc."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2C' avec le canal 500 (Demande de paiement marchand sur site)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 42000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement B2C chez un artisan sur site\",\n  \"identifiantTransaction\": \"TXN-B2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 42000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2C canal `MARCHAND_SUR_SITE` (500)** — entreprise effectue un paiement physique chez un artisan/commerçant individuel (type C).\n\n`identifiantTransaction` et GPS obligatoires."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "B2P",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 000 Paiement par QR Code statique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Remboursement de frais via QR statique\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2P canal `QR_CODE_STATIQUE` (000)** — entreprise paie un particulier via QR statique (affiché, non daté).\n\nGPS requis. `identifiantTransaction` **non requis** pour ce canal."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 300 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"montantRetrait\": 50000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2P canal `USSD` (300)** — transfert d'entreprise vers particulier initié par USSD après vérification d'identité (acct.023).\n\nCanal 300 : ni GPS ni `identifiantTransaction` requis. DISP → `montant` = 1 franc, montant réel dans `montantRetrait`."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"B2P via canal PARTICULIER — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 20000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal `PARTICULIER` (631) réservé aux flux P2P. L'AIP doit refuser un sender business sur ce canal."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 733 (Paiement provenant de l'API Business)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 125000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Versement salaire — mois d'avril 2026\",\n  \"identifiantTransaction\": \"TXN-B2P-SAL-20260422-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**B2P canal `API_BUSINESS` (733)** — paiement d'entreprise vers particulier via API business. Cas d'usage typique : versement de salaire, paiement de prestataire freelance, remboursement.\n\n`identifiantTransaction` obligatoire. GPS **non requis**."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "P2B",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 000 avec motif non structuré",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 12500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Merci pour le pain et les viennoiseries, à demain !\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2B canal `QR_CODE_STATIQUE` (000) — motif non structuré (libre)**. Le motif est texte libre (commentaire client), mappé vers `RmtInf/Ustrd` côté pacs.008 AIP.\n\nGPS requis. `identifiantTransaction` **non requis** pour ce canal."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' par alias avec le canal 300 (USSD avec alias MCOD)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 8500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeMCOD}}\",\n  \"motif\": \"Paiement USSD via code marchand (alias MCOD)\",\n  \"montantAchat\": 8500\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2B canal `USSD` (300) résolu par alias MCOD**. Le client tape le code marchand (MCOD) dans le menu USSD ; PI-SPI résout l'alias via `codificationPayeMCOD` et enrichit automatiquement les infos du bénéficiaire depuis `pi_alias`.\n\nNi GPS ni `identifiantTransaction` requis."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 400 Paiement par QR Code dynamique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 22000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement P2B par QR code dynamique — courses supermarché\",\n  \"identifiantTransaction\": \"TXN-P2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 22000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2B canal `QR_CODE_DYNAMIQUE` (400)** — cas le plus courant : particulier scanne le QR code généré par la caisse du marchand.\n\n`identifiantTransaction` + GPS obligatoires."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 401 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"montant\": 85000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B via canal FACTURE — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-FACT-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FF05-001\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal `FACTURE` (401) interdit pour pacs.008 direct. Un règlement de facture doit transiter par une demande de paiement RTP préalable (pain.013/pain.014)."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 40000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 40000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — scénario à préciser selon règles AIP (conflit entre le MCC du marchand et le canal). Sert à vérifier le routage d'erreur FF05."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 110000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 110000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal 520 `E_COMMERCE_LIVRAISON` exige normalement une pain.013 préalable (flux RTP). Un pacs.008 direct doit être rejeté."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal 521 `E_COMMERCE_IMMEDIAT` exige une pain.013 préalable. Un pacs.008 direct est refusé."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "P2C",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 300 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"montantRetrait\": 15000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2C canal `USSD` (300)** — particulier paie un artisan/commerçant individuel via USSD après vérification d'identité préalable (acct.023). DISP → `montant` = 1, montant réel dans `montantRetrait`."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 400 Paiement par QR Code dynamique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 18500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-P2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 18500\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2C canal `QR_CODE_DYNAMIQUE` (400)** — particulier scanne le QR dynamique affiché par un artisan (type C).\n\n`identifiantTransaction` + GPS obligatoires."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 500",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 32000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C chez le couturier sur site\",\n  \"identifiantTransaction\": \"TXN-P2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 32000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2C canal `MARCHAND_SUR_SITE` (500)** — particulier paie un commerçant individuel (type C) sur site.\n\n`identifiantTransaction` + GPS obligatoires."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 999 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"montantRetrait\": 75000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2C canal `ORDRE_TRANSFERT` (999)** — virement classique d'un particulier vers un commerçant individuel, précédé d'une vérification d'identité (acct.023). Ni GPS ni `identifiantTransaction` requis."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "P2P",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 20000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Attendu : rejet FF05** — canal `PARTICULIER` (631) exige normalement une pain.013 préalable avec mandat. Un pacs.008 direct sans contexte RTP doit être rejeté."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 633 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ADRESSE_PAIEMENT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 45000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2P canal `ADRESSE_PAIEMENT` (633)** — transfert entre particuliers via adresse de paiement après vérification d'identité. GPS requis, `identifiantTransaction` non requis. DISP → `montant` = 1."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 731 par alias",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"QR_CODE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via QR code (par alias)\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 25000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2P canal `QR_CODE` (731)** — le payé est résolu par alias (MBNO ou AIBN) attaché au QR code présenté. GPS requis. DISP → `montant` = 1, montant réel dans `montantRetrait`."
+              },
+              "response": []
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 999 par alias",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert familial P2P par ordre de transfert (résolu par alias)\",\n  \"montantRetrait\": 100000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**P2P canal `ORDRE_TRANSFERT` (999) par alias** — virement classique entre particuliers, payé résolu via alias (MBNO). Ni GPS ni `identifiantTransaction` requis."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Paiements programmés",
+          "item": [
+            {
+              "name": "Envoyer un paiement programmé / Envoyer un pacs.008 'P2C' avec le canal 000",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 18000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement programmé — abonnement coiffure mensuelle\",\n  \"referenceBulk\": \"SCHED-COIFFURE-20260501\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 18000\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers"
+                  ]
+                },
+                "description": "**Paiement programmé P2C canal `QR_CODE_STATIQUE` (000)** — exécution différée d'un règlement récurrent vers un artisan/commerçant individuel.\n\n**referenceBulk** : identifiant du lot de paiements programmés côté ordonnanceur (ex. scheduler interne PI-SPI). Permet de regrouper les occurrences d'un même contrat récurrent.\n\nGPS requis. Pour une exécution immédiate, omettre `referenceBulk`."
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Virements entrants",
       "item": [
         {
@@ -404,10 +1431,10 @@
       "description": "Actions sur les virements reçus depuis l'AIP via le callback `/transferts`. Lorsqu'un virement entrant est reçu (statut `PEND`), le participant doit l'accepter (`ACSP`) ou le rejeter (`RJCT`) via PACS.002."
     },
     {
-      "name": "Callbacks AIP → PI-SPI",
+      "name": "Demandes sortantes",
       "item": [
         {
-          "name": "Recevoir un virement entrant (PACS.008)",
+          "name": "Envoyer une demande de paiement de facture avec remittance B2B",
           "request": {
             "method": "POST",
             "header": [
@@ -418,7 +1445,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"msgId\": \"MCIE001XJWPACS008000000000000001\",\n  \"endToEndId\": \"ECIE001XJWE2E00014000000000000001\",\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"999\",\n  \"montant\": \"25000\",\n  \"codeMembreParticipantPayeur\": \"SNB001\",\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"nomClientPayeur\": \"Ndiaye\",\n  \"typeClientPayeur\": \"P\",\n  \"paysClientPayeur\": \"SN\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"deviseCompteClientPayeur\": \"XOF\",\n  \"otherClientPayeur\": \"+221771234567\",\n  \"nomClientPaye\": \"Diallo\",\n  \"typeClientPaye\": \"P\",\n  \"paysClientPaye\": \"CI\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"deviseCompteClientPaye\": \"XOF\",\n  \"otherClientPaye\": \"+2250707077777\",\n  \"dateHeureAcceptation\": \"2026-04-22T08:14:54.682Z\",\n  \"motif\": \"Transfert familial\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"FIN-PLUS-SARL\",\n  \"identifiantDemandePaiement\": \"RTP-B2B-INV-2026-0001\",\n  \"montant\": 1500000,\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"CI05CI12345678901234567890123\",\n  \"typeCompteClientPayeur\": \"CACC\",\n  \"numeroCompteClientPaye\": \"CI08CI98765432109876543210987\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"AGRO NEGOCE CI\",\n    \"raisonSociale\": \"AGRO NEGOCE CI SA\",\n    \"denominationSociale\": \"AGRO NEGOCE CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2021-B-1234567\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Alpha 2000, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252721234567\",\n    \"email\": \"compta@agro-negoce.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"FIN PLUS SARL\",\n    \"raisonSociale\": \"FIN PLUS SARL\",\n    \"denominationSociale\": \"FIN PLUS\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2018-B-7654321\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone Industrielle Yopougon, Lot 42\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521987654\",\n    \"email\": \"factures@finplus.ci\"\n  },\n  \"motif\": \"Règlement facture fournisseur matières premières Q2 2026\",\n  \"referenceClient\": \"FACT-FP-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FP-2026-0042\",\n    \"libelleDocument\": \"Facture commerciale — Cacao fèves 15 tonnes\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -426,20 +1453,22 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/transferts",
+              "raw": "{{baseUrl}}/api/v1/rtp",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "transferts"
+                "api",
+                "v1",
+                "rtp"
               ]
             },
-            "description": "Simule la réception d'un virement PACS.008 envoyé par l'AIP. PI-SPI enregistre le virement en base avec statut `PEND` et déclenche le webhook `TRANSFER_RECEIVED`.\n\n**Note** : `canalCommunication` ici est le code numérique AIP (`999` = ORDRE_TRANSFERT), pas l'enum PI-SPI.\n\nAprès réception, appeler `POST /api/v1/transfers/incoming/{endToEndId}/accept` ou `/reject` pour répondre."
+            "description": "Demande de paiement B2B adossée à une facture commerciale (canal `FACTURE` → code AIP `401`, `typeTransaction: PRMG`).\n\n**clientPayeur** et **clientPaye** sont de type `B` (business) avec identifiant fiscal (`TXID`).\n**document.codeTypeDocument** : `CINV` (Commercial Invoice).\n**referenceClient** : numéro de facture côté émetteur — mappé vers `referenceBulk` / `numeroDocumentReference` dans le PAIN.013.\n\n⚠️ L'identifiantDemandePaiement doit être unique par PI-SPI."
           },
           "response": []
         },
         {
-          "name": "Recevoir le résultat d'un virement — ACSP (PACS.002)",
+          "name": "Envoyer une demande de paiement de facture avec remise",
           "request": {
             "method": "POST",
             "header": [
@@ -450,7 +1479,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"msgId\": \"MPIUMOAW8Os2wIHBS2j1XngvTOc0b6Ixffm\",\n  \"msgIdDemande\": \"MCIE001XJWPACS008000000000000001\",\n  \"endToEndId\": \"{{transferEndToEndId}}\",\n  \"statutTransaction\": \"ACSP\",\n  \"dateHeureIrrevocabilite\": \"2026-04-22T08:15:30.000Z\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"BOUTIQUE-KONE\",\n  \"identifiantDemandePaiement\": \"RTP-INV-REMISE-20260422-001\",\n  \"montant\": 50000,\n  \"dateHeureLimiteAction\": \"2026-04-29T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11112222333344445555666\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUASSI\",\n    \"prenom\": \"Amani\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1985-0009876\",\n    \"dateNaissance\": \"1985-07-14\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue des Jardins, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"BOUTIQUE KONE\",\n    \"raisonSociale\": \"BOUTIQUE KONE SARL\",\n    \"denominationSociale\": \"BOUTIQUE KONE\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-5556677\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Marché de Treichville, Stand 217\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521555666\"\n  },\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"referenceClient\": \"FACT-BK-2026-0108\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 5000,\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-BK-2026-0108\",\n    \"libelleDocument\": \"Facture électroménager — Réfrigérateur Samsung\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -458,21 +1487,22 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/transferts/reponses",
+              "raw": "{{baseUrl}}/api/v1/rtp",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "transferts",
-                "reponses"
+                "api",
+                "v1",
+                "rtp"
               ]
             },
-            "description": "Simule la réponse positive de l'AIP (`ACSP`) pour un virement sortant. PI-SPI met à jour le statut local du virement et déclenche le webhook `TRANSFER_RESULT`.\n\n**statutTransaction** : `ACSP` | `RJCT` (les deux seules valeurs acceptées par `VirementReponse` selon le schéma AIP BCEAO)"
+            "description": "Demande de paiement de facture avec remise pour paiement immédiat (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de la remise accordée si le payeur règle avant `dateHeureLimiteAction`. Mutuellement exclusif avec `tauxRemisePaiementImmediat`.\n**autorisationModificationMontant** : `false` — le payeur doit régler le montant exact (avec remise déduite au clearing).\n\nAlternative : remplacer par `tauxRemisePaiementImmediat: 10` pour une remise en pourcentage."
           },
           "response": []
         },
         {
-          "name": "Recevoir le résultat d'un virement — RJCT (PACS.002)",
+          "name": "Envoyer une demande de paiement sur site avec débit différé",
           "request": {
             "method": "POST",
             "header": [
@@ -483,7 +1513,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"msgId\": \"MPIUMOAW8Os2wIHBS2j1XngvTOc0b6Ixffn\",\n  \"msgIdDemande\": \"MCIE001XJWPACS008000000000000001\",\n  \"endToEndId\": \"{{transferEndToEndId}}\",\n  \"statutTransaction\": \"RJCT\",\n  \"codeRaison\": \"AC01\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"SUPERMARCHE-ABIDJAN\",\n  \"identifiantDemandePaiement\": \"RTP-MAG-DIFF-20260422-001\",\n  \"montant\": 75000,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250508080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI77778888999900001111222\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"TRAORE\",\n    \"prenom\": \"Fatou\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1992-0001234\",\n    \"dateNaissance\": \"1992-03-22\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cité Riviera Palmeraie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250508080808\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SUPERMARCHE ABIDJAN\",\n    \"raisonSociale\": \"SUPERMARCHE ABIDJAN SA\",\n    \"denominationSociale\": \"SM ABIDJAN\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2015-B-3334445\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Avenue Houdaille, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252520070070\"\n  },\n  \"motif\": \"Paiement différé courses mensuelles\",\n  \"referenceClient\": \"TICKET-SM-20260422-3421\",\n  \"marchand\": {\n    \"codeMarchand\": \"4421\",\n    \"categorieCodeMarchand\": \"5411\",\n    \"nomMarchand\": \"SUPERMARCHE ABIDJAN — Plateau\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 75000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -491,21 +1521,22 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/transferts/reponses",
+              "raw": "{{baseUrl}}/api/v1/rtp",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "transferts",
-                "reponses"
+                "api",
+                "v1",
+                "rtp"
               ]
             },
-            "description": "Simule un rejet de l'AIP (`RJCT`) pour un virement sortant. PI-SPI met à jour le statut local en `RJCT` avec le `codeRaison` fourni."
+            "description": "Paiement marchand sur site avec débit différé (canal `MARCHAND_SUR_SITE` → `500`).\n\n**dateHeureExecution** (format ISO 8601 UTC) : date/heure future à laquelle le débit sera exécuté par le PI payeur. Doit être postérieure à `dateHeureLimiteAction` (qui elle correspond à la limite pour l'acceptation).\n**categorieCodeMarchand** : `5411` (MCC — Grocery Stores, Supermarkets).\n**montantAchat** : montant HT du ticket."
           },
           "response": []
         },
         {
-          "name": "Recevoir un rejet structurel (ADMI.002)",
+          "name": "Envoyer une demande de paiement marchand sur site P2B",
           "request": {
             "method": "POST",
             "header": [
@@ -516,7 +1547,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"msgId\": \"MPIUMOAW8Os2wIHBS2j1XngvTOc0b6Ixffp\",\n  \"msgIdDemande\": \"MCIE001XJWPACS008000000000000001\",\n  \"codeRaisonRejet\": \"NARR\",\n  \"descriptionRejet\": \"Message structurellement invalide — champ deviseCompteClientPaye absent\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PHARMACIE-COCODY\",\n  \"identifiantDemandePaiement\": \"RTP-P2B-MAG-20260422-001\",\n  \"montant\": 25000,\n  \"dateHeureLimiteAction\": \"2026-04-22T14:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250102030405\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI66667777888899990000111\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"DIALLO\",\n    \"prenom\": \"Mamadou\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1988-0003456\",\n    \"dateNaissance\": \"1988-11-05\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue J40, Angré 8ème Tranche\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250102030405\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PHARMACIE COCODY\",\n    \"raisonSociale\": \"PHARMACIE COCODY SARL\",\n    \"denominationSociale\": \"PHARM COCODY\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2019-B-2223334\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Boulevard Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252522100100\"\n  },\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"referenceClient\": \"TICKET-PC-20260422-0987\",\n  \"marchand\": {\n    \"codeMarchand\": \"7821\",\n    \"categorieCodeMarchand\": \"5912\",\n    \"nomMarchand\": \"PHARMACIE COCODY\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 25000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -524,21 +1555,374 @@
               }
             },
             "url": {
-              "raw": "{{baseUrl}}/transferts/echecs",
+              "raw": "{{baseUrl}}/api/v1/rtp",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "transferts",
-                "echecs"
+                "api",
+                "v1",
+                "rtp"
               ]
             },
-            "description": "Simule un rejet structurel ADMI.002 envoyé par l'AIP lorsqu'un message PACS.008 soumis est invalide (champ manquant, format incorrect, etc.). PI-SPI loggue le rejet et déclenche le webhook `MESSAGE_REJECTED`."
+            "description": "Paiement marchand sur site **P2B** (Person to Business) — canal `MARCHAND_SUR_SITE` → `500`.\n\n**clientPayeur** : type `P` (personne physique, identifiant NIDN).\n**clientPaye** : type `B` (business, identifiant TXID).\n**categorieCodeMarchand** : `5912` (MCC — Drug Stores, Pharmacies)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement marchand sur site P2C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"COUTURIER-ADJOVI\",\n  \"identifiantDemandePaiement\": \"RTP-P2C-MAG-20260422-001\",\n  \"montant\": 35000,\n  \"dateHeureLimiteAction\": \"2026-04-22T18:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250709090909\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"N'GUESSAN\",\n    \"prenom\": \"Akissi\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1995-0007890\",\n    \"dateNaissance\": \"1995-09-18\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Millionnaire\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"ADJOVI\",\n    \"prenom\": \"Koffi\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1980-0005678\",\n    \"dateNaissance\": \"1980-02-10\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Atelier Couture — Marché Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250709090909\"\n  },\n  \"motif\": \"Confection 2 tenues traditionnelles\",\n  \"referenceClient\": \"COM-ADJOVI-20260422\",\n  \"marchand\": {\n    \"codeMarchand\": \"1055\",\n    \"categorieCodeMarchand\": \"5697\",\n    \"nomMarchand\": \"ADJOVI COUTURE\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 35000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Paiement marchand sur site **P2C** (Person to Commercial — marchand individuel / artisan) — canal `MARCHAND_SUR_SITE` → `500`.\n\n**clientPaye** : type `C` (commercial = personne physique exerçant une activité marchande). Identifiant `NIDN` (pas `TXID` — le type C reste une personne physique au sens BCEAO).\n**categorieCodeMarchand** : `5697` (MCC — Tailors, Seamstresses, Mending, and Alterations)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement PICASH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"AGENT-PICASH-RIVIERA\",\n  \"identifiantDemandePaiement\": \"RTP-PICASH-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T16:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250505050505\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"OUATTARA\",\n    \"prenom\": \"Adama\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1983-0004567\",\n    \"dateNaissance\": \"1983-06-30\",\n    \"lieuNaissance\": \"Korhogo\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Riviera 2\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606060606\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AGENT PICASH RIVIERA\",\n    \"prenom\": \"Bernard\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1978-0001122\",\n    \"dateNaissance\": \"1978-12-01\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Point Agent PICASH — Station Riviera\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250505050505\"\n  },\n  \"motif\": \"Retrait cash auprès d'un agent PICASH\",\n  \"referenceClient\": \"PICASH-RET-20260422-0042\",\n  \"montantRetrait\": 100000,\n  \"fraisRetrait\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **PICASH** — retrait d'espèces auprès d'un agent PI cash-out. Canal `PARTICULIER` → `631`, `typeTransaction: DISP`.\n\n**Règle BCEAO DISP** : `montant` doit être `1` (franc CFA symbolique) — le montant réel du retrait est renseigné dans `montantRetrait`.\n**fraisRetrait** : commission prélevée par l'agent (entier XOF, pattern `\\d+`).\n**clientPaye** : agent PICASH de type `C` (commerçant individuel)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement PICO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PICO-MARCHAND-PLATEAU\",\n  \"identifiantDemandePaiement\": \"RTP-PICO-20260422-001\",\n  \"montant\": 12500,\n  \"dateHeureLimiteAction\": \"2026-04-22T20:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250404040404\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI55556666777788889999000\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUAME\",\n    \"prenom\": \"Serge\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1990-0002345\",\n    \"dateNaissance\": \"1990-04-25\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence des Ambassades\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250404040404\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PICO MARCHAND PLATEAU\",\n    \"raisonSociale\": \"PICO MARCHAND PLATEAU SARL\",\n    \"denominationSociale\": \"PICO PLATEAU\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2022-B-9998887\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue du Commerce, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521200200\"\n  },\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"referenceClient\": \"TICKET-PICO-20260422-1337\",\n  \"marchand\": {\n    \"codeMarchand\": \"6621\",\n    \"categorieCodeMarchand\": \"5812\",\n    \"nomMarchand\": \"PICO PLATEAU RESTO\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 12500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **PICO** (Paiement Instantané Commerce) — paiement marchand via PI avec encaissement temps réel. Canal `MARCHAND_SUR_SITE` → `500`, `typeTransaction: PRMG`.\n\nÀ la différence de PICASH, PICO encaisse le marchand en temps réel sans retrait d'espèces.\n**categorieCodeMarchand** : `5812` (MCC — Eating Places, Restaurants)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce à la livraison P2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"SHOP-JUMIA-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DEL-20260422-001\",\n  \"montant\": 85000,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250808080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11122233344455566677788\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"BAMBA\",\n    \"prenom\": \"Aïcha\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1993-0008901\",\n    \"dateNaissance\": \"1993-01-08\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Les Rosiers, Marcory\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250808080808\",\n    \"email\": \"aicha.bamba@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SHOP JUMIA CI\",\n    \"raisonSociale\": \"JUMIA CI SA\",\n    \"denominationSociale\": \"JUMIA CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2014-B-1112223\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone 4C, Rue Pierre & Marie Curie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521900900\",\n    \"email\": \"service-paiement@jumia.ci\"\n  },\n  \"motif\": \"Commande e-commerce — Livraison sous 3j\",\n  \"referenceClient\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"8801\",\n    \"categorieCodeMarchand\": \"5399\",\n    \"nomMarchand\": \"JUMIA CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 85000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce **P2B** avec encaissement à la livraison (canal `E_COMMERCE_LIVRAISON` → `520`).\n\nL'AIP retient les fonds jusqu'à confirmation de la livraison (protection acheteur). Le débit du payeur s'effectue au moment de l'acceptation, les fonds sont crédités au marchand après livraison.\n**categorieCodeMarchand** : `5399` (MCC — Miscellaneous General Merchandise)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce immediat P2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"NETFLIX-AFRICA\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-IMM-20260422-001\",\n  \"montant\": 5500,\n  \"dateHeureLimiteAction\": \"2026-04-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250909090909\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI22233344455566677788899\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KONAN\",\n    \"prenom\": \"Yves\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1987-0006789\",\n    \"dateNaissance\": \"1987-08-17\",\n    \"lieuNaissance\": \"Daloa\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250909090909\",\n    \"email\": \"yves.konan@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"NETFLIX AFRICA\",\n    \"raisonSociale\": \"NETFLIX AFRICA SARL\",\n    \"denominationSociale\": \"NETFLIX AFRICA\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2017-B-4445556\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Pyramide, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521500500\",\n    \"email\": \"billing@netflix-africa.com\"\n  },\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"referenceClient\": \"SUB-NFX-20260422-88765\",\n  \"marchand\": {\n    \"codeMarchand\": \"4577\",\n    \"categorieCodeMarchand\": \"4899\",\n    \"nomMarchand\": \"NETFLIX AFRICA\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 5500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce **P2B** à encaissement immédiat (canal `E_COMMERCE_IMMEDIAT` → `521`).\n\nContrairement à `E_COMMERCE_LIVRAISON` (520), le marchand est crédité immédiatement à l'acceptation — typique des produits/services numériques, abonnements SaaS, téléchargements.\n**categorieCodeMarchand** : `4899` (MCC — Cable, Satellite, and Other Pay Television and Radio Services)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce avec débit différé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"AMAZON-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DIFF-20260422-001\",\n  \"montant\": 155000,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-05-14T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI33344455566677788899900\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"ZOHOURE\",\n    \"prenom\": \"Mireille\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1991-0005432\",\n    \"dateNaissance\": \"1991-05-23\",\n    \"lieuNaissance\": \"San-Pédro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Duncan, 2 Plateaux\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707060606\",\n    \"email\": \"mireille.zohoure@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AMAZON CI\",\n    \"raisonSociale\": \"AMAZON CI SA\",\n    \"denominationSociale\": \"AMAZON CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-6667778\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Tour BICICI, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521808080\",\n    \"email\": \"ci-billing@amazon.com\"\n  },\n  \"motif\": \"Précommande smartphone — Débit prévu au lancement\",\n  \"referenceClient\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"9911\",\n    \"categorieCodeMarchand\": \"5732\",\n    \"nomMarchand\": \"AMAZON CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 155000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande / pré-autorisation). Canal `E_COMMERCE_IMMEDIAT` → `521`.\n\n**dateHeureExecution** future (après `dateHeureLimiteAction`) : l'acceptation par le payeur est immédiate, mais le débit effectif est programmé à la date d'exécution — cas d'usage : précommandes, locations avec caution, réservations.\n**categorieCodeMarchand** : `5732` (MCC — Electronic Sales)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer demande de paiement pour une tontine P2P",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"TONTINE-ESPOIR-ORGA\",\n  \"identifiantDemandePaiement\": \"RTP-TONTINE-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250301020304\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250405060708\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"TOURE\",\n    \"prenom\": \"Aminata\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1984-0003210\",\n    \"dateNaissance\": \"1984-10-11\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Yopougon Niangon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250301020304\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"KOUADIO\",\n    \"prenom\": \"Eugénie\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1979-0002109\",\n    \"dateNaissance\": \"1979-03-15\",\n    \"lieuNaissance\": \"Bouaflé\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Trésorerie Tontine Espoir — Yopougon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250405060708\"\n  },\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceClient\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"montantRetrait\": 25000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **tontine P2P** — cotisation récurrente entre particuliers (canal `PARTICULIER` → `631`, `typeTransaction: DISP`).\n\n**Règle BCEAO DISP** : `montant` = `1` franc CFA symbolique, le montant réel circulant est `montantRetrait` (cotisation).\n**identifiantMandat** : référence du mandat de prélèvement signé par le cotisant auprès du trésorier de la tontine — permet au PI-SPI payeur de débiter automatiquement à chaque itération sans redemander l'autorisation.\n**clientPaye** : trésorier de la tontine (personne physique `P`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement entre particuliers P2P",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"DIABATE-MOUSSA\",\n  \"identifiantDemandePaiement\": \"RTP-P2P-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250202020202\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250303030303\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"KEITA\",\n    \"prenom\": \"Ibrahim\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1986-0007654\",\n    \"dateNaissance\": \"1986-12-20\",\n    \"lieuNaissance\": \"Man\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Adjamé 220 Logements\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250202020202\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"DIABATE\",\n    \"prenom\": \"Moussa\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1982-0009876\",\n    \"dateNaissance\": \"1982-07-03\",\n    \"lieuNaissance\": \"Odienné\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Koumassi Nouveau Quartier\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250303030303\"\n  },\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceClient\": \"PRET-20260315-KEITA-DIABATE\",\n  \"montantRetrait\": 50000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement entre particuliers (**P2P**) — transfert de fonds entre deux personnes physiques. Canal `PARTICULIER` → `631`, `typeTransaction: DISP`.\n\n**Cas d'usage** : remboursement entre amis, partage de frais, don familial, etc.\n**Règle BCEAO DISP** : `montant` = `1` franc CFA symbolique, montant réel dans `montantRetrait`.\n**Absence de `identifiantMandat`** : paiement ponctuel non récurrent (contrairement à la tontine)."
           },
           "response": []
         }
       ],
-      "description": "Endpoints appelés par la plateforme AIP BCEAO pour pousser les événements de virement vers ce PI. Ces requêtes sont émises par l'AIP — les utiliser en Postman permet de simuler le comportement de l'AIP en environnement de développement."
+      "description": "Initiation de demandes de paiement (PAIN.013) depuis ce PI vers un participant payeur via l'AIP. Le PI-SPI construit le message PAIN.013 puis l'envoie à l'AIP (`POST /demandes-paiements`). L'AIP le relaie au PI payeur, qui peut accepter (déclenchant un PACS.008) ou rejeter (PAIN.014)."
+    },
+    {
+      "name": "Rejets PAIN.014",
+      "item": [
+        {
+          "name": "Envoyer un pain.014 avec statut RJCT avec raison AC06 par le participant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"AC06\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "reject"
+              ]
+            },
+            "description": "Rejet d'une demande de paiement entrante par **le participant** (PI payeur) — motif `AC06` (compte bloqué / BlockedAccount).\n\nPI-SPI construit un PAIN.014 avec `statut: RJCT`, `codeRaison: AC06` et l'envoie à l'AIP (`POST /demandes-paiements/reponses`). Mise à jour locale : `pi_request_to_pay.statut = RJCT`.\n\n**Contexte** : utilisé lorsque le participant détecte côté banque que le compte du payeur est dans un état empêchant le débit (clôture administrative, gel judiciaire, etc.) — décision prise **sans** consultation du client.\n\n**Codes raison fréquents** :\n- `AC01` — compte inconnu\n- `AC04` — compte fermé\n- `AC06` — compte bloqué\n- `AM04` — fonds insuffisants\n- `AM09` — montant incorrect (à la demande du client)\n- `CUST` — refus à la demande du client"
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer un pain.014 avec statut RJCT avec raison AM09 par le client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"AM09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "reject"
+              ]
+            },
+            "description": "Rejet d'une demande de paiement entrante **à la demande du client** — motif `AM09` (WrongAmount / montant incorrect).\n\nContexte : le client payeur consulte la demande et la refuse parce que le montant ne correspond pas à ce qu'il attend (différend commercial, erreur de saisie côté payé). Le front appelle ce endpoint ; PI-SPI construit un PAIN.014 avec `statut: RJCT` et le code raison `AM09`.\n\nAlternative pour refus purement discrétionnaire du client : `CUST`."
+          },
+          "response": []
+        }
+      ],
+      "description": "Rejets de demandes de paiement entrantes via PAIN.014. Le endpoint `POST /api/v1/rtp/incoming/{endToEndId}/reject` accepte un simple `{ \"codeRaison\": \"<code>\" }` — le endToEndId de la demande entrante est fourni dans le path."
     }
   ],
   "variable": [
@@ -565,6 +1949,56 @@
       "key": "incomingEndToEndId",
       "value": "ECIE001XJWE2E00014000000000000002",
       "description": "endToEndId d'un virement entrant reçu via callback AIP"
+    },
+    {
+      "key": "searchPayeurB",
+      "value": "ECIE002XJWE2E00014000000000000010",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payeur de type Business (B)"
+    },
+    {
+      "key": "searchPayeurP",
+      "value": "ECIE002XJWE2E00014000000000000011",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payeur de type Personne physique (P)"
+    },
+    {
+      "key": "codificationPayeB",
+      "value": "CIE002-MB-20260422-00010",
+      "description": "Codification interne de l'alias du payé de type Business (B)"
+    },
+    {
+      "key": "codificationPayeBFirst",
+      "value": "CIE002-MB-20260422-00011",
+      "description": "Codification interne d'un payé business vers lequel aucun pacs.008 n'a encore été émis (scénario premier contact)"
+    },
+    {
+      "key": "codificationPayeC",
+      "value": "CIE002-MC-20260422-00020",
+      "description": "Codification interne de l'alias du payé de type Commercial / artisan individuel (C)"
+    },
+    {
+      "key": "codificationPayeP",
+      "value": "CIE002-MB-20260422-00030",
+      "description": "Codification interne de l'alias du payé de type Personne physique (P)"
+    },
+    {
+      "key": "codificationPayeMCOD",
+      "value": "CIE002-MC-20260422-00040",
+      "description": "Codification interne d'un alias MCOD (code marchand) — utilisé pour résolution par alias en canal USSD"
+    },
+    {
+      "key": "codeMembrePayeur",
+      "value": "SNE001",
+      "description": "Code membre (6 car., pattern (BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}) du PI payeur — ex. SNE001 = Sénégal EME 001"
+    },
+    {
+      "key": "rtpEndToEndId",
+      "value": "ECIE002XJWE2E00014000000000000001",
+      "description": "endToEndId d'une demande de paiement sortante générée par ce PI"
+    },
+    {
+      "key": "incomingRtpEndToEndId",
+      "value": "ECIE002XJWE2E00014000000000000002",
+      "description": "endToEndId d'une demande de paiement entrante reçue via callback AIP"
     }
   ]
 }
