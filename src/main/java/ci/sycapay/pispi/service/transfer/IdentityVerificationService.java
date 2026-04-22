@@ -37,19 +37,19 @@ public class IdentityVerificationService {
      */
     @Transactional
     public IdentityVerificationResponse requestVerification(IdentityVerificationRequest request) {
-        // BCEAO Identite schema (documentation/interface-participant-openapi.json):
-        //   msgId      — pattern ^M(country)[BCDEF]\d{3}... → real codeMembre (EMEs allowed)
-        //   endToEndId — pattern ^E(country)[BCDF]\d{3}...  → direct-participant only
-        // When codeMembre is an EME (type E), the endToEndId must carry a
-        // sponsoring direct-participant code configured via
-        // sycapay.pi-spi.code-membre-sponsor. Validation checks the resolved
-        // sponsor's type (the one that actually lands in endToEndId).
+        // Both msgId and endToEndId use the real codeMembre.
+        //
+        // The BCEAO OpenAPI Identite schema advertises an endToEndId pattern
+        // of [BCDF] (excluding EMEs), but the live AIP enforces a different,
+        // stronger rule: the endToEndId must start with "E<real-codeMembre>"
+        // — a caller-identity cross-check. Empirically the AIP accepts type E
+        // at that position (the observed admi.002 reason is "le EndToEndId
+        // doit débuter par 'E<codeMembre>'", which means the AIP accepts
+        // ECIE002... for an EME caller). A sponsor rewrite would therefore
+        // trip the caller-identity check, so we don't split here.
         String codeMembre = properties.getCodeMembre();
-        String codeMembreSponsor = properties.resolveCodeMembreSponsor();
-        validateInitiatorEligibility(codeMembreSponsor);
-
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembreSponsor);
+        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> acmt023 = new HashMap<>();
         acmt023.put("msgId", msgId);
@@ -175,34 +175,6 @@ public class IdentityVerificationService {
 
     private static void putIfNotBlank(Map<String, Object> map, String key, String value) {
         if (notBlank(value)) map.put(key, value);
-    }
-
-    /**
-     * Enforces the BCEAO {@code Identite} endToEndId participant-type
-     * constraint ({@code [BCDF]}) against the code that will actually land
-     * in the endToEndId — i.e. the resolved sponsor code
-     * ({@link PiSpiProperties#resolveCodeMembreSponsor()}).
-     *
-     * <p>ACMT.023 endToEndId is reserved to direct participants
-     * ({@code B|C|D|F}). When {@code codeMembre} is an EME (type {@code E}),
-     * a {@code code-membre-sponsor} must be configured; when none is set,
-     * the resolver returns {@code codeMembre} itself and this check fails.
-     */
-    private static void validateInitiatorEligibility(String codeMembreSponsor) {
-        if (codeMembreSponsor == null || codeMembreSponsor.length() < 3) {
-            throw new IllegalStateException(
-                    "sycapay.pi-spi.code-membre is not configured");
-        }
-        char type = codeMembreSponsor.charAt(2);
-        if ("BCDF".indexOf(type) < 0) {
-            throw new IllegalArgumentException(
-                    "The resolved endToEndId participant code '" + codeMembreSponsor
-                            + "' has participant type '" + type + "', which is not allowed by the "
-                            + "BCEAO Identite schema (endToEndId pattern [BCDF]). ACMT.023 "
-                            + "endToEndId must carry a direct-participant code (B/C/D/F). "
-                            + "If sycapay.pi-spi.code-membre is an EME (type E), configure "
-                            + "sycapay.pi-spi.code-membre-sponsor with the sponsoring bank's code.");
-        }
     }
 
     private IdentityVerificationResponse toResponse(PiIdentityVerification v) {

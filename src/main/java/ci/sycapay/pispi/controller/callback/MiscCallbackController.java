@@ -41,6 +41,7 @@ public class MiscCallbackController {
     @PostMapping("/notifications/echecs")
     public ResponseEntity<ApiResponse<Void>> receiveNotificationFailure(
             @RequestBody Map<String, Object> payload) {
+        log.info("ADMI.004 notification failure received: {}", payload);
         admi002CallbackService.handleRejection(payload, IsoMessageType.ADMI_004);
         return ResponseEntity.accepted().build();
     }
@@ -49,6 +50,7 @@ public class MiscCallbackController {
     @PostMapping("/verifications-identites/echecs")
     public ResponseEntity<ApiResponse<Void>> receiveVerificationFailure(
             @RequestBody Map<String, Object> payload) {
+        log.info("ACMT.023 verification failure received: {}", payload);
         admi002CallbackService.handleRejection(payload, IsoMessageType.ACMT_023);
         return ResponseEntity.accepted().build();
     }
@@ -178,6 +180,7 @@ public class MiscCallbackController {
     @PostMapping("/message-envoi/echec-http")
     public ResponseEntity<ApiResponse<Void>> receiveHttpSendFailure(
             @RequestBody Map<String, Object> payload) {
+        log.info("HTTP message send failure received: {}", payload);
         admi002CallbackService.handleRejection(payload, null);
         return ResponseEntity.accepted().build();
     }
@@ -186,6 +189,7 @@ public class MiscCallbackController {
     @PostMapping("/message-traitement/echec")
     public ResponseEntity<ApiResponse<Void>> receiveProcessingFailure(
             @RequestBody Map<String, Object> payload) {
+        log.info("Message processing failure received: {}", payload);
         admi002CallbackService.handleRejection(payload, null);
         return ResponseEntity.accepted().build();
     }
@@ -199,6 +203,7 @@ public class MiscCallbackController {
     @PostMapping("/messages-iso/echec-envoi")
     public ResponseEntity<ApiResponse<Void>> receiveIsoSendFailure(
             @RequestBody Map<String, Object> payload) {
+        log.info("ISO message send failure received: {}", payload);
         admi002CallbackService.handleRejection(payload, null);
         return ResponseEntity.accepted().build();
     }

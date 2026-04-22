@@ -9,9 +9,16 @@ import java.util.Optional;
 
 public interface PiMessageLogRepository extends JpaRepository<PiMessageLog, Long> {
 
-    Optional<PiMessageLog> findByMsgId(String msgId);
-
-    boolean existsByMsgId(String msgId);
+    /**
+     * Direction-aware msgId lookup. Since V23 the {@code (msg_id, direction)}
+     * pair is the composite unique key — the same msgId can legitimately
+     * appear in both the OUTBOUND row we wrote when sending a message and
+     * in the INBOUND row we wrote when the AIP echoed the same msgId on an
+     * admi.002 rejection. Always qualify a msgId lookup by direction to
+     * avoid {@code NonUniqueResultException}.
+     */
+    Optional<PiMessageLog> findPiMessageLogByMsgIdAndDirectionIs(
+            String msgId, MessageDirection direction);
 
     Optional<PiMessageLog> findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
             String endToEndId, MessageDirection direction, IsoMessageType messageType);

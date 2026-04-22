@@ -64,19 +64,20 @@ public class RequestToPayService {
         validatePayeRequiredFields(paye);
         validateCanalDateRules(request);
 
-        // BCEAO DemandePaiement schema (documentation/interface-participant-openapi.json):
-        //   msgId      — pattern ^M(country)[BCDEF]\d{3}... → real codeMembre (EMEs allowed)
-        //   endToEndId — pattern ^E(country)[BCDF]\d{3}...  → direct-participant only
-        // When codeMembre is an EME (type E), the endToEndId must carry a
-        // sponsoring direct-participant code configured via
-        // sycapay.pi-spi.code-membre-sponsor. Validation checks the resolved
-        // sponsor's type (the one that actually lands in endToEndId).
+        // Both msgId and endToEndId use the real codeMembre.
+        //
+        // The BCEAO OpenAPI DemandePaiement schema advertises an endToEndId
+        // pattern of [BCDF] (excluding EMEs), but the live AIP actually
+        // enforces a different rule: the endToEndId must start with
+        // "E<real-codeMembre>" — i.e. it cross-checks caller identity, and
+        // empirically accepts type E at that position (the admi.002 reason
+        // seen in practice is "le EndToEndId doit débuter par 'E<codeMembre>'",
+        // which confirms type E is allowed as long as the code matches).
+        // Any attempt to rewrite the endToEndId with a sponsor code therefore
+        // trips the caller-identity check. No sponsor split here.
         String codeMembre = properties.getCodeMembre();
-        String codeMembreSponsor = properties.resolveCodeMembreSponsor();
-        validateInitiatorEligibility(codeMembreSponsor);
-
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembreSponsor);
+        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
 
         Map<String, Object> pain013 = buildPain013Payload(msgId, endToEndId, request, payeur, paye);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013,
@@ -155,34 +156,6 @@ public class RequestToPayService {
         }
     }
 
-    /**
-     * Enforces the BCEAO {@code DemandePaiement} endToEndId participant-type
-     * constraint {@code [BCDF]} against the code that will actually land in
-     * the endToEndId — i.e. the resolved sponsor code
-     * ({@link PiSpiProperties#resolveCodeMembreSponsor()}).
-     *
-     * <p>PAIN.013 endToEndId is reserved to direct participants (banks,
-     * caisses — types {@code B|C|D|F}). When {@code codeMembre} is an EME
-     * (type {@code E}), a {@code code-membre-sponsor} must be configured; when
-     * none is set, the resolver returns {@code codeMembre} itself, and this
-     * check fails with a clear 400.
-     */
-    private static void validateInitiatorEligibility(String codeMembreSponsor) {
-        if (codeMembreSponsor == null || codeMembreSponsor.length() < 3) {
-            throw new IllegalStateException(
-                    "sycapay.pi-spi.code-membre is not configured");
-        }
-        char type = codeMembreSponsor.charAt(2);
-        if ("BCDF".indexOf(type) < 0) {
-            throw new IllegalArgumentException(
-                    "The resolved endToEndId participant code '" + codeMembreSponsor
-                            + "' has participant type '" + type + "', which is not allowed by the "
-                            + "BCEAO DemandePaiement schema (endToEndId pattern [BCDF]). "
-                            + "PAIN.013 endToEndId must carry a direct-participant code (B/C/D/F). "
-                            + "If sycapay.pi-spi.code-membre is an EME (type E), configure "
-                            + "sycapay.pi-spi.code-membre-sponsor with the sponsoring bank's code.");
-        }
-    }
 
     /**
      * BCEAO canal-specific rules on date fields:
@@ -365,20 +338,44 @@ public class RequestToPayService {
         putIfNotBlank(p, "identificationFiscaleCommercantPaye",
                 request.getIdentificationFiscaleCommercantPaye());
 
-        // Motif only — BCEAO pain.013 XSD places motif into RmtInf/Ustrd. The
-        // AIP maps montantAchat, typeDocumentReference and numeroDocumentReference
-        // into RmtInf/Strd, but RmtInf allows either Ustrd or Strd in a single
-        // message — never both. PI-SPI therefore omits the Strd-mapped fields
-        // from the outbound payload (same approach as TransferService for
-        // pacs.008). They remain captured on the entity for local reporting.
-        putIfNotBlank(p, "motif", request.getMotif());
+        // -----------------------------------------------------------------
+        // RmtInf mutual exclusion — BCEAO pain.013 XSD accepts EITHER
+        //   RmtInf/Ustrd   (filled by motif)
+        //   RmtInf/Strd    (filled by montantRetrait, fraisRetrait,
+        //                   montantAchat, typeDocumentReference,
+        //                   numeroDocumentReference, referenceBulk)
+        // …never both. The BCEAO PICASH reference XML confirms the
+        // cash-withdrawal flow relies on Strd/RfrdDocInf/LineDtls with the
+        // <Prtry>PICASH</Prtry> marker plus DuePyblAmt (montantRetrait) and
+        // AdjstmntAmtAndRsn (fraisRetrait). If the caller supplies any Strd
+        // field we therefore DROP motif, and if only motif is present we
+        // drop the Strd-mappers. The entity keeps every field regardless.
+        // -----------------------------------------------------------------
+        boolean hasStrd =
+                request.getMontantRetrait() != null
+                || request.getFraisRetrait() != null
+                || request.getMontantAchat() != null
+                || request.getTypeDocumentReference() != null
+                || notBlank(request.getNumeroDocumentReference());
 
-        // Retrait adjuncts don't collide with Strd/Ustrd — keep them as strings.
-        if (request.getMontantRetrait() != null) {
-            p.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
-        }
-        if (request.getFraisRetrait() != null) {
-            p.put("fraisRetrait", request.getFraisRetrait().toBigInteger().toString());
+        if (hasStrd) {
+            if (request.getMontantRetrait() != null) {
+                p.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
+            }
+            if (request.getFraisRetrait() != null) {
+                p.put("fraisRetrait", request.getFraisRetrait().toBigInteger().toString());
+            }
+            if (request.getMontantAchat() != null) {
+                p.put("montantAchat", request.getMontantAchat().toBigInteger().toString());
+            }
+            if (request.getTypeDocumentReference() != null) {
+                p.put("typeDocumentReference", request.getTypeDocumentReference().name());
+            }
+            putIfNotBlank(p, "numeroDocumentReference", request.getNumeroDocumentReference());
+            // motif intentionally OMITTED when Strd fields are present.
+        } else {
+            // No Strd fields → motif is free to land in Ustrd.
+            putIfNotBlank(p, "motif", request.getMotif());
         }
 
         return p;

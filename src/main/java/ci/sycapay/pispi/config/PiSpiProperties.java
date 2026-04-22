@@ -11,49 +11,23 @@ public class PiSpiProperties {
 
     /**
      * The registered participant code for this PI-SPI. Used as the sender
-     * identity in every outbound {@code msgId} (BCEAO pattern allows types
-     * {@code [BCDEF]}, so EMEs can be message senders).
+     * identity in every outbound ISO 20022 message — both {@code msgId} and
+     * {@code endToEndId}.
      *
-     * <p>When {@code codeMembre} is an EME (type {@code E}), outbound messages
-     * whose BCEAO schema restricts the {@code endToEndId} participant type to
-     * {@code [BCDF]} (ACMT.023 {@code Identite}, PAIN.013
-     * {@code DemandePaiement}) cannot carry this code in the endToEndId — a
-     * {@link #codeMembreSponsor sponsoring direct-participant code} must be
-     * configured instead.
+     * <p>Pattern: {@code (BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}} — the third
+     * character encodes the participant type (B/C/D/E/F). The BCEAO AIP
+     * cross-checks the outbound {@code endToEndId} against this code
+     * ("le EndToEndId doit débuter par 'E<code>'") and empirically accepts
+     * every participant type at that position, including E (EME), despite
+     * the BCEAO OpenAPI spec advertising a narrower {@code [BCDF]} pattern.
+     * Any sponsor-code rewrite would therefore trip the caller-identity check.
      */
     private String codeMembre;
-
-    /**
-     * Optional code membre of the sponsoring direct participant (bank, caisse —
-     * types {@code B|C|D|F}). Used exclusively to populate the
-     * {@code endToEndId} of outbound messages whose BCEAO schema requires a
-     * direct-participant identity at that position (currently ACMT.023
-     * {@code Identite} and PAIN.013 {@code DemandePaiement}).
-     *
-     * <p>The {@code msgId} always uses {@link #codeMembre} because the BCEAO
-     * pattern there accepts the sender's real identity (including type
-     * {@code E}).
-     *
-     * <p>Falls back to {@link #codeMembre} when blank. Services validate the
-     * resolved code's participant type and reject initiation with a 400 when
-     * it is not {@code [BCDF]}.
-     */
-    private String codeMembreSponsor;
 
     private String webhookUrl;
     private String aipBaseUrl;
     private String aipApiKey;
     private String apiVersion = "1";
-
-    /**
-     * Resolve the sponsor code used in the {@code endToEndId}:
-     * {@link #codeMembreSponsor} when set, otherwise {@link #codeMembre}.
-     */
-    public String resolveCodeMembreSponsor() {
-        return (codeMembreSponsor != null && !codeMembreSponsor.isBlank())
-                ? codeMembreSponsor
-                : codeMembre;
-    }
 
     private Mtls mtls = new Mtls();
 

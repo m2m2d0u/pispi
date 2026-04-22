@@ -1,6 +1,7 @@
 package ci.sycapay.pispi.service.callback;
 
 import ci.sycapay.pispi.entity.PiMessageLog;
+import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.AliasStatus;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
@@ -82,9 +83,8 @@ public class Admi002CallbackService {
             return;
         }
 
-        String rejectionMsgId = str(payload, "msgId");
-        String originalMsgId = firstNonNull(str(payload, "msgIdDemande"),
-                                            str(payload, "msgIdOriginal"));
+        String msgId = str(payload, "msgId");
+
         String endToEndId = str(payload, "endToEndId");
         String codeRaison = firstNonNull(str(payload, "codeRaisonRejet"),
                                          str(payload, "codeRaison"));
@@ -95,35 +95,40 @@ public class Admi002CallbackService {
                 : firstNonNull(detail, codeRaison);
 
         // 1) Dedup
-        if (rejectionMsgId != null && messageLogService.isDuplicate(rejectionMsgId)) {
-            log.info("ADMI.002 {} already processed, skipping", rejectionMsgId);
+        if (msgId != null && messageLogService.isDuplicateInbound(msgId)) {
+            log.info("ADMI.002 {} already processed, skipping", msgId);
             return;
         }
 
         // 2) Log the inbound rejection
-        messageLogService.log(rejectionMsgId, endToEndId, IsoMessageType.ADMI_002,
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ADMI_002,
                 MessageDirection.INBOUND, payload, 202, fullDetail);
-        log.error("ADMI.002 rejection received: msgId={} originalMsgId={} endToEndId={} "
+        log.error("ADMI.002 rejection received: msgId={} endToEndId={} "
                         + "code={} detail={}",
-                rejectionMsgId, originalMsgId, endToEndId, codeRaison, detail);
+                msgId, endToEndId, codeRaison, detail);
 
-        // 3) Resolve the rejected message's type
-        IsoMessageType originalType = resolveOriginalType(hint, originalMsgId, endToEndId);
+        // 3) Resolve the rejected message — type + its own endToEndId (the
+        //    admi.002 payload often omits the latter, so we fall back to the
+        //    OUTBOUND log row written when we first sent the message).
+        ResolvedOriginal original = resolveOriginal(hint, msgId, endToEndId);
+        IsoMessageType originalType = original.type();
+        String effectiveE2e = original.endToEndId();
+        log.info("ADMI.002 resolved original: type={} endToEndId={}", originalType, effectiveE2e);
 
         // 4) Route the update to the right domain
         boolean updated = false;
         if (originalType != null) {
             updated = switch (originalType) {
                 case PACS_008, PACS_002, PACS_028 ->
-                        applyToTransfer(originalMsgId, endToEndId, codeRaison, fullDetail);
+                        applyToTransfer(msgId, effectiveE2e, codeRaison, fullDetail);
                 case PAIN_013, PAIN_014 ->
-                        applyToRtp(endToEndId, codeRaison, fullDetail);
+                        applyToRtp(effectiveE2e, codeRaison, fullDetail);
                 case ACMT_023, ACMT_024 ->
-                        applyToVerification(endToEndId, codeRaison, fullDetail);
+                        applyToVerification(effectiveE2e, codeRaison, fullDetail);
                 case CAMT_056, PACS_004, CAMT_029 ->
-                        applyToReturnRequest(endToEndId, codeRaison, fullDetail);
+                        applyToReturnRequest(effectiveE2e, codeRaison, fullDetail);
                 case RAC_CREATE, RAC_MODIFY, RAC_DELETE ->
-                        applyToAlias(endToEndId, fullDetail);
+                        applyToAlias(effectiveE2e, fullDetail);
                 default -> {
                     log.info("ADMI.002 for {} has no dedicated handler — logged only",
                             originalType);
@@ -132,17 +137,17 @@ public class Admi002CallbackService {
             };
         } else {
             log.warn("ADMI.002 received without resolvable original type "
-                            + "(originalMsgId={}, endToEndId={}) — logged only",
-                    originalMsgId, endToEndId);
+                            + "(msgId={}, endToEndId={}) — logged only",
+                    msgId, effectiveE2e);
         }
 
         // 5) Webhook — the back office decides how to surface this
         webhookService.notify(WebhookEventType.MESSAGE_REJECTED,
-                endToEndId, rejectionMsgId, payload);
+                effectiveE2e, msgId, payload);
 
         if (updated) {
             log.info("ADMI.002 rejection applied to {} (endToEndId={})",
-                    originalType, endToEndId);
+                    originalType, effectiveE2e);
         }
     }
 
@@ -150,12 +155,12 @@ public class Admi002CallbackService {
     // Domain updaters
     // =======================================================================
 
-    private boolean applyToTransfer(String originalMsgId, String endToEndId,
+    private boolean applyToTransfer(String msgId, String endToEndId,
                                     String codeRaison, String detail) {
         // Prefer lookup by the rejected msgId (unique per outbound transfer);
         // fall back to endToEndId when only that is available.
-        Optional<ci.sycapay.pispi.entity.PiTransfer> hit = Optional.empty();
-        if (originalMsgId != null) hit = transferRepository.findByMsgId(originalMsgId);
+        Optional<PiTransfer> hit = Optional.empty();
+        if (msgId != null) hit = transferRepository.findByMsgId(msgId);
         if (hit.isEmpty() && endToEndId != null) {
             hit = transferRepository.findByEndToEndIdAndDirection(
                     endToEndId, MessageDirection.OUTBOUND);
@@ -168,7 +173,7 @@ public class Admi002CallbackService {
             return true;
         }).orElseGet(() -> {
             log.warn("ADMI.002 for transfer: no local row found (msgId={}, endToEndId={})",
-                    originalMsgId, endToEndId);
+                    msgId, endToEndId);
             return false;
         });
     }
@@ -247,24 +252,42 @@ public class Admi002CallbackService {
     // =======================================================================
 
     /**
-     * Resolve the original message type, preferring the caller-supplied hint
-     * (the controller endpoint knows the context — {@code /transferts/echecs}
-     * means PACS.008, etc.). When absent, looks up the referenced
-     * {@code msgIdDemande} in {@code pi_message_log}.
+     * Resolves the rejected message. Returns both its BCEAO {@link IsoMessageType}
+     * and the endToEndId stored on the original OUTBOUND log entry so downstream
+     * updaters can still find the matching domain row even when the admi.002
+     * payload itself omits {@code endToEndId}.
+     *
+     * <p>Prefers the caller-supplied hint (the controller endpoint knows the
+     * context — {@code /transferts/echecs} means PACS.008, etc.), then falls
+     * back to looking up the OUTBOUND log entry in {@code pi_message_log}
+     * by msgId.
+     *
+     * <p><b>Critical</b>: the lookup MUST filter by direction=OUTBOUND. Since
+     * V23 the (msg_id, direction) pair is the unique key — the same msgId now
+     * also appears on the INBOUND admi.002 row we just wrote, so
+     * {@code findByMsgId} alone would return two results and throw
+     * {@code NonUniqueResultException}.
      */
-    private IsoMessageType resolveOriginalType(IsoMessageType hint,
-                                               String originalMsgId,
-                                               String endToEndId) {
-        if (hint != null) return hint;
-        if (originalMsgId != null) {
-            Optional<PiMessageLog> original = messageLogRepository.findByMsgId(originalMsgId);
-            if (original.isPresent()) return original.get().getMessageType();
+    private ResolvedOriginal resolveOriginal(IsoMessageType hint,
+                                              String msgId,
+                                              String endToEndId) {
+        IsoMessageType type = hint;
+        String resolvedE2e = endToEndId;
+
+        if (msgId != null) {
+            Optional<PiMessageLog> original = messageLogRepository
+                    .findPiMessageLogByMsgIdAndDirectionIs(msgId, MessageDirection.OUTBOUND);
+            if (original.isPresent()) {
+                if (type == null) type = original.get().getMessageType();
+                if (resolvedE2e == null) resolvedE2e = original.get().getEndToEndId();
+            }
         }
-        // Last resort — scan on endToEndId with a permissive query. Not
-        // implemented yet because every BCEAO rejection we've seen in practice
-        // carries one of msgIdDemande/msgIdOriginal.
-        return null;
+
+        return new ResolvedOriginal(type, resolvedE2e);
     }
+
+    /** Tuple for {@link #resolveOriginal}. */
+    private record ResolvedOriginal(IsoMessageType type, String endToEndId) {}
 
     private static String str(Map<String, Object> map, String key) {
         Object v = map.get(key);

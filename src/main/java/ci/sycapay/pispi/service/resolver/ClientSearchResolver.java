@@ -98,22 +98,53 @@ public class ClientSearchResolver {
         if (villeNaissance != null) builder.lieuNaissance(villeNaissance);
         String nationalite = str(data, "nationalite");
         if (nationalite != null) builder.nationalite(nationalite);
-        // The RAC_SEARCH log can carry identification under three different keys
-        // depending on what the alias was registered with
-        // (AliasCallbackService writes these). Take whichever is populated — in
-        // priority order: national ID > passport > tax ID.
+        // Identification must match what's registered at PI-RAC for this
+        // account, otherwise the AIP rejects the pacs.008 / pain.013 with
+        // BE01 "InconsistenWithEndCustomer". Since §4.1 we don't hold a
+        // local copy of the registered ID — we read it back from the
+        // RAC_SEARCH log — but we MUST pick the right key by client type:
+        //
+        //   B / G (personnes morales)        → identificationFiscale (TXID)
+        //   P / C (personnes physiques)      → identificationNationale (NIDN),
+        //                                       numeroPasseport (CCPT) as fallback
+        //
+        // The RAC_SEARCH payload may contain more than one of these fields
+        // (e.g. a mandataire's NIDN on a business account). Picking the
+        // wrong one is exactly what triggers BE01, so the selection is
+        // driven by typeClient, not by which keys happen to be non-null.
         String identificationNationale = str(data, "identificationNationale");
         String numeroPasseport = str(data, "numeroPasseport");
         String identificationFiscale = str(data, "identificationFiscale");
-        if (identificationNationale != null) {
-            builder.identifiant(identificationNationale)
-                   .typeIdentifiant(CodeSystemeIdentification.NIDN);
-        } else if (numeroPasseport != null) {
-            builder.identifiant(numeroPasseport)
-                   .typeIdentifiant(CodeSystemeIdentification.CCPT);
-        } else if (identificationFiscale != null) {
-            builder.identifiant(identificationFiscale)
-                   .typeIdentifiant(CodeSystemeIdentification.TXID);
+
+        switch (typeClient) {
+            case B, G -> {
+                if (identificationFiscale != null) {
+                    builder.identifiant(identificationFiscale)
+                           .typeIdentifiant(CodeSystemeIdentification.TXID);
+                } else {
+                    log.warn("Client {} (type {}) has no identificationFiscale in the RAC_SEARCH "
+                                    + "log — pacs.008 / pain.013 will fail BE01 "
+                                    + "(InconsistenWithEndCustomer). endToEndIdSearch={}",
+                            side, typeClient, endToEndIdSearch);
+                }
+            }
+            case P, C -> {
+                if (identificationNationale != null) {
+                    builder.identifiant(identificationNationale)
+                           .typeIdentifiant(CodeSystemeIdentification.NIDN);
+                } else if (numeroPasseport != null) {
+                    builder.identifiant(numeroPasseport)
+                           .typeIdentifiant(CodeSystemeIdentification.CCPT);
+                } else if (identificationFiscale != null) {
+                    // Last-resort fallback — BCEAO v2.0.2 allows a type C
+                    // (commerçant individuel) to carry a TXID on top of NIDN,
+                    // but the account is keyed by the personal ID for P.
+                    // Use TXID only when nothing else is available so the
+                    // pacs.008 isn't empty.
+                    builder.identifiant(identificationFiscale)
+                           .typeIdentifiant(CodeSystemeIdentification.TXID);
+                }
+            }
         }
         String email = str(data, "email");
         if (email != null) builder.email(email);

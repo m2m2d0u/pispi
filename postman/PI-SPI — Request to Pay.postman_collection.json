@@ -193,7 +193,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash auprès d'un agent PICASH\",\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash chez un agent PICASH\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -211,7 +211,7 @@
                 "rtp"
               ]
             },
-            "description": "Demande de paiement **PICASH** (Paiement Instantané + Cash-out) — canal `PARTICULIER` → `631`.\n\nLe payé est un **agent cash-out** (type C)."
+            "description": "Demande de paiement **PICASH** — retrait d'espèces chez un agent.\n\n**canalCommunication = `MARCHAND_SUR_SITE` (500)** — conforme à l'exemple BCEAO PICASH (l'agent est traité comme un marchand cash-out).\n\n**latitudeClientPaye / longitudeClientPaye** obligatoires pour canal 500.\n\n**montantRetrait / fraisRetrait** remplissent automatiquement le bloc `RmtInf/Strd/RfrdDocInf/LineDtls` avec le marqueur `<Prtry>PICASH</Prtry>`. Le service PI-SPI supprime alors `motif` pour respecter la règle d'exclusion mutuelle Ustrd vs Strd du pain.013.001.10."
           },
           "response": []
         },

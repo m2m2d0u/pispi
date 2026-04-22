@@ -47,7 +47,27 @@ public class MessageLogService {
         return log(null, endToEndId, messageType, MessageDirection.INBOUND, payload, httpStatus, errorMessage);
     }
 
+    /**
+     * Direction-aware idempotency check for callback paths. Returns true when
+     * an INBOUND row already exists for this msgId — which is the only thing
+     * callback controllers care about. Callers that used to rely on the older
+     * {@code existsByMsgId} semantics see identical behaviour here because
+     * every existing call site is in an inbound context.
+     *
+     * <p>Since V23 the (msg_id, direction) pair is the composite unique key
+     * of {@code pi_message_log} — the same msgId can legitimately appear on
+     * both sides (e.g. an outbound pain.013 we sent and the admi.002
+     * rejection that echoes the same msgId). The direction filter prevents
+     * false-positive dedup in that case.
+     */
     public boolean isDuplicate(String msgId) {
-        return repository.existsByMsgId(msgId);
+        if (msgId == null) return false;
+        return repository.findPiMessageLogByMsgIdAndDirectionIs(msgId, MessageDirection.INBOUND)
+                .isPresent();
+    }
+
+    /** Alias of {@link #isDuplicate(String)} — kept for readability at call sites. */
+    public boolean isDuplicateInbound(String msgId) {
+        return isDuplicate(msgId);
     }
 }

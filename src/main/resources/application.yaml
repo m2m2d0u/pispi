@@ -27,21 +27,14 @@ spring:
 # ---- Sycapay PI-SPI Config ----
 sycapay:
   pi-spi:
-    # Registered participant code — used in every outbound msgId (BCEAO pattern
-    # allows any type B/C/D/E/F at that position). When this is an EME (type E)
-    # and the message has an endToEndId restricted to [BCDF] (ACMT.023 Identite
-    # / PAIN.013 DemandePaiement), configure code-membre-sponsor below.
+    # Registered participant code — used in every outbound message for both
+    # msgId and endToEndId. The BCEAO AIP cross-checks the outbound endToEndId
+    # against this value ("le EndToEndId doit débuter par 'E<code>'") and
+    # empirically accepts every participant type at that position, including
+    # E (EME), despite the OpenAPI spec advertising a narrower [BCDF] pattern.
+    # Any sponsor-code override trips the caller-identity check, so the
+    # previous code-membre-sponsor property has been removed.
     code-membre: ${PISPI_CODE_MEMBRE:CIE002}
-
-    # Sponsoring direct-participant code — used EXCLUSIVELY in the endToEndId
-    # of outbound messages whose BCEAO schema restricts the participant type to
-    # [BCDF] (ACMT.023 Identite, PAIN.013 DemandePaiement). The msgId still
-    # carries code-membre above.
-    #
-    # Leave blank to reuse code-membre. If code-membre is an EME (type E) and
-    # this is blank, /api/v1/verifications and /api/v1/rtp reject initiation
-    # with a 400 explaining the BCEAO rule.
-    code-membre-sponsor: ${PISPI_CODE_MEMBRE_SPONSOR:SNB000}
 
     aip-base-url: ${PISPI_AIP_BASE_URL:https://bceao.symmetry.sn:8081}
     aip-api-key: ${PISPI_AIP_API_KEY:CHANGE_ME}
