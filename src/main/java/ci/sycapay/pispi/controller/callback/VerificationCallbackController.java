@@ -13,6 +13,7 @@ import ci.sycapay.pispi.enums.WebhookEventType;
 import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +27,14 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.Map;
 
+/**
+ * Hidden from OpenAPI/Swagger for indirect-participant deployments (EMEs do
+ * not initiate or receive direct ACMT.023 traffic — the BCEAO Identite schema
+ * restricts initiators to types B/C/D/F). The endpoints remain mounted so a
+ * sponsoring direct participant running this PI-SPI can still receive
+ * verification callbacks when configured appropriately.
+ */
+@Hidden
 @Tag(name = "Verification Callbacks")
 @Slf4j
 @RestController

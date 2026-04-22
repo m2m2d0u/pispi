@@ -11,11 +11,20 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Return-of-funds (CAMT.056 / CAMT.029 / PACS.004) is a direct-participant
+ * primitive — the reimbursement flow runs between settlement accounts held at
+ * the central bank, which indirect participants (EMEs) don't have. Hidden from
+ * OpenAPI/Swagger for indirect-participant deployments; the endpoints remain
+ * callable for sponsoring-bank operators.
+ */
+@Hidden
 @Tag(name = "Return Funds")
 @Slf4j
 @RestController

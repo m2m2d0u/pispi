@@ -10,11 +10,23 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Identity verification (ACMT.023 / ACMT.024) is a direct-participant
+ * (bank / caisse) primitive per BCEAO rules — indirect participants (EMEs)
+ * should resolve beneficiary identity via the RAC_SEARCH alias flow.
+ *
+ * <p>Hidden from OpenAPI/Swagger for indirect-participant deployments. When
+ * {@code sycapay.pi-spi.code-membre} is not a direct-participant code
+ * (types B/C/D/F), {@link IdentityVerificationService#requestVerification}
+ * rejects the call with a 400 at the service boundary.
+ */
+@Hidden
 @Tag(name = "Identity Verification")
 @Slf4j
 @RestController

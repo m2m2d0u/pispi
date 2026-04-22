@@ -1,0 +1,498 @@
+{
+  "info": {
+    "_postman_id": "c4e7d8a9-2f1b-4d5e-9c3a-7e6b8f9a1d2c",
+    "name": "PI-SPI — Request to Pay",
+    "description": "Collection de tests pour les opérations Request-to-Pay (PAIN.013 / PAIN.014 — schéma BCEAO `DemandePaiement` / `ReponseDemandePaiement`).\n\n**Résolution des parties** (sur le modèle `TransferRequest`) — `endToEndIdSearchPayeur` et `endToEndIdSearchPaye` référencent des `endToEndId` de recherches d'alias RAC_SEARCH inbound déjà journalisées dans `pi_message_log`. PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `aliasClient*`, `otherClient*` et `codeMembreParticipant*`.\n\n**canalCommunication (RTP BCEAO)** : `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `E_COMMERCE_LIVRAISON` (520) | `E_COMMERCE_IMMEDIAT` (521) | `PARTICULIER` (631)\n\n**Règle BCEAO `typeCompteClientPaye`** : `CACC|SVGS|TRAN|LLSV|VACC|TAXE` — **pas `TRAL`**. Le service émet un 400 si l'alias résolu pour le payé porte `TRAL`.\n\n**Sérialisation BCEAO** : PI-SPI convertit les montants et le booléen `autorisationModificationMontant` en chaînes avant envoi à l'AIP (patterns `\\d+` / `true|false`).\n\n**`identifiantDemandePaiement`** : auto-généré par le script pre-request de la collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "24650068"
+  },
+  "item": [
+    {
+      "name": "Demandes sortantes",
+      "description": "Initiation de demandes de paiement (PAIN.013) avec résolution des parties via `endToEndIdSearch*` (modèle `TransferRequest`).",
+      "item": [
+        {
+          "name": "Envoyer une demande de paiement de facture avec remittance B2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Règlement facture fournisseur cacao Q2 2026\",\n  \"referenceBulk\": \"BULK-FP-2026-0042\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-FP-2026-0042\",\n  \"identificationFiscaleCommercantPayeur\": \"CI-FISC-AGRO-001\",\n  \"identificationFiscaleCommercantPaye\": \"CI-FISC-FINPLUS-042\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande B2B adossée à une facture commerciale (canal `FACTURE` → `401`).\n\n**endToEndIdSearchPayeur** / **endToEndIdSearchPaye** : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `alias*`, `otherClient*` et `codeMembreParticipant*` depuis `pi_message_log`.\n\n**typeDocumentReference** : `CINV` (Commercial Invoice)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement de facture avec remise",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement de facture avec **remise pour paiement immédiat** (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de remise — mutuellement exclusif avec `tauxRemisePaiementImmediat`. Sérialisé en chaîne côté AIP.\n**autorisationModificationMontant** : sérialisé en chaîne `\"false\"` côté AIP."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement sur site avec débit différé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement différé courses mensuelles\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Paiement marchand sur site avec **débit différé** (canal `MARCHAND_SUR_SITE` → `500`).\n\n**dateHeureExecution** postérieure à `dateHeureLimiteAction` — l'acceptation est immédiate, mais le débit effectif est programmé à cette date."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement marchand sur site P2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Paiement marchand sur site **P2B** (Person → Business) — canal `MARCHAND_SUR_SITE` → `500`.\n\n`searchPayeurP` résout un payeur de type P ; `searchPayeB` résout un payé de type B. BCEAO interdit `TRAL` pour `typeCompteClientPaye` — le service lève un 400 si l'alias résolu porte ce type."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement marchand sur site P2C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Confection 2 tenues traditionnelles\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Paiement marchand sur site **P2C** (Person → Commercial — artisan individuel) — canal `MARCHAND_SUR_SITE` → `500`.\n\n`searchPayeC` résout un payé de type C."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement PICASH",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash auprès d'un agent PICASH\",\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **PICASH** (Paiement Instantané + Cash-out) — canal `PARTICULIER` → `631`.\n\nLe payé est un **agent cash-out** (type C)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement PICO",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **PICO** (Paiement Instantané Commerce) — canal `MARCHAND_SUR_SITE` → `500`.\n\nEncaissement temps réel du marchand (contrairement à PICASH)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce à la livraison P2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Commande e-commerce — livraison sous 3j\",\n  \"referenceBulk\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce **P2B** avec encaissement à la livraison (canal `E_COMMERCE_LIVRAISON` → `520`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce immediat P2B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce **P2B** à encaissement immédiat (canal `E_COMMERCE_IMMEDIAT` → `521`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement e-commerce avec débit différé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-06-05T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu au lancement\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"montantAchat\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande). Canal `E_COMMERCE_IMMEDIAT` → `521`. **dateHeureExecution** postérieure à `dateHeureLimiteAction`."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer demande de paiement pour une tontine P2P",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceBulk\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"montantRetrait\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **tontine P2P** — cotisation récurrente (canal `PARTICULIER` → `631`).\n\n**identifiantMandat** : référence du mandat de prélèvement signé par le cotisant."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement entre particuliers P2P",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceBulk\": \"PRET-20260315-DIALLO-DIABATE\",\n  \"montantRetrait\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement entre particuliers (**P2P**). Canal `PARTICULIER` → `631`.\n\nPaiement ponctuel (pas d'`identifiantMandat`)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-generate a unique identifiantDemandePaiement for every request.",
+          "// Format: RTP-YYYYMMDDHHmmss-XXXXXX (UTC timestamp + 6-char random suffix).",
+          "// BCEAO DemandePaiement constraint: max 35 chars — generated value is 25 chars.",
+          "const now = new Date();",
+          "const pad = n => String(n).padStart(2, '0');",
+          "const ts = '' +",
+          "  now.getUTCFullYear() +",
+          "  pad(now.getUTCMonth() + 1) +",
+          "  pad(now.getUTCDate()) +",
+          "  pad(now.getUTCHours()) +",
+          "  pad(now.getUTCMinutes()) +",
+          "  pad(now.getUTCSeconds());",
+          "const rand = Array.from({ length: 6 }, () =>",
+          "  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.charAt(Math.floor(Math.random() * 36))",
+          ").join('');",
+          "pm.collectionVariables.set('identifiantDemandePaiement', `RTP-${ts}-${rand}`);"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": ""
+    },
+    {
+      "key": "identifiantDemandePaiement",
+      "value": "",
+      "description": "Généré automatiquement par le script pre-request (RTP-YYYYMMDDHHmmss-XXXXXX)."
+    },
+    {
+      "key": "searchPayeurP",
+      "value": "ECIE002XJWE2E00014000000000000011",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payeur type P"
+    },
+    {
+      "key": "searchPayeurB",
+      "value": "ECIE002XJWE2E00014000000000000010",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payeur type B"
+    },
+    {
+      "key": "searchPayeB",
+      "value": "ECIE002XJWE2E00014000000000000020",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payé type B"
+    },
+    {
+      "key": "searchPayeC",
+      "value": "ECIE002XJWE2E00014000000000000022",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payé type C"
+    },
+    {
+      "key": "searchPayeP",
+      "value": "ECIE002XJWE2E00014000000000000023",
+      "description": "endToEndId d'un RAC_SEARCH inbound pour un payé type P"
+    },
+    {
+      "key": "rtpEndToEndId",
+      "value": "ECIE002XJWE2E0001420260422000001",
+      "description": "endToEndId d'une demande de paiement sortante générée par ce PI"
+    },
+    {
+      "key": "incomingRtpEndToEndId",
+      "value": "ECIE002XJWE2E0001420260422000002",
+      "description": "endToEndId d'une demande de paiement entrante"
+    }
+  ]
+}

@@ -2,15 +2,20 @@ package ci.sycapay.pispi.service.rtp;
 
 import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
+import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.rtp.RequestToPayRequest;
 import ci.sycapay.pispi.dto.rtp.RequestToPayResponse;
 import ci.sycapay.pispi.entity.PiRequestToPay;
+import ci.sycapay.pispi.enums.CanalCommunicationRtp;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.RtpStatus;
+import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.service.MessageLogService;
+import ci.sycapay.pispi.service.resolver.ClientSearchResolver;
+import ci.sycapay.pispi.service.resolver.ResolvedClient;
 import ci.sycapay.pispi.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.HashMap;
 import java.util.Map;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.normaliseIsoInstantMillis;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Slf4j
@@ -33,70 +39,54 @@ public class RequestToPayService {
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
+    private final ClientSearchResolver clientSearchResolver;
 
+    /**
+     * Emit an outbound PAIN.013 Request-to-Pay toward the AIP, using the flat
+     * BCEAO {@code DemandePaiement} schema.
+     *
+     * <p>Both parties are resolved from inbound RAC_SEARCH log entries
+     * ({@code endToEndIdSearchPayeur} / {@code endToEndIdSearchPaye}) — the
+     * caller passes only the payment-specific fields (amount, canal, motif,
+     * etc.), the identity data comes from {@code pi_message_log}.
+     *
+     * <p>Per BCEAO, numbers and booleans are serialised as strings
+     * ({@code "\d+"} / {@code "true|false"}).
+     */
     @Transactional
     public RequestToPayResponse createRtp(RequestToPayRequest request) {
+        ResolvedClient payeur = clientSearchResolver.resolve(
+                request.getEndToEndIdSearchPayeur(), "payeur");
+        ResolvedClient paye = clientSearchResolver.resolve(
+                request.getEndToEndIdSearchPaye(), "paye");
+
+        validateTypeComptePaye(paye);
+        validatePayeRequiredFields(paye);
+        validateCanalDateRules(request);
+
+        // BCEAO DemandePaiement schema (documentation/interface-participant-openapi.json):
+        //   msgId      — pattern ^M(country)[BCDEF]\d{3}... → real codeMembre (EMEs allowed)
+        //   endToEndId — pattern ^E(country)[BCDF]\d{3}...  → direct-participant only
+        // When codeMembre is an EME (type E), the endToEndId must carry a
+        // sponsoring direct-participant code configured via
+        // sycapay.pi-spi.code-membre-sponsor. Validation checks the resolved
+        // sponsor's type (the one that actually lands in endToEndId).
         String codeMembre = properties.getCodeMembre();
+        String codeMembreSponsor = properties.resolveCodeMembreSponsor();
+        validateInitiatorEligibility(codeMembreSponsor);
+
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        String endToEndId = IdGenerator.generateEndToEndId(codeMembreSponsor);
 
-        Map<String, Object> pain013 = new HashMap<>();
-        pain013.put("msgId", msgId);
-        pain013.put("clientDemandeur", request.getClientDemandeur());
-        pain013.put("identifiantDemandePaiement", request.getIdentifiantDemandePaiement());
-        pain013.put("endToEndId", endToEndId);
-        pain013.put("typeTransaction", request.getTypeTransaction().name());
-        pain013.put("canalCommunication", request.getCanalCommunication().getCode());
-        pain013.put("montant", request.getMontant());
-        pain013.put("devise", "XOF");
-        pain013.put("codeMembreParticipantPayeur", request.getCodeMembreParticipantPayeur());
-        pain013.put("codeMembreParticipantPaye", codeMembre);
-        pain013.put("numeroCompteClientPayeur", request.getNumeroCompteClientPayeur());
-        pain013.put("typeCompteClientPayeur", request.getTypeCompteClientPayeur().name());
-        pain013.put("numeroCompteClientPaye", request.getNumeroCompteClientPaye());
-        pain013.put("typeCompteClientPaye", request.getTypeCompteClientPaye().name());
-        pain013.put("clientPayeur", buildClientMap(request.getClientPayeur()));
-        pain013.put("clientPaye", buildClientMap(request.getClientPaye()));
-        if (request.getDateHeureExecution() != null) pain013.put("dateHeureExecution", request.getDateHeureExecution());
-        if (request.getDateHeureLimiteAction() != null) pain013.put("dateHeureLimiteAction", request.getDateHeureLimiteAction());
-        if (request.getMotif() != null) pain013.put("motif", request.getMotif());
-        if (request.getReferenceClient() != null) pain013.put("referenceClient", request.getReferenceClient());
-        if (request.getAutorisationModificationMontant() != null) pain013.put("autorisationModificationMontant", request.getAutorisationModificationMontant());
-        if (request.getMontantRemisePaiementImmediat() != null) pain013.put("montantRemisePaiementImmediat", request.getMontantRemisePaiementImmediat());
-        if (request.getTauxRemisePaiementImmediat() != null) pain013.put("tauxRemisePaiementImmediat", request.getTauxRemisePaiementImmediat());
-        if (request.getIdentifiantMandat() != null) pain013.put("identifiantMandat", request.getIdentifiantMandat());
-        if (request.getSignatureNumeriqueMandat() != null) pain013.put("signatureNumeriqueMandat", request.getSignatureNumeriqueMandat());
-        if (request.getDocument() != null) {
-            Map<String, Object> doc = new HashMap<>();
-            if (request.getDocument().getCodeTypeDocument() != null) doc.put("codeTypeDocument", request.getDocument().getCodeTypeDocument().name());
-            if (request.getDocument().getIdentifiantDocument() != null) doc.put("identifiantDocument", request.getDocument().getIdentifiantDocument());
-            if (request.getDocument().getLibelleDocument() != null) doc.put("libelleDocument", request.getDocument().getLibelleDocument());
-            pain013.put("document", doc);
-        }
-        if (request.getMarchand() != null) pain013.put("marchand", buildMarchandMap(request.getMarchand()));
-        if (request.getMontantAchat() != null) pain013.put("montantAchat", request.getMontantAchat());
-        if (request.getMontantRetrait() != null) pain013.put("montantRetrait", request.getMontantRetrait());
-        if (request.getFraisRetrait() != null) pain013.put("fraisRetrait", request.getFraisRetrait());
+        Map<String, Object> pain013 = buildPain013Payload(msgId, endToEndId, request, payeur, paye);
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013,
+                MessageDirection.OUTBOUND, pain013, null, null);
 
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013, MessageDirection.OUTBOUND, pain013, null, null);
-
-        PiRequestToPay rtp = PiRequestToPay.builder()
-                .msgId(msgId)
-                .endToEndId(endToEndId)
-                .identifiantDemandePaiement(request.getIdentifiantDemandePaiement())
-                .direction(MessageDirection.OUTBOUND)
-                .typeTransaction(request.getTypeTransaction())
-                .canalCommunication(request.getCanalCommunication())
-                .montant(request.getMontant())
-                .devise("XOF")
-                .codeMembrePayeur(request.getCodeMembreParticipantPayeur())
-                .codeMembrePaye(codeMembre)
-                .dateHeureLimiteAction(parseDateTime(request.getDateHeureLimiteAction()))
-                .autorisationModificationMontant(request.getAutorisationModificationMontant())
-                .statut(RtpStatus.PENDING)
-                .build();
+        PiRequestToPay rtp = buildEntity(msgId, endToEndId, codeMembre, request, payeur, paye);
         rtpRepository.save(rtp);
 
+        log.info("RTP PAIN.013 emitted: endToEndId={} payeur={} paye={}",
+                endToEndId, payeur.codeMembre(), codeMembre);
         aipClient.post("/demandes-paiements", pain013);
 
         return toResponse(rtp);
@@ -113,6 +103,11 @@ public class RequestToPayService {
                 .map(this::toResponse);
     }
 
+    /**
+     * Emit a PAIN.014 rejection (BCEAO {@code ReponseDemandePaiement}) for an
+     * inbound RTP received on this PI. The spec mandates {@code statut: "RJCT"}
+     * and a {@code codeRaison} matching {@code [A-Z]{2}\d{2}}.
+     */
     @Transactional
     public RequestToPayResponse rejectRtp(String endToEndId, String codeRaison) {
         PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
@@ -128,8 +123,10 @@ public class RequestToPayService {
         pain014.put("endToEndId", endToEndId);
         pain014.put("statut", "RJCT");
         pain014.put("codeRaison", codeRaison);
+        if (notBlank(rtp.getReferenceBulk())) pain014.put("referenceBulk", rtp.getReferenceBulk());
 
-        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014, MessageDirection.OUTBOUND, pain014, null, null);
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_014,
+                MessageDirection.OUTBOUND, pain014, null, null);
         aipClient.post("/demandes-paiements/reponses", pain014);
 
         rtp.setStatut(RtpStatus.RJCT);
@@ -140,34 +137,341 @@ public class RequestToPayService {
         return toResponse(rtp);
     }
 
-    private Map<String, Object> buildClientMap(ci.sycapay.pispi.dto.common.ClientInfo client) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("nom", client.getNom());
-        map.put("typeClient", client.getTypeClient().name());
-        map.put("typeIdentifiant", client.getTypeIdentifiant().name());
-        map.put("identifiant", client.getIdentifiant());
-        map.put("telephone", client.getTelephone());
-        if (client.getPrenom() != null) map.put("prenom", client.getPrenom());
-        if (client.getAutrePrenom() != null) map.put("autrePrenom", client.getAutrePrenom());
-        if (client.getRaisonSociale() != null) map.put("raisonSociale", client.getRaisonSociale());
-        if (client.getDateNaissance() != null) map.put("dateNaissance", client.getDateNaissance());
-        if (client.getLieuNaissance() != null) map.put("lieuNaissance", client.getLieuNaissance());
-        if (client.getNationalite() != null) map.put("nationalite", client.getNationalite());
-        if (client.getAdresse() != null) map.put("adresse", client.getAdresse());
-        if (client.getVille() != null) map.put("ville", client.getVille());
-        if (client.getPays() != null) map.put("pays", client.getPays());
-        if (client.getEmail() != null) map.put("email", client.getEmail());
-        return map;
+    // =======================================================================
+    // BCEAO validation
+    // =======================================================================
+
+    /**
+     * BCEAO {@code typeCompteClientPaye} pattern is
+     * {@code CACC|SVGS|TRAN|LLSV|VACC|TAXE} — {@code TRAL} is forbidden on the
+     * payé (unlike the payeur).
+     */
+    private static void validateTypeComptePaye(ResolvedClient paye) {
+        if (paye.typeCompte() == TypeCompte.TRAL) {
+            throw new IllegalArgumentException(
+                    "typeCompteClientPaye résolu est TRAL, ce qui est interdit par le schéma "
+                            + "BCEAO DemandePaiement (CACC|SVGS|TRAN|LLSV|VACC|TAXE). "
+                            + "Le compte du payé doit être d'un type supporté.");
+        }
     }
 
-    private Map<String, Object> buildMarchandMap(ci.sycapay.pispi.dto.common.MerchantInfo marchand) {
-        Map<String, Object> map = new HashMap<>();
-        if (marchand.getCodeMarchand() != null) map.put("codeMarchand", marchand.getCodeMarchand());
-        if (marchand.getCategorieCodeMarchand() != null) map.put("categorieCodeMarchand", marchand.getCategorieCodeMarchand());
-        if (marchand.getNomMarchand() != null) map.put("nomMarchand", marchand.getNomMarchand());
-        if (marchand.getVilleMarchand() != null) map.put("villeMarchand", marchand.getVilleMarchand());
-        if (marchand.getPaysMarchand() != null) map.put("paysMarchand", marchand.getPaysMarchand());
-        return map;
+    /**
+     * Enforces the BCEAO {@code DemandePaiement} endToEndId participant-type
+     * constraint {@code [BCDF]} against the code that will actually land in
+     * the endToEndId — i.e. the resolved sponsor code
+     * ({@link PiSpiProperties#resolveCodeMembreSponsor()}).
+     *
+     * <p>PAIN.013 endToEndId is reserved to direct participants (banks,
+     * caisses — types {@code B|C|D|F}). When {@code codeMembre} is an EME
+     * (type {@code E}), a {@code code-membre-sponsor} must be configured; when
+     * none is set, the resolver returns {@code codeMembre} itself, and this
+     * check fails with a clear 400.
+     */
+    private static void validateInitiatorEligibility(String codeMembreSponsor) {
+        if (codeMembreSponsor == null || codeMembreSponsor.length() < 3) {
+            throw new IllegalStateException(
+                    "sycapay.pi-spi.code-membre is not configured");
+        }
+        char type = codeMembreSponsor.charAt(2);
+        if ("BCDF".indexOf(type) < 0) {
+            throw new IllegalArgumentException(
+                    "The resolved endToEndId participant code '" + codeMembreSponsor
+                            + "' has participant type '" + type + "', which is not allowed by the "
+                            + "BCEAO DemandePaiement schema (endToEndId pattern [BCDF]). "
+                            + "PAIN.013 endToEndId must carry a direct-participant code (B/C/D/F). "
+                            + "If sycapay.pi-spi.code-membre is an EME (type E), configure "
+                            + "sycapay.pi-spi.code-membre-sponsor with the sponsoring bank's code.");
+        }
+    }
+
+    /**
+     * BCEAO canal-specific rules on date fields:
+     * <ul>
+     *   <li>{@code dateHeureExecution} (ReqdExctnDt) is REQUIRED for FACTURE (401)
+     *       and E_COMMERCE_LIVRAISON (520), FORBIDDEN for MARCHAND_SUR_SITE (500),
+     *       E_COMMERCE_IMMEDIAT (521), PARTICULIER (631).</li>
+     *   <li>{@code dateHeureLimiteAction} (XpryDt) is FORBIDDEN for
+     *       MARCHAND_SUR_SITE (500), E_COMMERCE_IMMEDIAT (521), PARTICULIER (631).</li>
+     * </ul>
+     */
+    private static void validateCanalDateRules(RequestToPayRequest req) {
+        CanalCommunicationRtp canal = req.getCanalCommunication();
+        boolean execProvided = notBlank(req.getDateHeureExecution());
+        boolean limiteProvided = notBlank(req.getDateHeureLimiteAction());
+
+        switch (canal) {
+            case FACTURE, E_COMMERCE_LIVRAISON -> {
+                if (!execProvided) {
+                    throw new IllegalArgumentException(
+                            "dateHeureExecution est obligatoire pour le canal "
+                                    + canal.name() + " (code " + canal.getCode() + ")");
+                }
+            }
+            case MARCHAND_SUR_SITE, E_COMMERCE_IMMEDIAT, PARTICULIER -> {
+                if (execProvided) {
+                    throw new IllegalArgumentException(
+                            "dateHeureExecution ne doit pas être renseigné pour le canal "
+                                    + canal.name() + " (code " + canal.getCode() + ")");
+                }
+                if (limiteProvided) {
+                    throw new IllegalArgumentException(
+                            "dateHeureLimiteAction ne doit pas être renseigné pour le canal "
+                                    + canal.name() + " (code " + canal.getCode() + ")");
+                }
+            }
+        }
+
+        // BCEAO rule: XpryDt (dateHeureLimiteAction) must be >= ReqdExctnDt
+        // (dateHeureExecution). The limit action acts as the expiry of the
+        // request's validity window, which sits after the requested execution.
+        if (execProvided && limiteProvided) {
+            try {
+                java.time.Instant exec = java.time.Instant.parse(req.getDateHeureExecution());
+                java.time.Instant limite = java.time.Instant.parse(req.getDateHeureLimiteAction());
+                if (limite.isBefore(exec)) {
+                    throw new IllegalArgumentException(
+                            "dateHeureLimiteAction (" + req.getDateHeureLimiteAction()
+                                    + ") doit être supérieure ou égale à dateHeureExecution ("
+                                    + req.getDateHeureExecution() + ") — règle BCEAO XpryDt ≥ ReqdExctnDt.");
+                }
+            } catch (java.time.format.DateTimeParseException e) {
+                // Skip ordering check if either date is not strict ISO-8601 —
+                // the normaliser / AIP will surface the format error separately.
+            }
+        }
+    }
+
+    /**
+     * BCEAO {@code DemandePaiement} marks several payé fields as required —
+     * notably {@code numeroIdentificationClientPaye} and
+     * {@code systemeIdentificationClientPaye}. If the RAC_SEARCH log resolved
+     * for the payé carries none of {@code identificationNationale} /
+     * {@code numeroPasseport} / {@code identificationFiscale}, we cannot build a
+     * valid PAIN.013. Fail fast with a clear 400 instead of emitting and
+     * letting the AIP reject with
+     * {@code "numeroIdentificationClientPaye doit être renseigné"}.
+     */
+    private static void validatePayeRequiredFields(ResolvedClient paye) {
+        ClientInfo info = paye.clientInfo();
+        if (info.getIdentifiant() == null || info.getIdentifiant().isBlank()
+                || info.getTypeIdentifiant() == null) {
+            throw new IllegalArgumentException(
+                    "L'alias payé résolu ne porte aucun identifiant (identificationNationale / "
+                            + "numeroPasseport / identificationFiscale). BCEAO DemandePaiement "
+                            + "exige numeroIdentificationClientPaye + systemeIdentificationClientPaye. "
+                            + "Ré-enregistrer l'alias avec une identification (NIDN / CCPT / TXID) ou "
+                            + "choisir un autre alias comme bénéficiaire.");
+        }
+        if (info.getVille() == null || info.getVille().isBlank()) {
+            throw new IllegalArgumentException(
+                    "L'alias payé résolu n'a pas de ville (villeClientPaye est obligatoire "
+                            + "selon BCEAO DemandePaiement). Compléter l'alias ou utiliser un "
+                            + "bénéficiaire avec ville renseignée.");
+        }
+    }
+
+    // =======================================================================
+    // PAIN.013 payload builder (BCEAO DemandePaiement — flat schema)
+    // =======================================================================
+
+    private Map<String, Object> buildPain013Payload(String msgId,
+                                                    String endToEndId,
+                                                    RequestToPayRequest request,
+                                                    ResolvedClient payeur,
+                                                    ResolvedClient paye) {
+        Map<String, Object> p = new HashMap<>();
+        p.put("msgId", msgId);
+        p.put("endToEndId", endToEndId);
+        p.put("identifiantDemandePaiement", request.getIdentifiantDemandePaiement());
+
+        // BCEAO pain.013 InitgPty>Nm rule: must be "X" or an https:// URL.
+        // Default to "X" when absent so the AIP doesn't reject with
+        // "InitgPty>Nm doit contenir X si c'est le nom du client payé ou une
+        // le lien vers une image commencant par https://".
+        p.put("clientDemandeur", resolveClientDemandeur(request.getClientDemandeur()));
+        // BCEAO pain.013 XSD enforces pattern \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z
+        // on DtTm elements — millisecond precision is mandatory. Normalise input.
+        putIfNotBlank(p, "dateHeureExecution",
+                normaliseIsoInstantMillis(request.getDateHeureExecution()));
+        putIfNotBlank(p, "dateHeureLimiteAction",
+                normaliseIsoInstantMillis(request.getDateHeureLimiteAction()));
+        // referenceBulk OMITTED from outbound: BCEAO AIP maps it into
+        // RmtInf/Strd, which conflicts with motif → RmtInf/Ustrd (error
+        // "Element 'Strd': This element is not expected"). Kept on the entity
+        // for local traceability only — not emitted on the wire.
+
+        // Canal & monetary (BCEAO encodes numbers/booleans as strings).
+        p.put("canalCommunication", request.getCanalCommunication().getCode());
+        p.put("montant", request.getMontant().toBigInteger().toString());
+        if (request.getAutorisationModificationMontant() != null) {
+            p.put("autorisationModificationMontant",
+                    Boolean.toString(request.getAutorisationModificationMontant()));
+        }
+        if (request.getMontantRemisePaiementImmediat() != null) {
+            p.put("montantRemisePaiementImmediat",
+                    request.getMontantRemisePaiementImmediat().toBigInteger().toString());
+        }
+        if (request.getTauxRemisePaiementImmediat() != null) {
+            p.put("tauxRemisePaiementImmediat",
+                    request.getTauxRemisePaiementImmediat().toBigInteger().toString());
+        }
+
+        // Mandate (optional).
+        putIfNotBlank(p, "identifiantMandat", request.getIdentifiantMandat());
+        putIfNotBlank(p, "signatureNumeriqueMandat", request.getSignatureNumeriqueMandat());
+
+        // Payeur party — flat fields (resolved).
+        ClientInfo payeurInfo = payeur.clientInfo();
+        p.put("nomClientPayeur", payeurInfo.getNom());
+        p.put("typeClientPayeur", payeurInfo.getTypeClient().name());
+        putIfNotBlank(p, "villeClientPayeur", payeurInfo.getVille());
+        putIfNotBlank(p, "adresseClientPayeur", payeurInfo.getAdresse());
+        putIfNotBlank(p, "numeroIdentificationClientPayeur", payeurInfo.getIdentifiant());
+        if (payeurInfo.getTypeIdentifiant() != null) {
+            p.put("systemeIdentificationClientPayeur", payeurInfo.getTypeIdentifiant().name());
+        }
+        putIfNotBlank(p, "dateNaissanceClientPayeur", payeurInfo.getDateNaissance());
+        putIfNotBlank(p, "villeNaissanceClientPayeur", payeurInfo.getLieuNaissance());
+        putIfNotBlank(p, "paysNaissanceClientPayeur", payeurInfo.getPaysNaissance());
+        putIfNotBlank(p, "paysClientPayeur", payeurInfo.getPays());
+        putIfNotBlank(p, "otherClientPayeur", payeur.other());
+        p.put("typeCompteClientPayeur", payeur.typeCompte().name());
+        p.put("deviseCompteClientPayeur", "XOF");
+        putIfNotBlank(p, "aliasClientPayeur", payeur.aliasValue());
+        putIfNotBlank(p, "codeMembreParticipantPayeur", payeur.codeMembre());
+        putIfNotBlank(p, "identificationFiscaleCommercantPayeur",
+                request.getIdentificationFiscaleCommercantPayeur());
+
+        // Payé party — flat fields (resolved).
+        ClientInfo payeInfo = paye.clientInfo();
+        p.put("nomClientPaye", payeInfo.getNom());
+        p.put("typeClientPaye", payeInfo.getTypeClient().name());
+        putIfNotBlank(p, "villeClientPaye", payeInfo.getVille());
+        putIfNotBlank(p, "latitudeClientPaye", request.getLatitudeClientPaye());
+        putIfNotBlank(p, "longitudeClientPaye", request.getLongitudeClientPaye());
+        putIfNotBlank(p, "adresseClientPaye", payeInfo.getAdresse());
+        putIfNotBlank(p, "numeroIdentificationClientPaye", payeInfo.getIdentifiant());
+        if (payeInfo.getTypeIdentifiant() != null) {
+            p.put("systemeIdentificationClientPaye", payeInfo.getTypeIdentifiant().name());
+        }
+        putIfNotBlank(p, "dateNaissanceClientPaye", payeInfo.getDateNaissance());
+        putIfNotBlank(p, "villeNaissanceClientPaye", payeInfo.getLieuNaissance());
+        putIfNotBlank(p, "paysNaissanceClientPaye", payeInfo.getPaysNaissance());
+        putIfNotBlank(p, "paysClientPaye", payeInfo.getPays());
+        putIfNotBlank(p, "otherClientPaye", paye.other());
+        p.put("typeCompteClientPaye", paye.typeCompte().name());
+        p.put("deviseCompteClientPaye", "XOF");
+        putIfNotBlank(p, "aliasClientPaye", paye.aliasValue());
+        putIfNotBlank(p, "identificationFiscaleCommercantPaye",
+                request.getIdentificationFiscaleCommercantPaye());
+
+        // Motif only — BCEAO pain.013 XSD places motif into RmtInf/Ustrd. The
+        // AIP maps montantAchat, typeDocumentReference and numeroDocumentReference
+        // into RmtInf/Strd, but RmtInf allows either Ustrd or Strd in a single
+        // message — never both. PI-SPI therefore omits the Strd-mapped fields
+        // from the outbound payload (same approach as TransferService for
+        // pacs.008). They remain captured on the entity for local reporting.
+        putIfNotBlank(p, "motif", request.getMotif());
+
+        // Retrait adjuncts don't collide with Strd/Ustrd — keep them as strings.
+        if (request.getMontantRetrait() != null) {
+            p.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
+        }
+        if (request.getFraisRetrait() != null) {
+            p.put("fraisRetrait", request.getFraisRetrait().toBigInteger().toString());
+        }
+
+        return p;
+    }
+
+    // =======================================================================
+    // Entity builder — persists the resolved flat BCEAO fields.
+    // =======================================================================
+
+    private PiRequestToPay buildEntity(String msgId,
+                                       String endToEndId,
+                                       String codeMembrePaye,
+                                       RequestToPayRequest request,
+                                       ResolvedClient payeur,
+                                       ResolvedClient paye) {
+        ClientInfo payeurInfo = payeur.clientInfo();
+        ClientInfo payeInfo = paye.clientInfo();
+
+        return PiRequestToPay.builder()
+                .msgId(msgId)
+                .endToEndId(endToEndId)
+                .identifiantDemandePaiement(request.getIdentifiantDemandePaiement())
+                .referenceBulk(request.getReferenceBulk())
+                .direction(MessageDirection.OUTBOUND)
+                .canalCommunication(request.getCanalCommunication())
+                .montant(request.getMontant())
+                .devise("XOF")
+                .dateHeureLimiteAction(parseDateTime(request.getDateHeureLimiteAction()))
+                // Payeur
+                .codeMembrePayeur(payeur.codeMembre())
+                .aliasClientPayeur(payeur.aliasValue())
+                .otherClientPayeur(payeur.other())
+                .numeroComptePayeur(payeur.other())
+                .typeComptePayeur(payeur.typeCompte())
+                .nomClientPayeur(payeurInfo.getNom())
+                .telephonePayeur(payeurInfo.getTelephone())
+                .typeClientPayeur(payeurInfo.getTypeClient())
+                .villeClientPayeur(payeurInfo.getVille())
+                .paysClientPayeur(payeurInfo.getPays())
+                .numeroIdentificationPayeur(payeurInfo.getIdentifiant())
+                .systemeIdentificationPayeur(payeurInfo.getTypeIdentifiant())
+                .dateNaissancePayeur(payeurInfo.getDateNaissance())
+                .villeNaissancePayeur(payeurInfo.getLieuNaissance())
+                .paysNaissancePayeur(payeurInfo.getPaysNaissance())
+                .identificationFiscalePayeur(request.getIdentificationFiscaleCommercantPayeur())
+                // Payé (this PI)
+                .codeMembrePaye(codeMembrePaye)
+                .aliasClientPaye(paye.aliasValue())
+                .otherClientPaye(paye.other())
+                .numeroComptePaye(paye.other())
+                .typeComptePaye(paye.typeCompte())
+                .nomClientPaye(payeInfo.getNom())
+                .telephonePaye(payeInfo.getTelephone())
+                .typeClientPaye(payeInfo.getTypeClient())
+                .villeClientPaye(payeInfo.getVille())
+                .paysClientPaye(payeInfo.getPays())
+                .numeroIdentificationPaye(payeInfo.getIdentifiant())
+                .systemeIdentificationPaye(payeInfo.getTypeIdentifiant())
+                .dateNaissancePaye(payeInfo.getDateNaissance())
+                .villeNaissancePaye(payeInfo.getLieuNaissance())
+                .paysNaissancePaye(payeInfo.getPaysNaissance())
+                .identificationFiscalePaye(request.getIdentificationFiscaleCommercantPaye())
+                .latitudeClientPaye(request.getLatitudeClientPaye())
+                .longitudeClientPaye(request.getLongitudeClientPaye())
+                // Transaction details
+                .motif(request.getMotif())
+                .typeDocumentReference(request.getTypeDocumentReference())
+                .numeroDocumentReference(request.getNumeroDocumentReference())
+                .autorisationModificationMontant(request.getAutorisationModificationMontant())
+                .statut(RtpStatus.PENDING)
+                .build();
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    /**
+     * Normalise {@code clientDemandeur} to a BCEAO-accepted value. The AIP only
+     * accepts {@code "X"} (payé as initiating party) or an {@code https://}
+     * URL. Anything else is coerced to {@code "X"} with a warning — the DTO
+     * validator already rejects other patterns, this is a last-line guard.
+     */
+    private static String resolveClientDemandeur(String input) {
+        if (input == null || input.isBlank()) return "X";
+        String trimmed = input.trim();
+        if ("X".equals(trimmed) || trimmed.startsWith("https://")) return trimmed;
+        log.warn("clientDemandeur [{}] does not match BCEAO InitgPty rule — coerced to 'X'", trimmed);
+        return "X";
+    }
+
+    private static void putIfNotBlank(Map<String, Object> map, String key, String value) {
+        if (notBlank(value)) map.put(key, value);
     }
 
     private RequestToPayResponse toResponse(PiRequestToPay rtp) {
@@ -184,5 +488,4 @@ public class RequestToPayService {
                 .createdAt(rtp.getCreatedAt() != null ? rtp.getCreatedAt().toString() : null)
                 .build();
     }
-
 }

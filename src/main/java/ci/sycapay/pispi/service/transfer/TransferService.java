@@ -2,28 +2,22 @@ package ci.sycapay.pispi.service.transfer;
 
 import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
-import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.transfer.TransferAcceptRejectRequest;
 import ci.sycapay.pispi.dto.transfer.TransferRequest;
 import ci.sycapay.pispi.dto.transfer.TransferResponse;
-import ci.sycapay.pispi.entity.PiMessageLog;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.CanalCommunication;
-import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.TransferStatus;
 import ci.sycapay.pispi.enums.TypeTransaction;
 import java.time.LocalDateTime;
-import ci.sycapay.pispi.enums.TypeClient;
-import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
-import ci.sycapay.pispi.repository.PiMessageLogRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
+import ci.sycapay.pispi.service.resolver.ClientSearchResolver;
+import ci.sycapay.pispi.service.resolver.ResolvedClient;
 import ci.sycapay.pispi.util.IdGenerator;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -44,11 +38,10 @@ import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
 public class TransferService {
 
     private final PiTransferRepository transferRepository;
-    private final PiMessageLogRepository messageLogRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
-    private final ObjectMapper objectMapper;
+    private final ClientSearchResolver clientSearchResolver;
 
     @Transactional
     public TransferResponse initiateTransfer(TransferRequest request) {
@@ -59,12 +52,12 @@ public class TransferService {
                     "Le montant réel du retrait doit être renseigné dans montantRetrait.");
         }
 
-        ResolvedClient payeur = resolveClientFromSearchLog(request.getEndToEndIdSearchPayeur(), "payeur");
+        ResolvedClient payeur = clientSearchResolver.resolve(request.getEndToEndIdSearchPayeur(), "payeur");
 
         // BCEAO rule: for DISP, payeur and paye must be the same person
         ResolvedClient paye = request.getTypeTransaction() == TypeTransaction.DISP
                 ? payeur
-                : resolveClientFromSearchLog(request.getEndToEndIdSearchPaye(), "paye");
+                : clientSearchResolver.resolve(request.getEndToEndIdSearchPaye(), "paye");
 
         validateLocalisationRules(request.getCanalCommunication(), request);
 
@@ -201,99 +194,6 @@ public class TransferService {
     }
 
     // -------------------------------------------------------------------------
-    // Client resolution
-    // -------------------------------------------------------------------------
-
-    private ResolvedClient resolveClientFromSearchLog(String endToEndIdSearch, String side) {
-        PiMessageLog entry = messageLogRepository
-                .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
-                        endToEndIdSearch, MessageDirection.INBOUND, IsoMessageType.RAC_SEARCH)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Résultat de recherche d'alias introuvable pour endToEndId", endToEndIdSearch));
-
-        Map<String, Object> data;
-        try {
-            data = objectMapper.readValue(entry.getPayload(), new TypeReference<>() {});
-        } catch (Exception e) {
-            throw new IllegalStateException("Impossible de lire le payload du log [endToEndId=" + endToEndIdSearch + "]", e);
-        }
-
-        String nom = getString(data, "nom");
-        String telephone = getString(data, "telephone");
-        String paysResidence = getString(data, "paysResidence");
-        String categorie = getString(data, "categorie");
-        String other = getString(data, "other");
-        String typeCompteStr = getString(data, "typeCompte");
-
-        if (nom == null || telephone == null || paysResidence == null || categorie == null
-                || other == null || typeCompteStr == null) {
-            throw new IllegalStateException(
-                    "Payload du résultat de recherche incomplet pour le " + side + " [endToEndId=" + endToEndIdSearch + "]");
-        }
-
-        TypeClient typeClient;
-        try {
-            typeClient = TypeClient.valueOf(categorie);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Catégorie client inconnue: " + categorie);
-        }
-
-        TypeCompte typeCompte;
-        try {
-            typeCompte = TypeCompte.valueOf(typeCompteStr);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Type de compte inconnu: " + typeCompteStr);
-        }
-
-        ClientInfo.ClientInfoBuilder builder = ClientInfo.builder()
-                .nom(nom)
-                .typeClient(typeClient)
-                .pays(paysResidence)
-                .telephone(telephone);
-
-        String genre = getString(data, "genre");
-        if (genre != null) builder.genre(genre);
-
-        String adresse = getString(data, "adresse");
-        if (adresse != null) builder.adresse(adresse);
-
-        String ville = getString(data, "ville");
-        if (ville != null) builder.ville(ville);
-
-        String dateNaissance = getString(data, "dateNaissance");
-        if (dateNaissance != null) builder.dateNaissance(dateNaissance);
-
-        String paysNaissance = getString(data, "paysNaissance");
-        if (paysNaissance != null) builder.paysNaissance(paysNaissance);
-
-        String villeNaissance = getString(data, "villeNaissance");
-        if (villeNaissance != null) builder.lieuNaissance(villeNaissance);
-
-        String nationalite = getString(data, "nationalite");
-        if (nationalite != null) builder.nationalite(nationalite);
-
-        String identificationNationale = getString(data, "identificationNationale");
-        if (identificationNationale != null) {
-            builder.identifiant(identificationNationale)
-                   .typeIdentifiant(CodeSystemeIdentification.NIDN);
-        }
-
-        String email = getString(data, "email");
-        if (email != null) builder.email(email);
-
-        String valeurAlias = getString(data, "valeurAlias");
-        String codeMembreParticipant = getString(data, "participant");
-
-        log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch);
-        return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias, codeMembreParticipant);
-    }
-
-    private static String getString(Map<String, Object> map, String key) {
-        Object val = map.get(key);
-        return val instanceof String s && !s.isBlank() ? s : null;
-    }
-
-    // -------------------------------------------------------------------------
     // PACS.008 payload builder
     // -------------------------------------------------------------------------
 
@@ -408,6 +308,4 @@ public class TransferService {
                 .build();
     }
 
-    /** Holds the resolved client data ready to use in the PACS.008 payload. */
-    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte, String aliasValue, String codeMembre) {}
 }

@@ -40,18 +40,14 @@ public class OpenApiConfig {
                         new Server().url("https://pi-spi.sycapay.ci").description("Production")))
                 .tags(List.of(
                         new Tag().name("Transfers").description("Initiate and manage credit transfers (PACS.008 / PACS.002 / PACS.028)"),
-                        new Tag().name("Identity Verification").description("Request and respond to account identity verifications (ACMT.023 / ACMT.024)"),
                         new Tag().name("Request to Pay").description("Create and manage Request-to-Pay operations (PAIN.013 / PAIN.014)"),
                         new Tag().name("Aliases").description("Manage account aliases in the RAC (creation, modification, deletion, search)"),
                         new Tag().name("Revendications").description("Manage alias ownership claim operations"),
-                        new Tag().name("Return Funds").description("Initiate, accept or reject return-of-funds requests (CAMT.056 / CAMT.029 / PACS.004)"),
                         new Tag().name("Participants").description("List and synchronise SPI participant directory (CAMT.013 / CAMT.014)"),
                         new Tag().name("Notifications").description("Connectivity test (ADMI.004) and notification history"),
                         new Tag().name("Reports").description("Request compensation, transaction and invoice reports (CAMT.060)"),
                         new Tag().name("Transfer Callbacks").description("AIP callbacks for inbound transfers and transfer results"),
-                        new Tag().name("Verification Callbacks").description("AIP callbacks for inbound identity verification requests"),
                         new Tag().name("RTP Callbacks").description("AIP callbacks for inbound Request-to-Pay messages"),
-                        new Tag().name("Return Funds Callbacks").description("AIP callbacks for inbound return-of-funds requests"),
                         new Tag().name("Report Callbacks").description("AIP callbacks delivering compensation and guarantee report data"),
                         new Tag().name("Notification Callbacks").description("AIP callbacks for system notifications and connectivity events")));
     }
@@ -61,16 +57,32 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("outbound")
                 .displayName("Outbound — PI to AIP")
-                .pathsToMatch("/api/v1/**")
+                .packagesToScan("ci.sycapay.pispi.controller.outbound")
                 .build();
     }
 
     @Bean
     public GroupedOpenApi callbackApi() {
+        // Callback controllers live under a single package but use the BCEAO-defined
+        // root paths (/transferts, /demandes-paiements, /verifications-identites,
+        // /retour-fonds, /rapports/*, /notifications/*, /revendications/*, etc.) —
+        // a single pathsToMatch pattern can't capture them all, so group by package.
         return GroupedOpenApi.builder()
                 .group("callbacks")
                 .displayName("Callbacks — AIP to PI")
-                .pathsToMatch("/api/pi/**")
+                .packagesToScan("ci.sycapay.pispi.controller.callback")
+                .build();
+    }
+
+    @Bean
+    public GroupedOpenApi allApi() {
+        // Catch-all group so the default Swagger UI view ("all") shows every endpoint
+        // and every referenced DTO in a single page — useful when hunting for a
+        // specific schema name.
+        return GroupedOpenApi.builder()
+                .group("all")
+                .displayName("All endpoints")
+                .packagesToScan("ci.sycapay.pispi.controller")
                 .build();
     }
 }

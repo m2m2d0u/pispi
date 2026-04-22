@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
@@ -17,8 +19,15 @@ public final class DateTimeUtil {
     private DateTimeUtil() {
     }
 
+    /**
+     * Current UTC timestamp formatted to match the BCEAO/ISO-20022 strict pattern
+     * {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}. We cannot use {@link Instant#toString()}
+     * here because it omits trailing-zero millis (e.g. {@code 2026-04-22T18:39:29Z}
+     * instead of {@code 2026-04-22T18:39:29.000Z}), which the BCEAO pain.013 /
+     * pacs.008 XSDs reject.
+     */
     public static String nowIso() {
-        return Instant.now().truncatedTo(ChronoUnit.MILLIS).toString();
+        return ISO_INSTANT_MILLIS.format(Instant.now().truncatedTo(ChronoUnit.MILLIS));
     }
 
     public static String nowCompact() {
@@ -67,5 +76,38 @@ public final class DateTimeUtil {
             return null;
         }
         return date.format(DateTimeFormatter.ISO_DATE);
+    }
+
+    /** Strict BCEAO/ISO-20022 timestamp pattern (UTC, mandatory millisecond precision). */
+    private static final DateTimeFormatter ISO_INSTANT_MILLIS =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC);
+
+    /**
+     * Normalise an ISO-8601 timestamp to {@code yyyy-MM-dd'T'HH:mm:ss.SSS'Z'}.
+     *
+     * <p>The BCEAO pain.013 / pacs.008 XSDs reject {@code DtTm} without
+     * millisecond precision (pattern
+     * {@code \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z}). This helper accepts
+     * inputs with or without fractional seconds and any zone offset, returns
+     * UTC with {@code .SSS} always present.
+     *
+     * <p>Returns {@code null} for blank input and passes the original string
+     * through unchanged if it cannot be parsed, so callers can at least
+     * surface the problem in the outbound payload instead of silently dropping.
+     */
+    public static String normaliseIsoInstantMillis(String input) {
+        if (input == null || input.isBlank()) return null;
+        try {
+            Instant instant = Instant.parse(input).truncatedTo(ChronoUnit.MILLIS);
+            return ISO_INSTANT_MILLIS.format(instant);
+        } catch (Exception ignored) {
+            try {
+                Instant instant = OffsetDateTime.parse(input).toInstant().truncatedTo(ChronoUnit.MILLIS);
+                return ISO_INSTANT_MILLIS.format(instant);
+            } catch (Exception e) {
+                log.warn("Failed to normalise ISO instant [{}], passing through as-is", input);
+                return input;
+            }
+        }
     }
 }

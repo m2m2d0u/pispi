@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RetourFondsDemandeCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RetourFondsRejetCallbackPayload;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -24,6 +25,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * Hidden from OpenAPI/Swagger for indirect-participant deployments — the
+ * return-of-funds flow runs between settlement accounts that indirect
+ * participants (EMEs) do not hold at the central bank.
+ */
+@Hidden
 @Tag(name = "Return Funds Callbacks")
 @Slf4j
 @RestController

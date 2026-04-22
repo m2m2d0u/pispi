@@ -9,24 +9,36 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "sycapay.pi-spi")
 public class PiSpiProperties {
 
+    /**
+     * The registered participant code for this PI-SPI. Used as the sender
+     * identity in every outbound {@code msgId} (BCEAO pattern allows types
+     * {@code [BCDEF]}, so EMEs can be message senders).
+     *
+     * <p>When {@code codeMembre} is an EME (type {@code E}), outbound messages
+     * whose BCEAO schema restricts the {@code endToEndId} participant type to
+     * {@code [BCDF]} (ACMT.023 {@code Identite}, PAIN.013
+     * {@code DemandePaiement}) cannot carry this code in the endToEndId — a
+     * {@link #codeMembreSponsor sponsoring direct-participant code} must be
+     * configured instead.
+     */
     private String codeMembre;
 
     /**
-     * Optional code membre used to generate the {@code endToEndId} of outbound
-     * ACMT.023 identity verification requests. Falls back to {@link #codeMembre}
-     * when null/blank.
+     * Optional code membre of the sponsoring direct participant (bank, caisse —
+     * types {@code B|C|D|F}). Used exclusively to populate the
+     * {@code endToEndId} of outbound messages whose BCEAO schema requires a
+     * direct-participant identity at that position (currently ACMT.023
+     * {@code Identite} and PAIN.013 {@code DemandePaiement}).
      *
-     * <p>The BCEAO {@code Identite} schema restricts the verification
-     * {@code endToEndId} to participant types {@code [BCDF]} (see
-     * documentation/interface-participant-openapi.json, ~line 790). An EME
-     * ({@code [E]}) PI therefore cannot directly initiate an ACMT.023 — set this
-     * property to a non-EME proxy code (e.g. {@code CIB002}) to bypass the AIP
-     * pattern check on the endToEndId.
+     * <p>The {@code msgId} always uses {@link #codeMembre} because the BCEAO
+     * pattern there accepts the sender's real identity (including type
+     * {@code E}).
      *
-     * <p>The {@code msgId} always uses {@link #codeMembre} because the AIP
-     * enforces that {@code BizMsgIdr} starts with {@code M<real-codeMembre>}.
+     * <p>Falls back to {@link #codeMembre} when blank. Services validate the
+     * resolved code's participant type and reject initiation with a 400 when
+     * it is not {@code [BCDF]}.
      */
-    private String codeMembreVerification;
+    private String codeMembreSponsor;
 
     private String webhookUrl;
     private String aipBaseUrl;
@@ -34,13 +46,12 @@ public class PiSpiProperties {
     private String apiVersion = "1";
 
     /**
-     * Returns {@link #codeMembreVerification} when set; otherwise falls back to
-     * {@link #codeMembre}. Used by the identity verification service to generate
-     * ACMT.023 identifiers.
+     * Resolve the sponsor code used in the {@code endToEndId}:
+     * {@link #codeMembreSponsor} when set, otherwise {@link #codeMembre}.
      */
-    public String resolveCodeMembreVerification() {
-        return (codeMembreVerification != null && !codeMembreVerification.isBlank())
-                ? codeMembreVerification
+    public String resolveCodeMembreSponsor() {
+        return (codeMembreSponsor != null && !codeMembreSponsor.isBlank())
+                ? codeMembreSponsor
                 : codeMembre;
     }
 
