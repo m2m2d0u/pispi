@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +30,11 @@ public class IdentityVerificationService {
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
 
+    /**
+     * Initiate an ACMT.023 identity verification request against another participant.
+     * Builds the BCEAO {@code Identite} payload — only msgId, endToEndId,
+     * codeMembreParticipant, and one of ibanClient/otherClient.
+     */
     @Transactional
     public IdentityVerificationResponse requestVerification(IdentityVerificationRequest request) {
         String codeMembre = properties.getCodeMembre();
@@ -38,25 +44,26 @@ public class IdentityVerificationService {
         Map<String, Object> acmt023 = new HashMap<>();
         acmt023.put("msgId", msgId);
         acmt023.put("endToEndId", endToEndId);
-        acmt023.put("codeMembreParticipantPayeur", codeMembre);
-        acmt023.put("codeMembreParticipantPaye", request.getCodeMembreParticipantPaye());
-        acmt023.put("numeroCompteClientPaye", request.getNumeroCompteClientPaye());
-        acmt023.put("typeCompteClientPaye", request.getTypeCompteClientPaye().name());
-        if (request.getNomClientPaye() != null) acmt023.put("nomClientPaye", request.getNomClientPaye());
-        if (request.getPrenomClientPaye() != null) acmt023.put("prenomClientPaye", request.getPrenomClientPaye());
+        acmt023.put("codeMembreParticipant", request.getCodeMembreParticipant());
+        if (request.getIbanClient() != null && !request.getIbanClient().isBlank()) {
+            acmt023.put("ibanClient", request.getIbanClient());
+        }
+        if (request.getOtherClient() != null && !request.getOtherClient().isBlank()) {
+            acmt023.put("otherClient", request.getOtherClient());
+        }
 
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023, MessageDirection.OUTBOUND, acmt023, null, null);
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_023,
+                MessageDirection.OUTBOUND, acmt023, null, null);
 
         PiIdentityVerification verification = PiIdentityVerification.builder()
                 .msgId(msgId)
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.OUTBOUND)
                 .codeMembrePayeur(codeMembre)
-                .codeMembrePaye(request.getCodeMembreParticipantPaye())
-                .numeroComptePaye(request.getNumeroCompteClientPaye())
-                .typeComptePaye(request.getTypeCompteClientPaye())
-                .nomClientPaye(request.getNomClientPaye())
-                .prenomClientPaye(request.getPrenomClientPaye())
+                .codeMembrePaye(request.getCodeMembreParticipant())
+                .codeMembreParticipant(request.getCodeMembreParticipant())
+                .ibanClient(request.getIbanClient())
+                .otherClient(request.getOtherClient())
                 .statut(VerificationStatus.PENDING)
                 .build();
         repository.save(verification);
@@ -72,8 +79,14 @@ public class IdentityVerificationService {
         return toResponse(v);
     }
 
+    /**
+     * Respond to an inbound ACMT.023 by emitting an ACMT.024 IdentiteReponse.
+     * When {@code resultatVerification} is true, populate the full client
+     * identity block; when false, include only {@code codeRaison}.
+     */
     @Transactional
-    public IdentityVerificationResponse respond(String endToEndId, IdentityVerificationRespondRequest request) {
+    public IdentityVerificationResponse respond(String endToEndId,
+                                                IdentityVerificationRespondRequest request) {
         PiIdentityVerification v = repository.findByEndToEndId(endToEndId)
                 .orElseThrow(() -> new ResourceNotFoundException("Verification", endToEndId));
 
@@ -84,19 +97,74 @@ public class IdentityVerificationService {
         acmt024.put("msgId", msgId);
         acmt024.put("msgIdDemande", v.getMsgId());
         acmt024.put("endToEndId", endToEndId);
-        acmt024.put("resultatVerification", request.getResultatVerification());
-        if (request.getCodeRaison() != null) acmt024.put("codeRaison", request.getCodeRaison());
+        acmt024.put("codeMembreParticipant", codeMembre);
+        acmt024.put("resultatVerification", Boolean.TRUE.equals(request.getResultatVerification()) ? "true" : "false");
 
-        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024, MessageDirection.OUTBOUND, acmt024, null, null);
+        if (Boolean.TRUE.equals(request.getResultatVerification())) {
+            putIfNotBlank(acmt024, "ibanClient", request.getIbanClient());
+            putIfNotBlank(acmt024, "otherClient", request.getOtherClient());
+            if (request.getTypeCompte() != null) acmt024.put("typeCompte", request.getTypeCompte().name());
+            if (request.getTypeClient() != null) acmt024.put("typeClient", request.getTypeClient().name());
+            putIfNotBlank(acmt024, "nomClient", request.getNomClient());
+            putIfNotBlank(acmt024, "villeClient", request.getVilleClient());
+            putIfNotBlank(acmt024, "adresseComplete", request.getAdresseComplete());
+            putIfNotBlank(acmt024, "numeroIdentification", request.getNumeroIdentification());
+            if (request.getSystemeIdentification() != null) {
+                acmt024.put("systemeIdentification", request.getSystemeIdentification().name());
+            }
+            putIfNotBlank(acmt024, "numeroRCCMClient", request.getNumeroRCCMClient());
+            putIfNotBlank(acmt024, "identificationFiscaleCommercant", request.getIdentificationFiscaleCommercant());
+            putIfNotBlank(acmt024, "dateNaissance", request.getDateNaissance());
+            putIfNotBlank(acmt024, "villeNaissance", request.getVilleNaissance());
+            putIfNotBlank(acmt024, "paysNaissance", request.getPaysNaissance());
+            putIfNotBlank(acmt024, "paysResidence", request.getPaysResidence());
+            putIfNotBlank(acmt024, "devise", request.getDevise() != null ? request.getDevise() : "XOF");
+        } else {
+            putIfNotBlank(acmt024, "codeRaison", request.getCodeRaison());
+        }
+
+        messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024,
+                MessageDirection.OUTBOUND, acmt024, null, null);
         aipClient.post("/verifications-identites/reponses", acmt024);
 
+        // Persist result and all rich client info locally
         v.setResultatVerification(request.getResultatVerification());
         v.setCodeRaison(request.getCodeRaison());
         v.setMsgIdReponse(msgId);
-        v.setStatut(request.getResultatVerification() ? VerificationStatus.VERIFIED : VerificationStatus.FAILED);
+        if (Boolean.TRUE.equals(request.getResultatVerification())) {
+            if (notBlank(request.getIbanClient())) v.setIbanClient(request.getIbanClient());
+            if (notBlank(request.getOtherClient())) v.setOtherClient(request.getOtherClient());
+            v.setTypeCompte(request.getTypeCompte());
+            v.setTypeClient(request.getTypeClient());
+            v.setNomClient(request.getNomClient());
+            v.setVilleClient(request.getVilleClient());
+            v.setAdresseComplete(request.getAdresseComplete());
+            v.setNumeroIdentification(request.getNumeroIdentification());
+            v.setSystemeIdentification(request.getSystemeIdentification());
+            v.setNumeroRCCMClient(request.getNumeroRCCMClient());
+            v.setIdentificationFiscaleCommercant(request.getIdentificationFiscaleCommercant());
+            if (notBlank(request.getDateNaissance())) {
+                v.setDateNaissance(LocalDate.parse(request.getDateNaissance()));
+            }
+            v.setVilleNaissance(request.getVilleNaissance());
+            v.setPaysNaissance(request.getPaysNaissance());
+            v.setPaysResidence(request.getPaysResidence());
+            v.setDevise(request.getDevise() != null ? request.getDevise() : "XOF");
+        }
+        v.setStatut(Boolean.TRUE.equals(request.getResultatVerification())
+                ? VerificationStatus.VERIFIED
+                : VerificationStatus.FAILED);
         repository.save(v);
 
         return toResponse(v);
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
+
+    private static void putIfNotBlank(Map<String, Object> map, String key, String value) {
+        if (notBlank(value)) map.put(key, value);
     }
 
     private IdentityVerificationResponse toResponse(PiIdentityVerification v) {
@@ -104,8 +172,25 @@ public class IdentityVerificationService {
                 .endToEndId(v.getEndToEndId())
                 .msgId(v.getMsgId())
                 .statut(v.getStatut())
+                .codeMembreParticipant(v.getCodeMembreParticipant())
+                .ibanClient(v.getIbanClient())
+                .otherClient(v.getOtherClient())
                 .resultatVerification(v.getResultatVerification())
                 .codeRaison(v.getCodeRaison())
+                .typeCompte(v.getTypeCompte())
+                .typeClient(v.getTypeClient())
+                .nomClient(v.getNomClient())
+                .villeClient(v.getVilleClient())
+                .adresseComplete(v.getAdresseComplete())
+                .numeroIdentification(v.getNumeroIdentification())
+                .systemeIdentification(v.getSystemeIdentification())
+                .numeroRCCMClient(v.getNumeroRCCMClient())
+                .identificationFiscaleCommercant(v.getIdentificationFiscaleCommercant())
+                .dateNaissance(v.getDateNaissance() != null ? v.getDateNaissance().toString() : null)
+                .villeNaissance(v.getVilleNaissance())
+                .paysNaissance(v.getPaysNaissance())
+                .paysResidence(v.getPaysResidence())
+                .devise(v.getDevise())
                 .createdAt(v.getCreatedAt() != null ? v.getCreatedAt().toString() : null)
                 .build();
     }

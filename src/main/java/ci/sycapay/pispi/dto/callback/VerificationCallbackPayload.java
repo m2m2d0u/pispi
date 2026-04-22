@@ -3,31 +3,30 @@ package ci.sycapay.pispi.dto.callback;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+/**
+ * Inbound identity verification request payload (ACMT.023 — schéma BCEAO {@code Identite}).
+ * Poussé par l'AIP lorsqu'un autre participant demande la vérification d'un compte détenu
+ * chez ce PI.
+ */
 @Data
-@Schema(description = "Inbound identity verification request payload (ACMT.023) pushed by the AIP")
+@Schema(description = "Inbound ACMT.023 — BCEAO Identite schema")
 public class VerificationCallbackPayload {
 
-    @Schema(description = "Unique message identifier", example = "MCIE001XJWVERIF00001")
+    @Schema(description = "Identifiant unique du message.", example = "MCIE001XJWVERIF00001")
     private String msgId;
 
-    @Schema(description = "End-to-end identifier", example = "E2EMCIE001XJVERIF001")
+    @Schema(description = "Identifiant bout-en-bout.", example = "ECIE001XJWE2E00001VERIF000000001")
     private String endToEndId;
 
-    @Schema(description = "Member code of the requesting participant", example = "CIE001")
-    private String codeMembreParticipantPayeur;
+    @Schema(description = "Code du participant détenteur du compte à vérifier (ce PI).",
+            example = "CIE002")
+    private String codeMembreParticipant;
 
-    @Schema(description = "Member code of this PI (the verifying participant)", example = "CIE002")
-    private String codeMembreParticipantPaye;
+    @Schema(description = "IBAN du compte à vérifier (banques). Exclusif avec otherClient.",
+            example = "CI05CI12345678901234567890123")
+    private String ibanClient;
 
-    @Schema(description = "Account number to verify", example = "CI001234567890")
-    private String numeroCompteClientPaye;
-
-    @Schema(description = "Account type (e.g. CACC, SVGS, MOMA)", example = "CACC")
-    private String typeCompteClientPaye;
-
-    @Schema(description = "Expected last name of the account holder", example = "Koné")
-    private String nomClientPaye;
-
-    @Schema(description = "Expected first name of the account holder", example = "Fatou")
-    private String prenomClientPaye;
+    @Schema(description = "Autre identifiant du compte à vérifier (ex. téléphone pour EME). "
+            + "Exclusif avec ibanClient.", example = "+2250707077777")
+    private String otherClient;
 }
