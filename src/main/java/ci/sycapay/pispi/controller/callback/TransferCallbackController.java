@@ -22,6 +22,8 @@ import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.time.LocalDateTime;
+
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Tag(name = "Transfer Callbacks")
@@ -56,6 +58,9 @@ public class TransferCallbackController {
                 .canalCommunication(CanalCommunication.fromCode((String) payload.get("canalCommunication")))
                 .nomClientPayeur((String) payload.get("nomClientPayeur"))
                 .nomClientPaye((String) payload.get("nomClientPaye"))
+                .dateHeureExecution(parseDateTime(payload.get("dateHeureAcceptation")) != null
+                        ? parseDateTime(payload.get("dateHeureAcceptation"))
+                        : LocalDateTime.now())
                 .statut(TransferStatus.PEND)
                 .build();
         transferRepository.save(transfer);

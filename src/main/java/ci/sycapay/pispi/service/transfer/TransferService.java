@@ -61,7 +61,10 @@ public class TransferService {
         }
 
         ResolvedClient payeur = resolveClientFromSearchLog(request.getEndToEndIdSearchPayeur(), "payeur");
-        ResolvedClient paye = resolveClientFromCodification(request.getCodificationPaye(), "paye");
+        // BCEAO rule: for DISP, payeur and paye must be the same person
+        ResolvedClient paye = request.getTypeTransaction() == TypeTransaction.DISP
+                ? payeur
+                : resolveClientFromCodification(request.getCodificationPaye(), "paye");
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -190,7 +193,7 @@ public class TransferService {
         if (alias.getEmail() != null) builder.email(alias.getEmail());
 
         log.info("Client {} résolu depuis la codification [{}]", side, codification);
-        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte());
+        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte(), alias.getAliasValue());
     }
 
     private ResolvedClient resolveClientFromSearchLog(String endToEndIdSearch, String side) {
@@ -270,8 +273,10 @@ public class TransferService {
         String email = getString(data, "email");
         if (email != null) builder.email(email);
 
+        String valeurAlias = getString(data, "valeurAlias");
+
         log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch); // NOSONAR — log is the Slf4j logger here
-        return new ResolvedClient(builder.build(), other, typeCompte);
+        return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias);
     }
 
     private static String getString(Map<String, Object> map, String key) {
@@ -326,8 +331,8 @@ public class TransferService {
             payload.put("systemeIdentificationClientPayeur", payeur.clientInfo().getTypeIdentifiant().name());
         if (payeur.clientInfo().getIdentifiant() != null)
             payload.put("numeroIdentificationClientPayeur", payeur.clientInfo().getIdentifiant());
-        if (request.getAliasClientPayeur() != null)
-            payload.put("aliasClientPayeur", request.getAliasClientPayeur());
+        if (payeur.aliasValue() != null)
+            payload.put("aliasClientPayeur", payeur.aliasValue());
 
         // Payé — required
         payload.put("nomClientPaye", paye.clientInfo().getNom());
@@ -353,8 +358,8 @@ public class TransferService {
             payload.put("systemeIdentificationClientPaye", paye.clientInfo().getTypeIdentifiant().name());
         if (paye.clientInfo().getIdentifiant() != null)
             payload.put("numeroIdentificationClientPaye", paye.clientInfo().getIdentifiant());
-        if (request.getAliasClientPaye() != null)
-            payload.put("aliasClientPaye", request.getAliasClientPaye());
+        if (paye.aliasValue() != null)
+            payload.put("aliasClientPaye", paye.aliasValue());
 
         // Optional transfer fields
         if (request.getTypeTransaction() != null)
@@ -398,5 +403,5 @@ public class TransferService {
     }
 
     /** Holds the resolved client data ready to use in the PACS.008 payload. */
-    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte) {}
+    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte, String aliasValue) {}
 }

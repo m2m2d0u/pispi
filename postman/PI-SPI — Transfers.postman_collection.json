@@ -23,7 +23,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"SNB001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Transfert familial\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"SNB001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"motif\": \"Transfert familial\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -79,7 +79,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"codeMembreParticipantPaye\": \"CIE002\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"aliasClientPaye\": \"5411001\",\n  \"motif\": \"Paiement via QR code\",\n  \"montantAchat\": 7500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"codeMembreParticipantPaye\": \"CIE002\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"montantAchat\": 7500\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,7 +91,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transfers"]
             },
-            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`).\n\n**aliasClientPaye** : code MCOD du marchand — renseigné lorsque le paiement est initié via l'alias du bénéficiaire (mappé vers `aliasClientPaye` dans le payload AIP). Complémentaire à `codificationPaye` qui identifie l'alias en base."
+            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne."
           },
           "response": []
         },
@@ -135,7 +135,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
               "options": {
                 "raw": {
                   "language": "json"

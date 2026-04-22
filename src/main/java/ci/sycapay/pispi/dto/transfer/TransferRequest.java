@@ -3,6 +3,7 @@ package ci.sycapay.pispi.dto.transfer;
 import ci.sycapay.pispi.dto.common.DocumentInfo;
 import ci.sycapay.pispi.enums.CanalCommunication;
 import ci.sycapay.pispi.enums.TypeTransaction;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
@@ -34,13 +35,12 @@ public class TransferRequest {
     @NotBlank
     private String endToEndIdSearchPayeur;
 
-    /** Codification interne de l'alias du payé (ex: CIE002-MB-20260422-00001). */
-    @NotBlank @Size(max = 30)
+    /**
+     * Codification interne de l'alias du payé (ex: CIE002-MB-20260422-00001).
+     * Non requis pour DISP : le payeur et le payé sont la même personne.
+     */
+    @Size(max = 30)
     private String codificationPaye;
-
-    // Optional alias identifiers (when transfer is alias-based)
-    private String aliasClientPayeur;
-    private String aliasClientPaye;
 
     @Size(max = 140)
     private String motif;
@@ -57,4 +57,11 @@ public class TransferRequest {
     private BigDecimal montantAchat;
     private BigDecimal montantRetrait;
     private BigDecimal fraisRetrait;
+
+    @JsonIgnore
+    @AssertTrue(message = "codificationPaye est requis pour les virements non-DISP")
+    public boolean isCodificationPayeRequiredForNonDisp() {
+        if (typeTransaction == TypeTransaction.DISP) return true;
+        return codificationPaye != null && !codificationPaye.isBlank();
+    }
 }
