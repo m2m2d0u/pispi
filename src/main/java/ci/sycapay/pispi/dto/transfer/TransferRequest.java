@@ -33,11 +33,11 @@ public class TransferRequest {
     private String endToEndIdSearchPayeur;
 
     /**
-     * Codification interne de l'alias du payé (ex: CIE002-MB-20260422-00001).
+     * endToEndId d'une recherche d'alias (RAC_SEARCH) inbound pour le payé.
      * Non requis pour DISP : le payeur et le payé sont la même personne.
      */
-    @Size(max = 30)
-    private String codificationPaye;
+    @Size(max = 140)
+    private String endToEndIdSearchPaye;
 
     @Size(max = 140)
     private String motif;
@@ -64,9 +64,9 @@ public class TransferRequest {
     private BigDecimal fraisRetrait;
 
     @JsonIgnore
-    @AssertTrue(message = "codificationPaye est requis pour les virements non-DISP")
-    public boolean isCodificationPayeRequiredForNonDisp() {
+    @AssertTrue(message = "endToEndIdSearchPaye est requis pour les virements non-DISP")
+    public boolean isEndToEndIdSearchPayeRequiredForNonDisp() {
         if (typeTransaction == TypeTransaction.DISP) return true;
-        return codificationPaye != null && !codificationPaye.isBlank();
+        return endToEndIdSearchPaye != null && !endToEndIdSearchPaye.isBlank();
     }
 }

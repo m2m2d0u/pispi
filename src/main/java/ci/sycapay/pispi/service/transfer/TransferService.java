@@ -6,7 +6,6 @@ import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.transfer.TransferAcceptRejectRequest;
 import ci.sycapay.pispi.dto.transfer.TransferRequest;
 import ci.sycapay.pispi.dto.transfer.TransferResponse;
-import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.entity.PiMessageLog;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.CanalCommunication;
@@ -19,7 +18,6 @@ import java.time.LocalDateTime;
 import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
-import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.repository.PiMessageLogRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -47,7 +45,6 @@ public class TransferService {
 
     private final PiTransferRepository transferRepository;
     private final PiMessageLogRepository messageLogRepository;
-    private final PiAliasRepository aliasRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
@@ -67,7 +64,7 @@ public class TransferService {
         // BCEAO rule: for DISP, payeur and paye must be the same person
         ResolvedClient paye = request.getTypeTransaction() == TypeTransaction.DISP
                 ? payeur
-                : resolveClientFromCodification(request.getCodificationPaye(), "paye");
+                : resolveClientFromSearchLog(request.getEndToEndIdSearchPaye(), "paye");
 
         validateLocalisationRules(request.getCanalCommunication(), request);
 
@@ -206,37 +203,6 @@ public class TransferService {
     // -------------------------------------------------------------------------
     // Client resolution
     // -------------------------------------------------------------------------
-
-    private ResolvedClient resolveClientFromCodification(String codification, String side) {
-        PiAlias alias = aliasRepository.findByCodification(codification)
-                .orElseThrow(() -> new ResourceNotFoundException("Alias", codification));
-
-        if (alias.getNumeroCompte() == null || alias.getTypeCompte() == null) {
-            throw new IllegalStateException(
-                    "Alias " + codification + " incomplet : numeroCompte ou typeCompte manquant");
-        }
-
-        ClientInfo.ClientInfoBuilder builder = ClientInfo.builder()
-                .nom(alias.getNom())
-                .typeClient(alias.getTypeClient())
-                .pays(alias.getPays())
-                .telephone(alias.getTelephone());
-
-        if (alias.getNationalite() != null) builder.nationalite(alias.getNationalite());
-        if (alias.getAdresse() != null) builder.adresse(alias.getAdresse());
-        if (alias.getVille() != null) builder.ville(alias.getVille());
-        if (alias.getDateNaissance() != null) builder.dateNaissance(alias.getDateNaissance().toString());
-        if (alias.getLieuNaissance() != null) builder.lieuNaissance(alias.getLieuNaissance());
-        if (alias.getPaysNaissance() != null) builder.paysNaissance(alias.getPaysNaissance());
-        if (alias.getIdentifiant() != null) {
-            builder.identifiant(alias.getIdentifiant())
-                   .typeIdentifiant(alias.getTypeIdentifiant());
-        }
-        if (alias.getEmail() != null) builder.email(alias.getEmail());
-
-        log.info("Client {} résolu depuis la codification [{}]", side, codification);
-        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte(), alias.getAliasValue(), alias.getCodeMembreParticipant());
-    }
 
     private ResolvedClient resolveClientFromSearchLog(String endToEndIdSearch, String side) {
         PiMessageLog entry = messageLogRepository
