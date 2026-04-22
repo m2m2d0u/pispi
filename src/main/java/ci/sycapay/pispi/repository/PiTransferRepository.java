@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface PiTransferRepository extends JpaRepository<PiTransfer, Long> {
 
-    Optional<PiTransfer> findByEndToEndId(String endToEndId);
+    Optional<PiTransfer> findByEndToEndIdAndDirection(String endToEndId, MessageDirection direction);
 
     Optional<PiTransfer> findByMsgId(String msgId);
 

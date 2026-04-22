@@ -111,7 +111,7 @@ public class TransferService {
     }
 
     public TransferResponse getTransfer(String endToEndId) {
-        PiTransfer transfer = transferRepository.findByEndToEndId(endToEndId)
+        PiTransfer transfer = transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Transfer", endToEndId));
         return toResponse(transfer);
     }
@@ -123,7 +123,7 @@ public class TransferService {
 
     @Transactional
     public TransferResponse acceptOrReject(String endToEndId, TransferAcceptRejectRequest request) {
-        PiTransfer transfer = transferRepository.findByEndToEndId(endToEndId)
+        PiTransfer transfer = transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Transfer", endToEndId));
 
         String codeMembre = properties.getCodeMembre();

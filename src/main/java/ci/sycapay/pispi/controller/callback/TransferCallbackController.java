@@ -49,6 +49,12 @@ public class TransferCallbackController {
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 202, null);
 
+        // If we already have an outbound row for this endToEndId it's an echo of our own DISP — no new record needed.
+        if (transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).isPresent()) {
+            webhookService.notify(WebhookEventType.TRANSFER_RECEIVED, endToEndId, msgId, payload);
+            return ResponseEntity.accepted().build();
+        }
+
         String typeComptePayeurStr = (String) payload.get("typeCompteClientPayeur");
         String typeClientPayeurStr = (String) payload.get("typeClientPayeur");
         String typeComptePayeStr   = (String) payload.get("typeCompteClientPaye");
@@ -97,7 +103,7 @@ public class TransferCallbackController {
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 202, null);
 
-        transferRepository.findByEndToEndId(endToEndId).ifPresent(transfer -> {
+        transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(transfer -> {
             String statut = (String) payload.get("statutTransaction");
             transfer.setStatut(TransferStatus.valueOf(statut));
             transfer.setCodeRaison((String) payload.get("codeRaison"));
