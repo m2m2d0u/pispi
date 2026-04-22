@@ -38,6 +38,10 @@ public class PiAliasRevendication {
     @Column(name = "statut", nullable = false)
     private StatutRevendication statut;
 
+    @Column(name = "verrouille", nullable = false)
+    @Builder.Default
+    private boolean verrouille = false;
+
     @Column(name = "date_action")
     private LocalDateTime dateAction;
 

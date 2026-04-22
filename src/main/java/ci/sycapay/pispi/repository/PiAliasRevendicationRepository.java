@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface PiAliasRevendicationRepository extends JpaRepository<PiAliasRevendication, Long> {
 
     Optional<PiAliasRevendication> findByIdentifiantRevendication(String identifiantRevendication);
+
+    Optional<PiAliasRevendication> findByAliasValue(String aliasValue);
 }

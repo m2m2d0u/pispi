@@ -65,7 +65,7 @@ public class MiscCallbackController {
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 202, null);
 
         // Process callback: update or create alias with data from PI-RAC
-        aliasCallbackService.processSearchResponse(payload);
+//        aliasCallbackService.processSearchResponse(payload);
 
         return ResponseEntity.accepted().build();
     }

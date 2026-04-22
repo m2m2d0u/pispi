@@ -8,10 +8,10 @@ import ci.sycapay.pispi.repository.PiGuaranteeRepository;
 import ci.sycapay.pispi.repository.PiNotificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
+import ci.sycapay.pispi.service.alias.RevendicationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +21,6 @@ import java.util.Map;
 
 import ci.sycapay.pispi.dto.callback.AccuseCallbackPayload;
 import ci.sycapay.pispi.dto.callback.NotificationCallbackPayload;
-import ci.sycapay.pispi.dto.callback.RejetCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RelationCallbackPayload;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,6 +39,7 @@ public class NotificationCallbackController {
     private final MessageLogService messageLogService;
     private final PiNotificationRepository notificationRepository;
     private final PiGuaranteeRepository guaranteeRepository;
+    private final RevendicationService revendicationService;
     private final WebhookService webhookService;
     private final ObjectMapper objectMapper;
 
@@ -66,13 +66,14 @@ public class NotificationCallbackController {
         return ResponseEntity.accepted().build();
     }
 
-    @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally and fires a PI_NOTIFICATION webhook.")
+    @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally, updates alias lock state when applicable, and fires a webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notifications/info-warn")
     public ResponseEntity<ApiResponse<Void>> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         log.info("ADMI.004 received info-warn: {}", payload);
         String msgId = (String) payload.get("msgId");
         String evenement = (String) payload.get("evenement");
+        String description = (String) payload.get("evenementDescription");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, null, IsoMessageType.ADMI_004, MessageDirection.INBOUND, payload, 202, null);
@@ -81,13 +82,15 @@ public class NotificationCallbackController {
                 .msgId(msgId)
                 .direction(MessageDirection.INBOUND)
                 .evenement(evenement)
-                .evenementDescription((String) payload.get("evenementDescription"))
+                .evenementDescription(description)
                 .evenementDate(parseDateTime(payload.get("evenementDate")))
                 .messageType(IsoMessageType.ADMI_004)
                 .build();
         notificationRepository.save(notification);
 
-        webhookService.notify(WebhookEventType.PI_NOTIFICATION, null, msgId, payload);
+        WebhookEventType webhookEvent = revendicationService.processInfoWarn(msgId, description);
+
+        webhookService.notify(webhookEvent, null, msgId, payload);
         return ResponseEntity.accepted().build();
     }
 

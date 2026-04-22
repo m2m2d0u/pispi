@@ -1,0 +1,1 @@
+ALTER TABLE pi_alias_revendication ADD COLUMN verrouille BOOLEAN NOT NULL DEFAULT FALSE;

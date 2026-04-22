@@ -4,14 +4,17 @@ import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.alias.RevendicationResponse;
 import ci.sycapay.pispi.entity.PiAliasRevendication;
+import ci.sycapay.pispi.enums.AliasStatus;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.StatutRevendication;
 import ci.sycapay.pispi.enums.WebhookEventType;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
+import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.repository.PiAliasRevendicationRepository;
 import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.util.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,14 +24,62 @@ import java.util.Map;
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RevendicationService {
 
     private final PiAliasRevendicationRepository repository;
+    private final PiAliasRepository aliasRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final WebhookService webhookService;
+
+    @Transactional
+    public WebhookEventType processInfoWarn(String msgId, String description) {
+        if (description != null && description.startsWith("ALIAS-")) {
+            // Format: ALIAS-{aliasValue}-VERROUILLE or ALIAS-{aliasValue}-DEVERROUILLE
+            int lastDash = description.lastIndexOf('-');
+            if (lastDash > 6) {
+                String aliasValue = description.substring(6, lastDash);
+                String action = description.substring(lastDash + 1);
+
+                if ("VERROUILLE".equals(action)) {
+                    aliasRepository.findByAliasValue(aliasValue).ifPresentOrElse(
+                            alias -> {
+                                alias.setStatut(AliasStatus.LOCKED);
+                                aliasRepository.save(alias);
+                                log.info("Alias {} locked (VERROUILLE) [msgId={}]", aliasValue, msgId);
+                            },
+                            () -> log.warn("VERROUILLE received for unknown alias: {} [msgId={}]", aliasValue, msgId)
+                    );
+                    repository.findByAliasValue(aliasValue).ifPresent(rev -> {
+                        rev.setVerrouille(true);
+                        repository.save(rev);
+                    });
+                    return WebhookEventType.ALIAS_LOCKED;
+                }
+
+                if ("DEVERROUILLE".equals(action)) {
+                    aliasRepository.findByAliasValue(aliasValue).ifPresentOrElse(
+                            alias -> {
+                                alias.setStatut(AliasStatus.ACTIVE);
+                                aliasRepository.save(alias);
+                                log.info("Alias {} unlocked (DEVERROUILLE) [msgId={}]", aliasValue, msgId);
+                            },
+                            () -> log.warn("DEVERROUILLE received for unknown alias: {} [msgId={}]", aliasValue, msgId)
+                    );
+                    repository.findByAliasValue(aliasValue).ifPresent(rev -> {
+                        rev.setVerrouille(false);
+                        repository.save(rev);
+                    });
+                    return WebhookEventType.ALIAS_UNLOCKED;
+                }
+            }
+        }
+
+        return WebhookEventType.PI_NOTIFICATION;
+    }
 
     public RevendicationResponse initiateClaim(String alias) {
         Map<String, Object> payload = new HashMap<>();

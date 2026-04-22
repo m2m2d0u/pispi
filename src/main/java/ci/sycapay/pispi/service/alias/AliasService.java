@@ -347,7 +347,9 @@ public class AliasService {
         payload.put("alias", alias);
 
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.OUTBOUND, payload, null, null);
-        return aipClient.post("/alias/recherche", payload);
+        Map<String, Object> response = aipClient.post("/alias/recherche", payload);
+        response.putAll(payload);
+        return response;
     }
 
     public Page<AliasResponse> listAliases(Pageable pageable) {
