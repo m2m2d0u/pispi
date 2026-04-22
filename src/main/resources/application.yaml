@@ -28,6 +28,20 @@ spring:
 sycapay:
   pi-spi:
     code-membre: ${PISPI_CODE_MEMBRE:CIE002}
+
+    # Optional ONLY for sponsoring-bank scenarios: when this PI-SPI is operated
+    # BY a direct participant (bank / caisse) ON BEHALF OF one or more indirect
+    # participants (EMEs), ACMT.023 identity verifications must be emitted under
+    # the direct participant's own code-membre (BCEAO Identite endToEndId pattern
+    # is [BCDF] — type E is not allowed as initiator). Leave blank to reuse
+    # code-membre; set ONLY if you are the sponsoring direct participant and are
+    # legally authorised to emit ACMT.023 under that code.
+    #
+    # If code-membre itself is an EME (type E) and no valid sponsoring code is
+    # configured, /api/v1/verifications will reject initiation with a 400.
+    # Indirect participants should use RAC_SEARCH (alias lookup) instead.
+    code-membre-verification: ${PISPI_CODE_MEMBRE_VERIFICATION:}
+
     aip-base-url: ${PISPI_AIP_BASE_URL:https://bceao.symmetry.sn:8081}
     aip-api-key: ${PISPI_AIP_API_KEY:CHANGE_ME}
     api-version: ${PISPI_API_VERSION:1}

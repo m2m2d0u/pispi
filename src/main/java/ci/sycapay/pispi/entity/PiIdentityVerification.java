@@ -76,7 +76,7 @@ public class PiIdentityVerification {
     private TypeCompte typeCompte;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "type_client", length = 1)
+    @Column(name = "type_client", columnDefinition = "varchar(1)")
     private TypeClient typeClient;
 
     @Column(name = "nom_client", length = 140)

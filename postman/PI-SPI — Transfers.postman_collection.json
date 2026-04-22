@@ -1113,6 +1113,154 @@
         }
       ],
       "description": "Rejets de demandes de paiement entrantes via PAIN.014. Le endpoint `POST /api/v1/rtp/incoming/{endToEndId}/reject` accepte un simple `{ \"codeRaison\": \"<code>\" }` — le endToEndId de la demande entrante est fourni dans le path."
+    },
+    {
+      "name": "Vérifications d'identité",
+      "description": "Opérations ACMT.023 / ACMT.024 (schéma BCEAO `Identite` / `IdentiteReponse`).\n\n**Endpoints**\n- `POST /api/v1/verifications`                                — initier une vérification (ACMT.023)\n- `GET  /api/v1/verifications/{endToEndId}`                   — consulter une vérification\n- `POST /api/v1/verifications/incoming/{endToEndId}/respond` — répondre à une vérification entrante (ACMT.024)\n\n**Règle BCEAO** : dans la demande ACMT.023, `ibanClient` (pour les banques) et `otherClient` (pour les EME) sont exclusifs. Dans la réponse ACMT.024, `resultatVerification` est sérialisé en chaîne (`true`|`false`). Si `false`, un `codeRaison` `AC01` est obligatoire.",
+      "item": [
+        {
+          "name": "Envoyer une demande de vérification d'identité IBAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeMembreParticipant\": \"{{verifTargetParticipant}}\",\n  \"ibanClient\": \"{{verifIbanClient}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications"
+              ]
+            },
+            "description": "Demande ACMT.023 adressée à un participant **banque** — le compte à vérifier est identifié par son **IBAN UEMOA** (28 car., pattern `^(?:CI|SN|ML|GW|BF|NE|BJ|TG)\\d{2}(BJ|BF|CI|GW|ML|NE|SN|TG)\\d{22}$`).\n\n`codeMembreParticipant` = code du participant détenteur du compte à vérifier.\n`ibanClient` et `otherClient` sont mutuellement exclusifs — le DTO rejette la requête si les deux sont renseignés.\n\nPI-SPI génère `msgId` et `endToEndId`, journalise en `pi_message_log` (ACMT.023 OUTBOUND) puis envoie à l'AIP via `POST /verifications-identites`. La réponse asynchrone arrive via le callback `/verifications-identites/reponses`."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de vérification d'identité Othr",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeMembreParticipant\": \"{{verifTargetParticipant}}\",\n  \"otherClient\": \"{{verifOtherClient}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications"
+              ]
+            },
+            "description": "Demande ACMT.023 adressée à un participant **EME** (monnaie électronique) — le compte à vérifier est identifié par son **autre identifiant** (généralement le MSISDN au format E.164).\n\nLe champ `otherClient` remplace `ibanClient` pour les EME : le schéma BCEAO `CompteOther` accepte un identifiant libre (max 70 car.). Typique : `+2250707077777`."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une réponse positive à une demande de vérification d'identité",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": true,\n  \"otherClient\": \"+2250707077777\",\n  \"typeCompte\": \"TRAN\",\n  \"typeClient\": \"P\",\n  \"nomClient\": \"Diallo Mamadou\",\n  \"villeClient\": \"Abidjan\",\n  \"adresseComplete\": \"12 Rue des Jardins, Cocody\",\n  \"numeroIdentification\": \"CI-NIDN-1988-0003456\",\n  \"systemeIdentification\": \"NIDN\",\n  \"dateNaissance\": \"1988-11-05\",\n  \"villeNaissance\": \"Abidjan\",\n  \"paysNaissance\": \"CI\",\n  \"paysResidence\": \"CI\",\n  \"devise\": \"XOF\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "description": "Réponse ACMT.024 **positive** (`resultatVerification: true`) à une vérification entrante.\n\nLe payload retourne l'intégralité du bloc `IdentiteReponse` BCEAO :\n- Identifiant du compte (`ibanClient` **ou** `otherClient`) ;\n- Typologie (`typeCompte`, `typeClient`) ;\n- État civil (`nomClient`, `dateNaissance`, `villeNaissance`, `paysNaissance`) ;\n- Adresse (`villeClient`, `adresseComplete`, `paysResidence`) ;\n- Identification (`numeroIdentification`, `systemeIdentification`) ;\n- `devise` = `XOF`.\n\nPI-SPI convertit `resultatVerification` en chaîne `\"true\"` lors de l'émission vers l'AIP (pattern BCEAO). Les champs sont persistés dans `pi_identity_verification` et un webhook `VERIFICATION_RESULT` est déclenché."
+          },
+          "response": []
+        },
+        {
+          "name": "Envoyer une réponse négative à une demande de vérification d'identité",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": false,\n  \"codeRaison\": \"AC01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "description": "Réponse ACMT.024 **négative** (`resultatVerification: false`) à une vérification entrante.\n\n**codeRaison** : la seule valeur autorisée par le schéma BCEAO `IdentiteReponse` est `AC01` (compte inconnu / non autorisé — `IncorrectAccountNumber`). Cas d'usage : le compte cible n'existe pas chez ce participant, ou les attributs fournis ne correspondent pas au titulaire du compte.\n\nLe statut local passe à `FAILED` après émission."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
@@ -1194,6 +1342,26 @@
       "key": "identifiantTransaction",
       "value": "",
       "description": "Généré automatiquement par le script pre-request de la collection. Format: TXN-YYYYMMDDHHmmss-XXXXXX (25 car.)."
+    },
+    {
+      "key": "verifTargetParticipant",
+      "value": "SNE001",
+      "description": "Code membre du participant cible d'une demande de vérification ACMT.023 (pattern (BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3})"
+    },
+    {
+      "key": "verifIbanClient",
+      "value": "SN12SN0112345678901234567890",
+      "description": "IBAN UEMOA du compte à vérifier (28 car.) — utilisé par la demande ACMT.023 visant une banque"
+    },
+    {
+      "key": "verifOtherClient",
+      "value": "+2250707077777",
+      "description": "Identifiant 'other' du compte à vérifier (typiquement MSISDN E.164) — utilisé par la demande ACMT.023 visant une EME"
+    },
+    {
+      "key": "incomingVerificationEndToEndId",
+      "value": "ECIE002XJWE2E00014VERIF000000001",
+      "description": "endToEndId d'une demande de vérification entrante reçue via callback /verifications-identites"
     }
   ],
   "event": [

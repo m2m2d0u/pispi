@@ -37,9 +37,26 @@ public class IdentityVerificationService {
      */
     @Transactional
     public IdentityVerificationResponse requestVerification(IdentityVerificationRequest request) {
+        // BCEAO rule — identity verification (ACMT.023) is an interbank primitive
+        // reserved to DIRECT participants. The Identite schema encodes this via
+        // the endToEndId pattern ^E(country)[BCDF]\d{3}...$ — type E (EME /
+        // indirect participant) is not allowed as initiator (see
+        // documentation/interface-participant-openapi.json ~line 790).
+        //
+        // Indirect participants should resolve beneficiary identity via the
+        // RAC_SEARCH alias flow (see TransferService.resolveClientFromSearchLog).
         String codeMembre = properties.getCodeMembre();
+        String codeMembreVerif = properties.resolveCodeMembreVerification();
+
+        validateInitiatorEligibility(codeMembre, codeMembreVerif);
+
+        // msgId uses the real codeMembre — the AIP enforces that BizMsgIdr starts
+        // with M<real-codeMembre> (error: "le BizMsgIdr doit debuter par
+        // 'M<codeMembre>'"). endToEndId uses the resolved verification code,
+        // which must be a direct-participant code when this PI-SPI acts on
+        // behalf of a sponsoring bank.
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        String endToEndId = IdGenerator.generateEndToEndId(codeMembreVerif);
 
         Map<String, Object> acmt023 = new HashMap<>();
         acmt023.put("msgId", msgId);
@@ -98,7 +115,7 @@ public class IdentityVerificationService {
         acmt024.put("msgIdDemande", v.getMsgId());
         acmt024.put("endToEndId", endToEndId);
         acmt024.put("codeMembreParticipant", codeMembre);
-        acmt024.put("resultatVerification", Boolean.TRUE.equals(request.getResultatVerification()) ? "true" : "false");
+        acmt024.put("resultatVerification", Boolean.toString(Boolean.TRUE.equals(request.getResultatVerification())));
 
         if (Boolean.TRUE.equals(request.getResultatVerification())) {
             putIfNotBlank(acmt024, "ibanClient", request.getIbanClient());
@@ -165,6 +182,40 @@ public class IdentityVerificationService {
 
     private static void putIfNotBlank(Map<String, Object> map, String key, String value) {
         if (notBlank(value)) map.put(key, value);
+    }
+
+    /**
+     * Enforces the BCEAO Identite endToEndId participant-type constraint
+     * ({@code [BCDF]}). If the effective verification code (override, else
+     * {@code codeMembre}) resolves to an EME (type {@code E}), the request is
+     * rejected at the application boundary with a clear explanation and a
+     * pointer to the RAC_SEARCH alternative.
+     */
+    private static void validateInitiatorEligibility(String codeMembre, String codeMembreVerif) {
+        if (codeMembreVerif == null || codeMembreVerif.length() < 3) {
+            // Configuration issue — not caller-fixable at runtime.
+            throw new IllegalStateException(
+                    "sycapay.pi-spi.code-membre (or code-membre-verification) is not configured");
+        }
+        char type = codeMembreVerif.charAt(2);
+        if (type == 'E') {
+            // Caller-addressable (via config or by choosing the alias-search path).
+            throw new IllegalArgumentException(
+                    "Identity verification (ACMT.023) is reserved to direct participants "
+                            + "(banks, caisses — types B/C/D/F) per BCEAO Identite schema. "
+                            + "This PI-SPI is configured as codeMembre=" + codeMembre
+                            + " (indirect participant, type E) and no sponsoring "
+                            + "direct-participant override is set via "
+                            + "sycapay.pi-spi.code-membre-verification. Indirect participants "
+                            + "should resolve beneficiary identity through the RAC_SEARCH "
+                            + "alias flow (POST /api/v1/aliases/search) instead of ACMT.023.");
+        }
+        if ("BCDF".indexOf(type) < 0) {
+            throw new IllegalArgumentException(
+                    "code-membre-verification '" + codeMembreVerif + "' has participant type '"
+                            + type + "' which is not allowed by the BCEAO Identite schema "
+                            + "(expected one of B, C, D, F).");
+        }
     }
 
     private IdentityVerificationResponse toResponse(PiIdentityVerification v) {
