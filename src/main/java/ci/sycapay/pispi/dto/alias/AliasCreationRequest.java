@@ -247,18 +247,17 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that birth info is provided for type P and C clients.
-     * Per BCEAO: dateNaissance, paysNaissance, and villeNaissance are required.
+     * Validates that birth info (dateNaissance, paysNaissance, lieuNaissance) is always provided.
+     * Required for all client types — the three fields form the ISO 20022 DtAndPlcOfBirth
+     * block in PACS.008, which the AIP rejects if any of the three is missing.
      */
     @JsonIgnore
-    @AssertTrue(message = "dateNaissance, paysNaissance, and lieuNaissance are required for type P and C clients")
-    public boolean isBirthInfoRequiredForPC() {
-        if (client != null && (client.getTypeClient() == TypeClient.P || client.getTypeClient() == TypeClient.C)) {
-            return client.getDateNaissance() != null && !client.getDateNaissance().isBlank()
-                    && client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank()
-                    && client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
-        }
-        return true;
+    @AssertTrue(message = "dateNaissance, paysNaissance, and lieuNaissance are required")
+    public boolean isBirthInfoRequired() {
+        if (client == null) return true;
+        return client.getDateNaissance() != null && !client.getDateNaissance().isBlank()
+                && client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank()
+                && client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
     }
 
     // ---- Type B/G required fields ----

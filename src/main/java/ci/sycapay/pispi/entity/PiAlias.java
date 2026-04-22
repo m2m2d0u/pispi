@@ -38,8 +38,11 @@ public class PiAlias {
     @Column(name = "prenom", length = 140)
     private String prenom;
 
-    @Column(name = "lieuNaissance", length = 140)
+    @Column(name = "lieu_naissance", length = 140)
     private String lieuNaissance;
+
+    @Column(name = "pays_naissance", length = 2)
+    private String paysNaissance;
 
     @Column(name = "raison_sociale", length = 140)
     private String raisonSociale;

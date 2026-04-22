@@ -158,6 +158,7 @@ public class AliasService {
                 .identifiant(c.getIdentifiant())
                 .dateNaissance(c.getDateNaissance() != null ? LocalDate.parse(c.getDateNaissance()) : null)
                 .nationalite(c.getNationalite())
+                .paysNaissance(c.getPaysNaissance())
                 .pays(c.getPays())
                 .adresse(c.getAdresse())
                 .ville(c.getVille())
@@ -231,6 +232,7 @@ public class AliasService {
         aliasRepository.saveAll(affected);
 
         Map<String, Object> payload = buildModificationPayload(alias, request);
+        log.info("Sending alias modification payload (type={}, e2e={}): {}",request.getTypeAlias(), alias.getEndToEndId(), payload);
         String endToEndId = alias.getEndToEndId();
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY,
                 MessageDirection.OUTBOUND, payload, null, null);
@@ -286,6 +288,7 @@ public class AliasService {
         if (c.getCodePostal() != null) target.setCodePostal(c.getCodePostal());
         if (c.getLieuNaissance() != null) target.setLieuNaissance(c.getLieuNaissance());
         if (c.getDateNaissance() != null) target.setDateNaissance(LocalDate.parse(c.getDateNaissance()));
+        if (c.getPaysNaissance() != null) target.setPaysNaissance(c.getPaysNaissance());
         if (c.getTelephone() != null) target.setTelephone(c.getTelephone());
         if (c.getEmail() != null) target.setEmail(c.getEmail());
         if (c.getRaisonSociale() != null) target.setRaisonSociale(c.getRaisonSociale());
@@ -469,6 +472,7 @@ public class AliasService {
         if (c.getCodePostal() != null) payload.put("codePostalClient", c.getCodePostal());
         if (c.getLieuNaissance() != null) payload.put("villeNaissanceClient", c.getLieuNaissance());
         if (c.getDateNaissance() != null) payload.put("dateNaissanceClient", c.getDateNaissance());
+        if (c.getPaysNaissance() != null) payload.put("paysNaissanceClient", c.getPaysNaissance());
 
         // B/G constraint enforced by validateModificationConstraints; safe to pass through.
         if (c.getRaisonSociale() != null) {

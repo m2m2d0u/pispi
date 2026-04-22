@@ -23,7 +23,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 25000,\n  \"codeMembreParticipantPaye\": \"SNB001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Transfert familial\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"SNB001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Transfert familial\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -135,7 +135,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 50000,\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
               "options": {
                 "raw": {
                   "language": "json"

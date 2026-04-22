@@ -316,6 +316,12 @@ public class AliasCallbackService {
             }
         }
 
+        String villeNaissance = (String) payload.get("villeNaissance");
+        if (villeNaissance != null) alias.setLieuNaissance(villeNaissance);
+
+        String paysNaissance = (String) payload.get("paysNaissance");
+        if (paysNaissance != null) alias.setPaysNaissance(paysNaissance);
+
         // Account info
         String other = (String) payload.get("other");
         if (other != null) alias.setNumeroCompte(other);

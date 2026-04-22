@@ -13,6 +13,7 @@ import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.TransferStatus;
+import ci.sycapay.pispi.enums.TypeTransaction;
 import java.time.LocalDateTime;
 import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.TypeCompte;
@@ -52,6 +53,13 @@ public class TransferService {
 
     @Transactional
     public TransferResponse initiateTransfer(TransferRequest request) {
+        if (request.getTypeTransaction() == TypeTransaction.DISP
+                && request.getMontant().compareTo(java.math.BigDecimal.ONE) > 0) {
+            throw new IllegalArgumentException(
+                    "Pour un virement DISP (disponibilité), le montant doit être 1 franc CFA. " +
+                    "Le montant réel du retrait doit être renseigné dans montantRetrait.");
+        }
+
         ResolvedClient payeur = resolveClientFromSearchLog(request.getEndToEndIdSearchPayeur(), "payeur");
         ResolvedClient paye = resolveClientFromCodification(request.getCodificationPaye(), "paye");
 
@@ -174,6 +182,7 @@ public class TransferService {
         if (alias.getVille() != null) builder.ville(alias.getVille());
         if (alias.getDateNaissance() != null) builder.dateNaissance(alias.getDateNaissance().toString());
         if (alias.getLieuNaissance() != null) builder.lieuNaissance(alias.getLieuNaissance());
+        if (alias.getPaysNaissance() != null) builder.paysNaissance(alias.getPaysNaissance());
         if (alias.getIdentifiant() != null) {
             builder.identifiant(alias.getIdentifiant())
                    .typeIdentifiant(alias.getTypeIdentifiant());
@@ -286,7 +295,11 @@ public class TransferService {
         payload.put("canalCommunication", request.getCanalCommunication().getCode());
         payload.put("codeMembreParticipantPayeur", properties.getCodeMembre());
         payload.put("codeMembreParticipantPaye", request.getCodeMembreParticipantPaye());
-        payload.put("montant", request.getMontant().toBigInteger().toString());
+        // BCEAO rule: DISP (disponibilité) messages must carry montant = 1; real amount goes in montantRetrait.
+        String montantAip = request.getTypeTransaction() == TypeTransaction.DISP
+                ? "1"
+                : request.getMontant().toBigInteger().toString();
+        payload.put("montant", montantAip);
         payload.put("dateHeureAcceptation", nowIso());
 
         // Payeur — required
@@ -302,12 +315,13 @@ public class TransferService {
             payload.put("adresseClientPayeur", payeur.clientInfo().getAdresse());
         if (payeur.clientInfo().getVille() != null)
             payload.put("villeClientPayeur", payeur.clientInfo().getVille());
-        if (payeur.clientInfo().getDateNaissance() != null)
+        if (payeur.clientInfo().getDateNaissance() != null
+                && payeur.clientInfo().getLieuNaissance() != null
+                && payeur.clientInfo().getPaysNaissance() != null) {
             payload.put("dateNaissanceClientPayeur", payeur.clientInfo().getDateNaissance());
-        if (payeur.clientInfo().getLieuNaissance() != null)
             payload.put("villeNaissanceClientPayeur", payeur.clientInfo().getLieuNaissance());
-        if (payeur.clientInfo().getPaysNaissance() != null)
             payload.put("paysNaissanceClientPayeur", payeur.clientInfo().getPaysNaissance());
+        }
         if (payeur.clientInfo().getTypeIdentifiant() != null)
             payload.put("systemeIdentificationClientPayeur", payeur.clientInfo().getTypeIdentifiant().name());
         if (payeur.clientInfo().getIdentifiant() != null)
@@ -328,12 +342,13 @@ public class TransferService {
             payload.put("adresseClientPaye", paye.clientInfo().getAdresse());
         if (paye.clientInfo().getVille() != null)
             payload.put("villeClientPaye", paye.clientInfo().getVille());
-        if (paye.clientInfo().getDateNaissance() != null)
+        if (paye.clientInfo().getDateNaissance() != null
+                && paye.clientInfo().getLieuNaissance() != null
+                && paye.clientInfo().getPaysNaissance() != null) {
             payload.put("dateNaissanceClientPaye", paye.clientInfo().getDateNaissance());
-        if (paye.clientInfo().getLieuNaissance() != null)
             payload.put("villeNaissanceClientPaye", paye.clientInfo().getLieuNaissance());
-        if (paye.clientInfo().getPaysNaissance() != null)
             payload.put("paysNaissanceClientPaye", paye.clientInfo().getPaysNaissance());
+        }
         if (paye.clientInfo().getTypeIdentifiant() != null)
             payload.put("systemeIdentificationClientPaye", paye.clientInfo().getTypeIdentifiant().name());
         if (paye.clientInfo().getIdentifiant() != null)
