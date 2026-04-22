@@ -28,9 +28,6 @@ public class TransferRequest {
     @NotNull @Positive
     private BigDecimal montant;
 
-    @NotBlank @Size(min = 6, max = 6)
-    private String codeMembreParticipantPaye;
-
     /** endToEndId d'une recherche d'alias (RAC_SEARCH) inbound pour le payeur. */
     @NotBlank
     private String endToEndIdSearchPayeur;

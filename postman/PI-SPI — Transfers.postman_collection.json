@@ -23,7 +23,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"SNB001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"motif\": \"Transfert familial\"\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"motif\": \"Transfert familial\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -51,7 +51,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 15000,\n  \"codeMembreParticipantPaye\": \"CIE002\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"montantAchat\": 15000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"montantAchat\": 15000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -79,7 +79,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"codeMembreParticipantPaye\": \"CIE002\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"montantAchat\": 7500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"montantAchat\": 7500\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -107,7 +107,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 120000,\n  \"codeMembreParticipantPaye\": \"MLB003\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Règlement facture fournisseur\",\n  \"identifiantTransaction\": \"FIN-PLUS-INV-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-2026-0042\"\n  }\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 120000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Règlement facture fournisseur\",\n  \"identifiantTransaction\": \"FIN-PLUS-INV-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-2026-0042\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -135,7 +135,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"codeMembreParticipantPaye\": \"CIE001\",\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
               "options": {
                 "raw": {
                   "language": "json"

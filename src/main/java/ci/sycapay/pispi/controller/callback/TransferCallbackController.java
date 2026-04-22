@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
+import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiTransferRepository;
@@ -35,16 +36,23 @@ public class TransferCallbackController {
     private final MessageLogService messageLogService;
     private final PiTransferRepository transferRepository;
     private final WebhookService webhookService;
+    private final PiSpiProperties properties;
 
     @Operation(summary = "Receive inbound transfer (PACS.008)", description = "Called by the AIP when another participant sends a credit transfer to this PI. Saves the transfer locally and forwards a webhook event to the backend.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementCallbackPayload.class)))
     @PostMapping("/transferts")
     public ResponseEntity<Void> receiveTransfer(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("PACS.008 received: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_008, MessageDirection.INBOUND, payload, 202, null);
+
+        String typeComptePayeurStr = (String) payload.get("typeCompteClientPayeur");
+        String typeClientPayeurStr = (String) payload.get("typeClientPayeur");
+        String typeComptePayeStr   = (String) payload.get("typeCompteClientPaye");
+        String typeClientPayeStr   = (String) payload.get("typeClientPaye");
 
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(msgId)
@@ -53,11 +61,20 @@ public class TransferCallbackController {
                 .montant(payload.get("montant") != null ? new BigDecimal(String.valueOf(payload.get("montant"))) : null)
                 .devise("XOF")
                 .codeMembrePayeur((String) payload.get("codeMembreParticipantPayeur"))
-                .codeMembrePaye((String) payload.get("codeMembreParticipantPaye"))
+                .codeMembrePaye(payload.getOrDefault("codeMembreParticipantPaye", properties.getCodeMembre()).toString())
                 .typeTransaction(TypeTransaction.valueOf((String) payload.get("typeTransaction")))
                 .canalCommunication(CanalCommunication.fromCode((String) payload.get("canalCommunication")))
                 .nomClientPayeur((String) payload.get("nomClientPayeur"))
+                .prenomClientPayeur((String) payload.get("prenomClientPayeur"))
+                .typeClientPayeur(typeClientPayeurStr != null ? TypeClient.valueOf(typeClientPayeurStr) : null)
+                .numeroComptePayeur((String) payload.get("otherClientPayeur"))
+                .typeComptePayeur(typeComptePayeurStr != null ? TypeCompte.valueOf(typeComptePayeurStr) : null)
                 .nomClientPaye((String) payload.get("nomClientPaye"))
+                .prenomClientPaye((String) payload.get("prenomClientPaye"))
+                .typeClientPaye(typeClientPayeStr != null ? TypeClient.valueOf(typeClientPayeStr) : null)
+                .numeroComptePaye((String) payload.get("otherClientPaye"))
+                .typeComptePaye(typeComptePayeStr != null ? TypeCompte.valueOf(typeComptePayeStr) : null)
+                .motif((String) payload.get("motif"))
                 .dateHeureExecution(parseDateTime(payload.get("dateHeureAcceptation")) != null
                         ? parseDateTime(payload.get("dateHeureAcceptation"))
                         : LocalDateTime.now())
@@ -73,6 +90,7 @@ public class TransferCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementResultatCallbackPayload.class)))
     @PostMapping("/transferts/reponses")
     public ResponseEntity<Void> receiveTransferResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("PACS.002 received: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
@@ -96,6 +114,7 @@ public class TransferCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RejetCallbackPayload.class)))
     @PostMapping("/transferts/echecs")
     public ResponseEntity<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("ADMI.002 received: {}", payload);
         String msgId = (String) payload.get("msgId");
         if (msgId == null) msgId = (String) payload.get("reference");
 

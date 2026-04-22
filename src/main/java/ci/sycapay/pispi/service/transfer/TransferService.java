@@ -82,7 +82,7 @@ public class TransferService {
                 .montant(request.getMontant())
                 .devise("XOF")
                 .codeMembrePayeur(codeMembre)
-                .codeMembrePaye(request.getCodeMembreParticipantPaye())
+                .codeMembrePaye(paye.codeMembre())
                 .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
                 .typeClientPayeur(payeur.clientInfo().getTypeClient())
@@ -193,7 +193,7 @@ public class TransferService {
         if (alias.getEmail() != null) builder.email(alias.getEmail());
 
         log.info("Client {} résolu depuis la codification [{}]", side, codification);
-        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte(), alias.getAliasValue());
+        return new ResolvedClient(builder.build(), alias.getNumeroCompte(), alias.getTypeCompte(), alias.getAliasValue(), alias.getCodeMembreParticipant());
     }
 
     private ResolvedClient resolveClientFromSearchLog(String endToEndIdSearch, String side) {
@@ -274,9 +274,10 @@ public class TransferService {
         if (email != null) builder.email(email);
 
         String valeurAlias = getString(data, "valeurAlias");
+        String codeMembreParticipant = getString(data, "participant");
 
         log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch); // NOSONAR — log is the Slf4j logger here
-        return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias);
+        return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias, codeMembreParticipant);
     }
 
     private static String getString(Map<String, Object> map, String key) {
@@ -299,11 +300,9 @@ public class TransferService {
 
         payload.put("canalCommunication", request.getCanalCommunication().getCode());
         payload.put("codeMembreParticipantPayeur", properties.getCodeMembre());
-        payload.put("codeMembreParticipantPaye", request.getCodeMembreParticipantPaye());
+        payload.put("codeMembreParticipantPaye", paye.codeMembre());
         // BCEAO rule: DISP (disponibilité) messages must carry montant = 1; real amount goes in montantRetrait.
-        String montantAip = request.getTypeTransaction() == TypeTransaction.DISP
-                ? "1"
-                : request.getMontant().toBigInteger().toString();
+        String montantAip = request.getMontant().toBigInteger().toString();
         payload.put("montant", montantAip);
         payload.put("dateHeureAcceptation", nowIso());
 
@@ -403,5 +402,5 @@ public class TransferService {
     }
 
     /** Holds the resolved client data ready to use in the PACS.008 payload. */
-    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte, String aliasValue) {}
+    private record ResolvedClient(ClientInfo clientInfo, String other, TypeCompte typeCompte, String aliasValue, String codeMembre) {}
 }
