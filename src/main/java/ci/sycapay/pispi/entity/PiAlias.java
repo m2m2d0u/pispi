@@ -4,9 +4,31 @@ import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Minimal alias record per BCEAO PI-RAC v3.0.0 §4.1 — the participant is
+ * forbidden from replicating the PI-RAC alias base locally. We only persist:
+ * <ul>
+ *   <li>the alias itself ({@code aliasValue}, {@code typeAlias},
+ *       {@code codification})</li>
+ *   <li>the participant code (always this PI)</li>
+ *   <li>a <b>back-office client reference</b> ({@code backOfficeClientId}) —
+ *       opaque FK to the participant's own client system. The nominal use is
+ *       grouping a client's alias family (MBNO+SHID) so the cascade works
+ *       without replicating the national ID.</li>
+ *   <li>operational codes for the account ({@code numeroCompte},
+ *       {@code typeCompte}) and discriminators used by the modification /
+ *       duplicate paths ({@code typeClient}, {@code typeIdentifiant}).</li>
+ *   <li>flow metadata (ids, statut, dates).</li>
+ * </ul>
+ *
+ * <p><b>No PII is stored here.</b> Name, birth data, address, phone, email,
+ * national/passport/RCCM identifier values and merchant descriptors are
+ * forwarded to PI-RAC on creation/modification and then read back through
+ * the participant's own back-office (by {@code backOfficeClientId}) or via a
+ * fresh {@code RAC_SEARCH} for someone else's alias — never from here.
+ */
 @Entity
 @Table(name = "pi_alias")
 @Getter @Setter
@@ -21,62 +43,41 @@ public class PiAlias {
     @Column(name = "end_to_end_id", nullable = false, length = 35)
     private String endToEndId;
 
-    @Column(name = "alias_value", length = 50)  // nullable for SHID - PI-RAC generates the value
+    /** Nullable for SHID — PI-RAC generates the value in the creation callback. */
+    @Column(name = "alias_value", length = 50)
     private String aliasValue;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type_alias", nullable = false, length = 10)
     private TypeAlias typeAlias;
 
+    /**
+     * Opaque reference to the participant's own client record. Supplied by the
+     * back office at creation time and used to correlate aliases owned by the
+     * same client (MBNO + SHID cascade, modification fan-out, etc.). MUST NOT
+     * contain any PII — pick a surrogate identifier.
+     */
+    @Column(name = "back_office_client_id", length = 64)
+    private String backOfficeClientId;
+
+    /**
+     * Participant-type discriminator (P/B/G/C). Retained as an operational
+     * code used to decide MCOD eligibility, MBNO eligibility, etc. A code,
+     * not personal data.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(name = "type_client", length = 5)
+    @Column(name = "type_client", columnDefinition = "varchar(1)")
     private TypeClient typeClient;
 
-    @Column(name = "nom", length = 140)
-    private String nom;
-
-    @Column(name = "prenom", length = 140)
-    private String prenom;
-
-    @Column(name = "lieu_naissance", length = 140)
-    private String lieuNaissance;
-
-    @Column(name = "pays_naissance", length = 2)
-    private String paysNaissance;
-
-    @Column(name = "raison_sociale", length = 140)
-    private String raisonSociale;
-
+    /**
+     * Identification system used when the alias was registered (NIDN/CCPT/TXID).
+     * Needed by {@code modifyAlias} to decide whether a passport field update
+     * is applicable. Code only — the identifier VALUE lives in PI-RAC and the
+     * back-office system, never here.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "type_identifiant", length = 10)
     private CodeSystemeIdentification typeIdentifiant;
-
-    @Column(name = "identifiant", length = 35)
-    private String identifiant;
-
-    @Column(name = "date_naissance")
-    private LocalDate dateNaissance;
-
-    @Column(name = "nationalite", length = 2)
-    private String nationalite;
-
-    @Column(name = "pays", length = 2)
-    private String pays;
-
-    @Column(name = "adresse", length = 140)
-    private String adresse;
-
-    @Column(name = "ville", length = 140)
-    private String ville;
-
-    @Column(name = "code_postal", length = 20)
-    private String codePostal;
-
-    @Column(name = "telephone", length = 20)
-    private String telephone;
-
-    @Column(name = "email", length = 254)
-    private String email;
 
     @Column(name = "numero_compte", length = 34)
     private String numeroCompte;
@@ -90,15 +91,6 @@ public class PiAlias {
 
     @Column(name = "code_membre_participant", length = 6)
     private String codeMembreParticipant;
-
-    @Column(name = "code_marchand", length = 10)
-    private String codeMarchand;
-
-    @Column(name = "categorie_code_marchand", length = 10)
-    private String categorieCodeMarchand;
-
-    @Column(name = "nom_marchand", length = 140)
-    private String nomMarchand;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
@@ -115,9 +107,7 @@ public class PiAlias {
 
     /**
      * Timestamp of the last successful sync between the participant's client
-     * data and the PI-RAC record. Drives the BCEAO §4.4 synchronization
-     * mechanism — when the back-office client record has been updated after
-     * this timestamp, the sync endpoint triggers an alias modification call.
+     * data and PI-RAC. See {@code AliasSyncService} and BCEAO §4.4.
      */
     @Column(name = "date_last_sync")
     private LocalDateTime dateLastSync;

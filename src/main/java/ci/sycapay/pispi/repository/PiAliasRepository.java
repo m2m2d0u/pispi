@@ -13,9 +13,11 @@ import java.util.Optional;
 
 public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
 
-    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatut(String aliasValue, TypeAlias typeAlias, AliasStatus statut);
+    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatut(
+            String aliasValue, TypeAlias typeAlias, AliasStatus statut);
 
-    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatutIn(String aliasValue, TypeAlias typeAlias, List<AliasStatus> statuts);
+    Optional<PiAlias> findByAliasValueAndTypeAliasAndStatutIn(
+            String aliasValue, TypeAlias typeAlias, List<AliasStatus> statuts);
 
     /**
      * MCOD uniqueness is scoped <b>per participant</b> per BCEAO PI-RAC §2.1.3.
@@ -23,9 +25,11 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
      * MCOD duplicates.
      */
     Optional<PiAlias> findByAliasValueAndTypeAliasAndCodeMembreParticipantAndStatutIn(
-            String aliasValue, TypeAlias typeAlias, String codeMembreParticipant, List<AliasStatus> statuts);
+            String aliasValue, TypeAlias typeAlias, String codeMembreParticipant,
+            List<AliasStatus> statuts);
 
-    Page<PiAlias> findByCodeMembreParticipantAndStatut(String codeMembre, AliasStatus statut, Pageable pageable);
+    Page<PiAlias> findByCodeMembreParticipantAndStatut(
+            String codeMembre, AliasStatus statut, Pageable pageable);
 
     Optional<PiAlias> findByEndToEndId(String endToEndId);
 
@@ -33,18 +37,23 @@ public interface PiAliasRepository extends JpaRepository<PiAlias, Long> {
 
     Optional<PiAlias> findByEndToEndIdAndTypeAlias(String endToEndId, TypeAlias typeAlias);
 
-    Optional<PiAlias> findByIdentifiant(String identifiant);
-
-    Optional<PiAlias> findByIdentifiantAndTypeAlias(String identifiant, TypeAlias typeAlias);
-
-    Optional<PiAlias> findByIdentifiantAndTypeAliasAndStatutIn(
-            String identifiant, TypeAlias typeAlias, List<AliasStatus> statuts);
-
-    List<PiAlias> findAllByIdentifiantAndStatut(String identifiant, AliasStatus statut);
-
     Optional<PiAlias> findByAliasValue(String aliasValue);
 
     Optional<PiAlias> findByCodification(String codification);
+
+    // ----------------------------------------------------------------------
+    // BCEAO §4.1 compliant lookups — use the opaque back-office client ID to
+    // correlate a client's alias family (MBNO+SHID cascade, modification
+    // fan-out, duplicate detection). Never expose PII outside the back office.
+    // ----------------------------------------------------------------------
+
+    /** Duplicate check for same client + same alias type (MBNO, SHID, MCOD). */
+    Optional<PiAlias> findByBackOfficeClientIdAndTypeAliasAndStatutIn(
+            String backOfficeClientId, TypeAlias typeAlias, List<AliasStatus> statuts);
+
+    /** MBNO+SHID cascade — every ACTIVE alias owned by the same back-office client. */
+    List<PiAlias> findAllByBackOfficeClientIdAndStatut(
+            String backOfficeClientId, AliasStatus statut);
 
     long countByCodeMembreParticipantAndCreatedAtBetween(
             String codeMembre, LocalDateTime from, LocalDateTime to);

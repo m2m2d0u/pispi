@@ -73,11 +73,11 @@ public class AliasService {
         TypeAlias requestedType = request.getTypeAlias();
 
         checkDuplicateByAliasValue(request.getAlias(), requestedType);
-        checkDuplicateByIdentifiant(request.getClient().getIdentifiant(), requestedType);
+        checkDuplicateByBackOfficeClientId(request.getBackOfficeClientId(), requestedType);
 
         if (requestedType == TypeAlias.MBNO) {
             // MBNO creation also provisions a SHID alias for the same client.
-            checkDuplicateByIdentifiant(request.getClient().getIdentifiant(), TypeAlias.SHID);
+            checkDuplicateByBackOfficeClientId(request.getBackOfficeClientId(), TypeAlias.SHID);
             return createMbnoWithShid(request, codeMembre);
         }
 
@@ -110,8 +110,8 @@ public class AliasService {
      */
     private AliasResponse createMbnoWithShid(AliasCreationRequest request, String codeMembre) {
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
-        log.info("Creating MBNO+SHID pair for identifiant {} with endToEndId {}",
-                request.getClient().getIdentifiant(), endToEndId);
+        log.info("Creating MBNO+SHID pair for backOfficeClientId={} with endToEndId={}",
+                request.getBackOfficeClientId(), endToEndId);
 
         PiAlias mbnoAlias = persistPendingAlias(
                 endToEndId, request, TypeAlias.MBNO, request.getAlias(), codeMembre);
@@ -161,17 +161,30 @@ public class AliasService {
                 });
     }
 
-    private void checkDuplicateByIdentifiant(String identifiant, TypeAlias typeAlias) {
-        if (identifiant == null) return;
-        aliasRepository.findByIdentifiantAndTypeAliasAndStatutIn(identifiant, typeAlias, BLOCKING_STATUSES)
+    /**
+     * BCEAO §4.1 compliant duplicate check — correlates aliases owned by the
+     * same back-office client via the opaque {@code backOfficeClientId}, not
+     * via the national identification number (which we no longer persist).
+     */
+    private void checkDuplicateByBackOfficeClientId(String backOfficeClientId,
+                                                    TypeAlias typeAlias) {
+        if (backOfficeClientId == null || backOfficeClientId.isBlank()) return;
+        aliasRepository.findByBackOfficeClientIdAndTypeAliasAndStatutIn(
+                        backOfficeClientId, typeAlias, BLOCKING_STATUSES)
                 .ifPresent(existing -> {
                     throw new DuplicateRequestException(
                             "Alias",
-                            identifiant + "/" + typeAlias,
+                            backOfficeClientId + "/" + typeAlias,
                             existing.getStatut().name());
                 });
     }
 
+    /**
+     * BCEAO §4.1 compliant persistence — the entity carries only the alias,
+     * operational codes, and a reference to the back-office client record.
+     * No PII is stored here; the full identity data was forwarded to PI-RAC in
+     * {@link #buildAliasPayload} and remains in the back office.
+     */
     private PiAlias persistPendingAlias(String endToEndId,
                                         AliasCreationRequest request,
                                         TypeAlias typeAlias,
@@ -190,32 +203,15 @@ public class AliasService {
                 .aliasValue(aliasValue)
                 .typeAlias(typeAlias)
                 .codification(codification)
+                .backOfficeClientId(request.getBackOfficeClientId())
+                // Operational codes only — no PII.
                 .typeClient(c.getTypeClient())
-                .nom(c.getNom())
-                .prenom(c.getPrenom())
-                .raisonSociale(c.getRaisonSociale())
                 .typeIdentifiant(c.getTypeIdentifiant())
-                .identifiant(c.getIdentifiant())
-                .dateNaissance(c.getDateNaissance() != null ? LocalDate.parse(c.getDateNaissance()) : null)
-                .nationalite(c.getNationalite())
-                .paysNaissance(c.getPaysNaissance())
-                .pays(c.getPays())
-                .adresse(c.getAdresse())
-                .ville(c.getVille())
-                .codePostal(c.getCodePostal())
-                .telephone(c.getTelephone())
-                .email(c.getEmail())
                 .numeroCompte(request.getNumeroCompte())
                 .typeCompte(request.getTypeCompte())
                 .codeMembreParticipant(codeMembre)
                 .statut(AliasStatus.PENDING)
                 .build();
-
-        if (request.getMarchand() != null && typeAlias == TypeAlias.MCOD) {
-            alias.setCodeMarchand(request.getMarchand().getCodeMarchand());
-            alias.setCategorieCodeMarchand(request.getMarchand().getCategorieCodeMarchand());
-            alias.setNomMarchand(request.getMarchand().getNomMarchand());
-        }
 
         return aliasRepository.save(alias);
     }
@@ -260,16 +256,12 @@ public class AliasService {
         ClientInfo c = request.getClient();
         validateModificationConstraints(alias, c);
 
-        // Mirror the edits onto every ACTIVE alias sharing this identifiant so the
-        // MBNO/SHID pair (and any MCOD) stays in lockstep. BCEAO only accepts one
-        // modification call and cascades internally; we reflect that locally.
+        // BCEAO §4.1: we don't mirror PII onto local rows (we don't store any).
+        // We still discover the full family of aliases for this client —
+        // MBNO + SHID (+ any MCOD) — via the back-office client ID so the
+        // dateLastSync bump below applies to the whole cascade. PI-RAC cascades
+        // the modification internally from the single call.
         List<PiAlias> affected = loadClientAliases(alias);
-        boolean applyPassport = alias.getTypeIdentifiant() == CodeSystemeIdentification.CCPT
-                && c.getIdentifiant() != null;
-        for (PiAlias row : affected) {
-            applyModifiableFields(row, c, applyPassport);
-        }
-        aliasRepository.saveAll(affected);
 
         Map<String, Object> payload = buildModificationPayload(alias, request);
         log.info("Sending alias modification payload (type={}, e2e={}): {}",request.getTypeAlias(), alias.getEndToEndId(), payload);
@@ -309,45 +301,32 @@ public class AliasService {
     }
 
     /**
-     * Returns every ACTIVE alias row for this client (same identifiant). Falls back
-     * to a singleton list when the alias has no identifiant (TRAL case) so the
-     * modification path still works for unidentified clients.
+     * Returns every ACTIVE alias row owned by the same back-office client as
+     * {@code primary}. Falls back to a singleton list when {@code backOfficeClientId}
+     * is absent (legacy rows migrated from before V22 may have nothing in that
+     * column) so the modification cascade still works.
      */
     private List<PiAlias> loadClientAliases(PiAlias primary) {
-        if (primary.getIdentifiant() == null) {
+        if (primary.getBackOfficeClientId() == null) {
             return List.of(primary);
         }
-        List<PiAlias> rows = aliasRepository.findAllByIdentifiantAndStatut(
-                primary.getIdentifiant(), AliasStatus.ACTIVE);
+        List<PiAlias> rows = aliasRepository.findAllByBackOfficeClientIdAndStatut(
+                primary.getBackOfficeClientId(), AliasStatus.ACTIVE);
         return rows.isEmpty() ? List.of(primary) : rows;
     }
 
     /**
-     * Applies only the fields BCEAO's ModificationAlias schema actually accepts:
-     * contact details (pays, telephone, email), denominationSociale for B/G clients,
-     * and the passport number for CCPT-identified clients. Fields like nom/prenom
-     * and account details (numeroCompte, typeCompte) are immutable on PI and are
-     * intentionally ignored here to avoid local/remote divergence.
-     */
-    private void applyModifiableFields(PiAlias target, ClientInfo c, boolean applyPassport) {
-        if (c.getPays() != null) target.setPays(c.getPays());
-        if (c.getAdresse() != null) target.setAdresse(c.getAdresse());
-        if (c.getVille() != null) target.setVille(c.getVille());
-        if (c.getCodePostal() != null) target.setCodePostal(c.getCodePostal());
-        if (c.getLieuNaissance() != null) target.setLieuNaissance(c.getLieuNaissance());
-        if (c.getDateNaissance() != null) target.setDateNaissance(LocalDate.parse(c.getDateNaissance()));
-        if (c.getPaysNaissance() != null) target.setPaysNaissance(c.getPaysNaissance());
-        if (c.getTelephone() != null) target.setTelephone(c.getTelephone());
-        if (c.getEmail() != null) target.setEmail(c.getEmail());
-        if (c.getRaisonSociale() != null) target.setRaisonSociale(c.getRaisonSociale());
-        if (applyPassport) target.setIdentifiant(c.getIdentifiant());
-    }
-
-    /**
-     * Validates PI-RAC modification constraints:
-     * - denominationSociale can only be modified for B and G clients
-     * - Identifier type is immutable (no NIDN ↔ CCPT ↔ TXID changes)
-     * - Identifier value is only mutable for CCPT (passport renewals)
+     * Validates the BCEAO ModificationAlias constraints that depend only on
+     * operational discriminators we still retain ({@code typeClient},
+     * {@code typeIdentifiant}):
+     * <ul>
+     *   <li>{@code denominationSociale}/{@code raisonSociale} may only be
+     *       modified for B/G clients.</li>
+     *   <li>Identification type is immutable (no NIDN ↔ CCPT ↔ TXID flips).</li>
+     *   <li>Identification value may only be updated for CCPT (passport
+     *       renewals) — the value itself isn't persisted locally anymore, so
+     *       we merely verify that the caller's type matches the stored code.</li>
+     * </ul>
      */
     private void validateModificationConstraints(PiAlias alias, ClientInfo requestClient) {
         if (requestClient.getRaisonSociale() != null || requestClient.getDenominationSociale() != null) {
@@ -366,9 +345,12 @@ public class AliasService {
                             + ". Original identification type must be preserved.");
         }
 
+        // Identification VALUE changes are only allowed for CCPT (passport).
+        // We no longer persist the value locally, so we only gate on the
+        // stored type code — the caller's new value itself is validated by
+        // the BCEAO AIP against its source of truth.
         if (requestClient.getIdentifiant() != null
-                && alias.getIdentifiant() != null
-                && !requestClient.getIdentifiant().equals(alias.getIdentifiant())
+                && alias.getTypeIdentifiant() != null
                 && alias.getTypeIdentifiant() != CodeSystemeIdentification.CCPT) {
             throw new InvalidStateException(
                     "Identifier value can only be updated for CCPT (passport) clients");

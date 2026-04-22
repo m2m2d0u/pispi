@@ -51,7 +51,25 @@ public class AliasCreationRequest {
     @NotNull(message = "typeAlias is required")
     private TypeAlias typeAlias;
 
-    /** Informations du client. */
+    /**
+     * Opaque reference to the client in the participant's own back-office system.
+     *
+     * <p>BCEAO PI-RAC §4.1 forbids replicating the PI-RAC alias base locally —
+     * this PI-SPI therefore persists only the alias itself and a pointer (this
+     * field) to where the client's real record lives (the back office). The
+     * nominal use is the MBNO+SHID cascade and duplicate detection.
+     *
+     * <p>Must NOT carry PII — pick a surrogate key (UUID, numeric ID, etc.).
+     */
+    @NotBlank(message = "backOfficeClientId is required — opaque surrogate key for the back-office client record")
+    @Size(max = 64, message = "backOfficeClientId must not exceed 64 characters")
+    private String backOfficeClientId;
+
+    /**
+     * Informations du client.
+     * Ces champs sont forwardés à PI-RAC à la création / modification mais
+     * ne sont pas persistés localement (BCEAO §4.1).
+     */
     @Valid
     @NotNull(message = "client is required")
     private ClientInfo client;
