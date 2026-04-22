@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "1070eda5-3baa-4b48-bf55-4897d06c9e2a",
+    "_postman_id": "840ff6a2-0235-415b-bc9f-1f10b8943f97",
     "name": "PI-SPI — Alias & Revendication",
     "description": "Collection de tests pour les opérations Alias (RAC) et Revendication du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/aliases`              — créer\n- `PUT    /api/v1/aliases`              — modifier\n- `DELETE /api/v1/aliases/{type}/{val}` — supprimer\n- `GET    /api/v1/aliases/search`       — rechercher\n- `POST   /api/v1/revendications`       — initier revendication\n- `POST   /api/v1/revendications/incoming/{id}/accept|reject`\n\n**⚠️ LIMITATIONS BCEAO** :\n1. Le champ `prenomClient` n'est PAS supporté par le DTO interface-participant\n2. `typeCompte` doit être `TRAN` (pas `TRAL`) pour EME - voir schéma OpenAPI CompteOther\n3. Pour les clients type P/C, les champs `dateNaissance`, `paysNaissance`, `lieuNaissance` sont recommandés\n\n**typeCompte valides (CompteOther)** : `CACC`, `SVGS`, `LLSV`, `TRAN`\n\n**⚠️ Note TRAL** : Le schéma BCEAO `ClientParticulierSansIdentification` permet de créer des alias pour personnes sans identification (compte TRAL avec seulement nom, categorie, paysResidence, telephone). Cependant, TRAL n'est PAS disponible pour les EME (établissements de paiement) - uniquement pour les banques.\n\n**Champs requis pour type P (personne physique)** :\n`nom`, `nationalite`, `paysResidence`, `telephone`, `categorie`, `genre`, `identificationNationale` (ou `numeroPasseport`), `dateNaissance`, `paysNaissance`, `villeNaissance`\n\n**Format compte (EME)** : Pour les participants de type E (monnaie électronique), utiliser `other` (pas `iban`). Exemple: `+2250707070707`\n\n**Téléphone** : `^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$`\n\n**raisonSuppression** (enum) : `FERMETURE_COMPTE_CLIENT` | `DEMANDE_CLIENT`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -22,7 +22,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"+2250707070707\",\n  \"typeAlias\": \"MBNO\",\n  \"client\": {\n    \"nom\": \"Diallo\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI123456789\",\n    \"dateNaissance\": \"1990-01-15\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"12 Rue des Jardins, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"mamadou.diallo@email.ci\"\n  },\n  \"numeroCompte\": \"+2250707070707\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2020-03-10\"\n}",
+              "raw": "{\n  \"alias\": \"+2250707077777\",\n  \"typeAlias\": \"MBNO\",\n  \"client\": {\n    \"nom\": \"Diallo\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI123456789\",\n    \"dateNaissance\": \"1990-01-15\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"12 Rue des Jardins, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707077777\",\n    \"email\": \"mamadou.diallo@email.ci\"\n  },\n  \"numeroCompte\": \"+2250707077777\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2020-03-10\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -247,6 +247,40 @@
             "description": "Crée un alias SHID pour une personne physique identifiée par passeport (sans CNI).\n\n**typeClient** : P\n**typeIdentifiant** : CCPT → champ AIP `numeroPasseport`\n\n**⚠️ Champs obligatoires pour type P** : `dateNaissance`, `paysNaissance`, `lieuNaissance` (villeNaissance) sont requis par BCEAO."
           },
           "response": []
+        },
+        {
+          "name": "Créer alias MBNO — ClientParticulierSansIdentification (TRAL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"alias\": \"+2250777770709\",\n    \"typeAlias\": \"MBNO\",\n    \"client\": {\n        \"nom\": \"Koné\",\n        \"typeClient\": \"P\",\n        \"pays\": \"CI\",\n        \"telephone\": \"+2250777770709\"\n    },\n    \"numeroCompte\": \"+2250777770709\",\n    \"typeCompte\": \"TRAL\",\n    \"dateOuvertureCompte\": \"2024-01-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/aliases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "aliases"
+              ]
+            },
+            "description": "Crée un alias MBNO pour une personne physique **sans identification** (schéma BCEAO `ClientParticulierSansIdentification`).\n\nCe schéma correspond à un compte de transaction allégé (`typeCompte: TRAL`) qui n'exige **aucun document d'identité** — seuls `nom`, `typeClient`, `pays` (paysResidence) et `telephone` sont requis.\n\n**typeClient** : P (personne physique uniquement)\n**typeCompte** : TRAL (Compte de Transaction Allégé)\n**Champs obligatoires** : `nom`, `pays`, `telephone`\n**Champs absents intentionnellement** : `typeIdentifiant`, `identifiant`, `genre`, `nationalite`, `dateNaissance`, `paysNaissance`, `lieuNaissance`\n\n**⚠️ LIMITATION EME** : TRAL est réservé aux participants de type banque. Les EME (établissements de paiement, type E) ne peuvent pas créer de comptes TRAL — la requête sera rejetée par le connecteur PI-SPI (`typeCompte` TRAL non autorisé pour EME) et par l'AIP BCEAO."
+          },
+          "response": []
         }
       ]
     },
@@ -265,7 +299,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Cité Patte d'Oie, Villa 32, Rue 17\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n    \"alias\": \"{{aliasShidPP}}\",\n    \"typeAlias\": \"SHID\",\n    \"client\": {\n        \"nom\": \"Ouedraogo\",\n        \"genre\": \"2\",\n        \"typeClient\": \"P\",\n        \"typeIdentifiant\": \"NIDN\",\n        \"identifiant\": \"BFNIN789654123\",\n        \"nationalite\": \"BF\",\n        \"lieuNaissance\": \"Abidjan\",\n        \"dateNaissance\": \"1990-01-15\",\n        \"paysNaissance\": \"CI\",\n        \"adresse\": \"Cité Patte d'Oie, Villa 32, Rue 17\",\n        \"ville\": \"Ouagadougou\",\n        \"pays\": \"BF\",\n        \"telephone\": \"+22670707070\",\n        \"email\": \"fatimata.ouedraogo@mail.bf\"\n    },\n    \"numeroCompte\": \"BF81BF0060000000000000000001\",\n    \"typeCompte\": \"CACC\",\n    \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -629,6 +663,35 @@
           "response": []
         },
         {
+          "name": "Supprimer un alias de type MCOD",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/aliases/SHID/{{aliasMcod}}?raisonSuppression=DEMANDE_CLIENT",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "aliases",
+                "SHID",
+                "{{aliasMcod}}"
+              ],
+              "query": [
+                {
+                  "key": "raisonSuppression",
+                  "value": "DEMANDE_CLIENT",
+                  "description": "Enum : DEMANDE_CLIENT | FERMETURE_COMPTE_CLIENT"
+                }
+              ]
+            },
+            "description": "Supprime un alias du RAC AIP et le marque `DELETED` en base locale.\n\n**Path params** : `{typeAlias}` (SHID|MBNO|MCOD) / `{aliasValue}`\n\n**`raisonSuppression`** est une enum stricte :\n- `DEMANDE_CLIENT` — résiliation à la demande du client\n- `FERMETURE_COMPTE_CLIENT` — clôture du compte"
+          },
+          "response": []
+        },
+        {
           "name": "Supprimer un alias (fermeture de compte)",
           "request": {
             "method": "DELETE",
@@ -745,7 +808,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"+2250707070710\"\n}",
+              "raw": "{\n  \"alias\": \"+2250707077777\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
