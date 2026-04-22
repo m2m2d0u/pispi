@@ -8,262 +8,6 @@
   },
   "item": [
     {
-      "name": "Virements sortants",
-      "item": [
-        {
-          "name": "Initier un virement DISP — Personne physique vers personne physique",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"motif\": \"Transfert familial\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ]
-            },
-            "description": "Virement de disponibilité (`DISP`) entre deux personnes physiques via le canal ordre de transfert (`ORDRE_TRANSFERT` → code AIP `999`).\n\n**endToEndIdSearchPayeur** : `endToEndId` retourné par une recherche d'alias RAC_SEARCH inbound pour le payeur. PI-SPI retrouve le log correspondant dans `pi_message_log` et reconstruit nom, téléphone, pays, identifiant, etc.\n\n**codificationPaye** : codification interne de l'alias du payé (format `{CODE_MEMBRE}-{TYPE}-{YYYYMMDD}-{SEQ5}`). PI-SPI retrouve l'alias dans `pi_alias` et reconstruit les informations du bénéficiaire.\n\nPI-SPI génère automatiquement : `msgId`, `endToEndId`, `dateHeureAcceptation`, `deviseCompteClientPayeur` = XOF, `deviseCompteClientPaye` = XOF."
-          },
-          "response": []
-        },
-        {
-          "name": "Initier un virement PRMG — Paiement marchand",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 100\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ]
-            },
-            "description": "Paiement marchand (`PRMG`) via présence physique en magasin (`MARCHAND_SUR_SITE` → code AIP `500`).\n\n**codificationPaye** : pointe vers l'alias MCOD ou MBNO du marchand dans `pi_alias`.\n**identifiantTransaction** : référence interne mappée vers `identifiantTransaction` dans le payload AIP.\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal — l'AIP les mappe vers `latitudeClientPayeur` / `longitudeClientPayeur` dans le PACS.008.\n**montantAchat** : montant HT de l'achat (entier XOF)."
-          },
-          "response": []
-        },
-        {
-          "name": "Initier un virement PRMG — Paiement QR code dynamique",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"identifiantTransaction\": \"TXN-QR-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 100\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ]
-            },
-            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**identifiantTransaction** : référence unique de la transaction côté appelant. Obligatoire pour ce canal (l'AIP l'exige pour les canaux 400, 733, 500, 521, 520, 631, 401).\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
-          },
-          "response": []
-        },
-        {
-          "name": "Initier un virement avec document de référence (CINV)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 120000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Règlement facture fournisseur\",\n  \"identifiantTransaction\": \"FIN-PLUS-INV-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-2026-0042\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ]
-            },
-            "description": "Virement B2B inter-UEMOA avec référence de document (`CINV` = facture commerciale).\n\n**canalCommunication** : `API_BUSINESS` — canal 733, intégration API directe entre entreprises.\n**document.codeTypeDocument** : `CINV` (Commercial Invoice) — mappé vers `typeDocumentReference` dans le payload AIP.\n**document.identifiantDocument** : numéro de facture — mappé vers `numeroDocumentReference`.\n\n**codeTypeDocument valides** : `CINV` (facture) | `CMCN` (contrat) | `DISP` (disponibilité) | `PUOR` (bon de commande)"
-          },
-          "response": []
-        },
-        {
-          "name": "Initier un virement avec retrait (DISP + frais)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"montantRetrait\": 50000,\n  \"fraisRetrait\": 500\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ]
-            },
-            "description": "Opération de retrait via USSD (`USSD` → code AIP `300`) avec `montantRetrait` et `fraisRetrait`.\n\n**montantRetrait** et **fraisRetrait** : entiers XOF, mappés vers les champs du même nom dans le payload AIP (pattern `\\d+`)."
-          },
-          "response": []
-        },
-        {
-          "name": "Consulter un virement",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/{{transferEndToEndId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "{{transferEndToEndId}}"
-              ]
-            },
-            "description": "Retourne l'état local du virement identifié par son `endToEndId`.\n\n**Statuts possibles** : `PEND` (en attente) | `ACSP` (accepté) | `ACCC` | `ACSC` | `RJCT` (rejeté) | `TMOT` (timeout)"
-          },
-          "response": []
-        },
-        {
-          "name": "Lister les virements (paginé)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers?page=0&size=20&sort=createdAt,desc",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0",
-                  "description": "Numéro de page (0-based)"
-                },
-                {
-                  "key": "size",
-                  "value": "20",
-                  "description": "Nombre d'éléments par page"
-                },
-                {
-                  "key": "sort",
-                  "value": "createdAt,desc",
-                  "description": "Tri par date de création décroissante"
-                }
-              ]
-            },
-            "description": "Retourne la liste paginée des virements sortants initiés par ce PI, triés par date de création décroissante."
-          },
-          "response": []
-        },
-        {
-          "name": "Interroger le statut d'un virement (PACS.028)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/{{transferEndToEndId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "{{transferEndToEndId}}",
-                "status"
-              ]
-            },
-            "description": "Envoie une demande de statut PACS.028 à l'AIP (`POST /transferts/statut`) pour le virement identifié par `endToEndId`. L'AIP répondra de manière asynchrone via le callback `/transferts/reponses`."
-          },
-          "response": []
-        }
-      ],
-      "description": "Initiation de virements depuis ce participant vers un autre participant UEMOA. Le payeur est identifié via l'`endToEndId` d'une recherche d'alias préalable, le payé via sa codification interne. PI-SPI reconstruit automatiquement tous les champs clients, génère `msgId` et `endToEndId`, construit le payload PACS.008 à plat selon le schéma `Virement` de l'AIP et l'envoie via `POST /transferts`."
-    },
-    {
       "name": "Scénarios BCEAO pacs.008",
       "description": "Scénarios de test pacs.008 organisés par typologie sender → receiver (B2B, B2C, B2P, P2B, P2C, P2P) et par canal de communication BCEAO. Chaque sous-dossier regroupe les variantes d'un même axe. Les scénarios marqués **FF05** attendent un rejet AIP pour incohérence de canal / type client — ils servent à tester la gestion d'erreur côté PI-SPI.\n\n**Variables requises** : `searchPayeurB` (endToEndId d'un RAC_SEARCH pour payeur business), `searchPayeurP` (pour payeur personne physique), `codificationPayeB` / `codificationPayeC` / `codificationPayeP` / `codificationPayeMCOD` (codifications internes des alias payés).",
       "item": [
@@ -282,7 +26,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 75000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement B2B par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 75000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement B2B par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -316,7 +60,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 50000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeBFirst}}\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-FIRST-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 50000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeBFirst}}\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"identifiantTransaction\": \"TXN-B2B-QRD-FIRST-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -350,7 +94,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 35000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 35000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -384,7 +128,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 185000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 185000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -418,7 +162,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 95000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 95000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"B2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -452,7 +196,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 450000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Règlement B2B via intégration API business\",\n  \"identifiantTransaction\": \"TXN-B2B-API-20260422-001\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-API-2026-0123\",\n    \"libelleDocument\": \"Facture API Business\"\n  }\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Règlement B2B via intégration API business\",\n  \"identifiantTransaction\": \"TXN-B2B-API-20260422-001\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-API-2026-0123\",\n    \"libelleDocument\": \"Facture API Business\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -486,7 +230,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-B2B-2026-0099\",\n    \"libelleDocument\": \"Facture B2B cacao — 15 tonnes\"\n  },\n  \"montantRetrait\": 1500000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-B2B-2026-0099\",\n    \"libelleDocument\": \"Facture B2B cacao — 15 tonnes\"\n  },\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -525,7 +269,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 28000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Règlement B2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 28000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Règlement B2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-B2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -559,7 +303,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 42000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement B2C chez un artisan sur site\",\n  \"identifiantTransaction\": \"TXN-B2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 42000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement B2C chez un artisan sur site\",\n  \"identifiantTransaction\": \"TXN-B2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -598,7 +342,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Remboursement de frais via QR statique\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Remboursement de frais via QR statique\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -632,7 +376,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"montantRetrait\": 50000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -666,7 +410,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"B2P via canal PARTICULIER — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 20000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"B2P via canal PARTICULIER — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-B2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -700,7 +444,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 125000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Versement salaire — mois d'avril 2026\",\n  \"identifiantTransaction\": \"TXN-B2P-SAL-20260422-001\"\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"API_BUSINESS\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Versement salaire — mois d'avril 2026\",\n  \"identifiantTransaction\": \"TXN-B2P-SAL-20260422-001\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -739,7 +483,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 12500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Merci pour le pain et les viennoiseries, à demain !\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Merci pour le pain et les viennoiseries, à demain !\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -773,7 +517,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 8500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeMCOD}}\",\n  \"motif\": \"Paiement USSD via code marchand (alias MCOD)\",\n  \"montantAchat\": 8500\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeMCOD}}\",\n  \"motif\": \"Paiement USSD via code marchand (alias MCOD)\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -807,7 +551,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 22000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement P2B par QR code dynamique — courses supermarché\",\n  \"identifiantTransaction\": \"TXN-P2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 22000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"Paiement P2B par QR code dynamique — courses supermarché\",\n  \"identifiantTransaction\": \"TXN-P2B-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -841,7 +585,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"montant\": 85000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B via canal FACTURE — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-FACT-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FF05-001\"\n  }\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B via canal FACTURE — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-FACT-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FF05-001\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -875,7 +619,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 40000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 40000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B marchand sur site — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-MOS-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -909,7 +653,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 110000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 110000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce livraison — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMDEL-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -943,7 +687,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeB}}\",\n  \"motif\": \"P2B e-commerce immédiat — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2B-ECOMIMM-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -982,7 +726,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"montantRetrait\": 15000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"USSD\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1016,7 +760,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 18500,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-P2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 18500\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C artisan par QR code dynamique\",\n  \"identifiantTransaction\": \"TXN-P2C-QRD-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1050,7 +794,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 32000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C chez le couturier sur site\",\n  \"identifiantTransaction\": \"TXN-P2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 32000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement P2C chez le couturier sur site\",\n  \"identifiantTransaction\": \"TXN-P2C-MOS-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1084,7 +828,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"montantRetrait\": 75000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1123,7 +867,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 20000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P — attendu: rejet FF05\",\n  \"identifiantTransaction\": \"TXN-P2P-PART-FF05-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1157,7 +901,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ADRESSE_PAIEMENT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 45000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ADRESSE_PAIEMENT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1191,7 +935,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"QR_CODE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via QR code (par alias)\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 25000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"QR_CODE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert P2P via QR code (par alias)\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1225,7 +969,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert familial P2P par ordre de transfert (résolu par alias)\",\n  \"montantRetrait\": 100000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"ORDRE_TRANSFERT\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeP}}\",\n  \"motif\": \"Transfert familial P2P par ordre de transfert (résolu par alias)\",\n  \"montantRetrait\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1264,7 +1008,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 18000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement programmé — abonnement coiffure mensuelle\",\n  \"referenceBulk\": \"SCHED-COIFFURE-20260501\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 18000\n}",
+                  "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_STATIQUE\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"codificationPaye\": \"{{codificationPayeC}}\",\n  \"motif\": \"Paiement programmé — abonnement coiffure mensuelle\",\n  \"referenceBulk\": \"SCHED-COIFFURE-20260501\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1291,146 +1035,6 @@
       ]
     },
     {
-      "name": "Virements entrants",
-      "item": [
-        {
-          "name": "Accepter un virement entrant (PACS.002 ACSP)",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/accept",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "incoming",
-                "{{incomingEndToEndId}}",
-                "accept"
-              ]
-            },
-            "description": "Accepte le virement entrant et envoie `PACS.002` avec `statutTransaction: ACSP` à l'AIP (`POST /transferts/reponses`).\n\n**ACSP** (Accepted Settlement In Process) est le seul statut d'acceptation valide pour `VirementReponse` selon le schéma AIP BCEAO — `ACCC` n'est pas accepté pour les virements."
-          },
-          "response": []
-        },
-        {
-          "name": "Rejeter un virement entrant (PACS.002 RJCT) — compte inconnu",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"statutTransaction\": \"RJCT\",\n  \"codeRaison\": \"AC01\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "incoming",
-                "{{incomingEndToEndId}}",
-                "reject"
-              ]
-            },
-            "description": "Rejette le virement entrant avec le code raison `AC01` (numéro de compte incorrect).\n\n**Codes raison fréquents** : `AC01` (compte incorrect) | `AC04` (compte fermé) | `AC06` (compte bloqué) | `AM04` (fonds insuffisants) | `CUST` (refus client)"
-          },
-          "response": []
-        },
-        {
-          "name": "Rejeter un virement entrant (PACS.002 RJCT) — compte fermé",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"statutTransaction\": \"RJCT\",\n  \"codeRaison\": \"AC04\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "incoming",
-                "{{incomingEndToEndId}}",
-                "reject"
-              ]
-            },
-            "description": "Rejette le virement entrant avec le code raison `AC04` (compte fermé)."
-          },
-          "response": []
-        },
-        {
-          "name": "Rejeter un virement entrant (PACS.002 RJCT) — refus client",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"statutTransaction\": \"RJCT\",\n  \"codeRaison\": \"CUST\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transfers/incoming/{{incomingEndToEndId}}/reject",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transfers",
-                "incoming",
-                "{{incomingEndToEndId}}",
-                "reject"
-              ]
-            },
-            "description": "Rejette le virement entrant avec le code raison `CUST` (refus à la demande du client)."
-          },
-          "response": []
-        }
-      ],
-      "description": "Actions sur les virements reçus depuis l'AIP via le callback `/transferts`. Lorsqu'un virement entrant est reçu (statut `PEND`), le participant doit l'accepter (`ACSP`) ou le rejeter (`RJCT`) via PACS.002."
-    },
-    {
       "name": "Demandes sortantes",
       "item": [
         {
@@ -1445,7 +1049,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"FIN-PLUS-SARL\",\n  \"identifiantDemandePaiement\": \"RTP-B2B-INV-2026-0001\",\n  \"montant\": 1500000,\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"CI05CI12345678901234567890123\",\n  \"typeCompteClientPayeur\": \"CACC\",\n  \"numeroCompteClientPaye\": \"CI08CI98765432109876543210987\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"AGRO NEGOCE CI\",\n    \"raisonSociale\": \"AGRO NEGOCE CI SA\",\n    \"denominationSociale\": \"AGRO NEGOCE CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2021-B-1234567\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Alpha 2000, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252721234567\",\n    \"email\": \"compta@agro-negoce.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"FIN PLUS SARL\",\n    \"raisonSociale\": \"FIN PLUS SARL\",\n    \"denominationSociale\": \"FIN PLUS\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2018-B-7654321\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone Industrielle Yopougon, Lot 42\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521987654\",\n    \"email\": \"factures@finplus.ci\"\n  },\n  \"motif\": \"Règlement facture fournisseur matières premières Q2 2026\",\n  \"referenceClient\": \"FACT-FP-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FP-2026-0042\",\n    \"libelleDocument\": \"Facture commerciale — Cacao fèves 15 tonnes\"\n  }\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"FIN-PLUS-SARL\",\n  \"identifiantDemandePaiement\": \"RTP-B2B-INV-2026-0001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"CI05CI12345678901234567890123\",\n  \"typeCompteClientPayeur\": \"CACC\",\n  \"numeroCompteClientPaye\": \"CI08CI98765432109876543210987\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"AGRO NEGOCE CI\",\n    \"raisonSociale\": \"AGRO NEGOCE CI SA\",\n    \"denominationSociale\": \"AGRO NEGOCE CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2021-B-1234567\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Alpha 2000, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252721234567\",\n    \"email\": \"compta@agro-negoce.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"FIN PLUS SARL\",\n    \"raisonSociale\": \"FIN PLUS SARL\",\n    \"denominationSociale\": \"FIN PLUS\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2018-B-7654321\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone Industrielle Yopougon, Lot 42\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521987654\",\n    \"email\": \"factures@finplus.ci\"\n  },\n  \"motif\": \"Règlement facture fournisseur matières premières Q2 2026\",\n  \"referenceClient\": \"FACT-FP-2026-0042\",\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-FP-2026-0042\",\n    \"libelleDocument\": \"Facture commerciale — Cacao fèves 15 tonnes\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1479,7 +1083,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"BOUTIQUE-KONE\",\n  \"identifiantDemandePaiement\": \"RTP-INV-REMISE-20260422-001\",\n  \"montant\": 50000,\n  \"dateHeureLimiteAction\": \"2026-04-29T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11112222333344445555666\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUASSI\",\n    \"prenom\": \"Amani\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1985-0009876\",\n    \"dateNaissance\": \"1985-07-14\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue des Jardins, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"BOUTIQUE KONE\",\n    \"raisonSociale\": \"BOUTIQUE KONE SARL\",\n    \"denominationSociale\": \"BOUTIQUE KONE\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-5556677\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Marché de Treichville, Stand 217\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521555666\"\n  },\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"referenceClient\": \"FACT-BK-2026-0108\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 5000,\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-BK-2026-0108\",\n    \"libelleDocument\": \"Facture électroménager — Réfrigérateur Samsung\"\n  }\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"BOUTIQUE-KONE\",\n  \"identifiantDemandePaiement\": \"RTP-INV-REMISE-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-29T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11112222333344445555666\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUASSI\",\n    \"prenom\": \"Amani\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1985-0009876\",\n    \"dateNaissance\": \"1985-07-14\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue des Jardins, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"BOUTIQUE KONE\",\n    \"raisonSociale\": \"BOUTIQUE KONE SARL\",\n    \"denominationSociale\": \"BOUTIQUE KONE\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-5556677\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Marché de Treichville, Stand 217\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521555666\"\n  },\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"referenceClient\": \"FACT-BK-2026-0108\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1,\n  \"document\": {\n    \"codeTypeDocument\": \"CINV\",\n    \"identifiantDocument\": \"FACT-BK-2026-0108\",\n    \"libelleDocument\": \"Facture électroménager — Réfrigérateur Samsung\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1513,7 +1117,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"SUPERMARCHE-ABIDJAN\",\n  \"identifiantDemandePaiement\": \"RTP-MAG-DIFF-20260422-001\",\n  \"montant\": 75000,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250508080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI77778888999900001111222\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"TRAORE\",\n    \"prenom\": \"Fatou\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1992-0001234\",\n    \"dateNaissance\": \"1992-03-22\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cité Riviera Palmeraie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250508080808\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SUPERMARCHE ABIDJAN\",\n    \"raisonSociale\": \"SUPERMARCHE ABIDJAN SA\",\n    \"denominationSociale\": \"SM ABIDJAN\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2015-B-3334445\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Avenue Houdaille, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252520070070\"\n  },\n  \"motif\": \"Paiement différé courses mensuelles\",\n  \"referenceClient\": \"TICKET-SM-20260422-3421\",\n  \"marchand\": {\n    \"codeMarchand\": \"4421\",\n    \"categorieCodeMarchand\": \"5411\",\n    \"nomMarchand\": \"SUPERMARCHE ABIDJAN — Plateau\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 75000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"SUPERMARCHE-ABIDJAN\",\n  \"identifiantDemandePaiement\": \"RTP-MAG-DIFF-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250508080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI77778888999900001111222\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"TRAORE\",\n    \"prenom\": \"Fatou\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1992-0001234\",\n    \"dateNaissance\": \"1992-03-22\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cité Riviera Palmeraie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250508080808\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SUPERMARCHE ABIDJAN\",\n    \"raisonSociale\": \"SUPERMARCHE ABIDJAN SA\",\n    \"denominationSociale\": \"SM ABIDJAN\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2015-B-3334445\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Avenue Houdaille, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252520070070\"\n  },\n  \"motif\": \"Paiement différé courses mensuelles\",\n  \"referenceClient\": \"TICKET-SM-20260422-3421\",\n  \"marchand\": {\n    \"codeMarchand\": \"4421\",\n    \"categorieCodeMarchand\": \"5411\",\n    \"nomMarchand\": \"SUPERMARCHE ABIDJAN — Plateau\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1547,7 +1151,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PHARMACIE-COCODY\",\n  \"identifiantDemandePaiement\": \"RTP-P2B-MAG-20260422-001\",\n  \"montant\": 25000,\n  \"dateHeureLimiteAction\": \"2026-04-22T14:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250102030405\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI66667777888899990000111\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"DIALLO\",\n    \"prenom\": \"Mamadou\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1988-0003456\",\n    \"dateNaissance\": \"1988-11-05\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue J40, Angré 8ème Tranche\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250102030405\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PHARMACIE COCODY\",\n    \"raisonSociale\": \"PHARMACIE COCODY SARL\",\n    \"denominationSociale\": \"PHARM COCODY\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2019-B-2223334\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Boulevard Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252522100100\"\n  },\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"referenceClient\": \"TICKET-PC-20260422-0987\",\n  \"marchand\": {\n    \"codeMarchand\": \"7821\",\n    \"categorieCodeMarchand\": \"5912\",\n    \"nomMarchand\": \"PHARMACIE COCODY\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 25000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PHARMACIE-COCODY\",\n  \"identifiantDemandePaiement\": \"RTP-P2B-MAG-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T14:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250102030405\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI66667777888899990000111\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"DIALLO\",\n    \"prenom\": \"Mamadou\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1988-0003456\",\n    \"dateNaissance\": \"1988-11-05\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue J40, Angré 8ème Tranche\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250102030405\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PHARMACIE COCODY\",\n    \"raisonSociale\": \"PHARMACIE COCODY SARL\",\n    \"denominationSociale\": \"PHARM COCODY\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2019-B-2223334\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Boulevard Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252522100100\"\n  },\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"referenceClient\": \"TICKET-PC-20260422-0987\",\n  \"marchand\": {\n    \"codeMarchand\": \"7821\",\n    \"categorieCodeMarchand\": \"5912\",\n    \"nomMarchand\": \"PHARMACIE COCODY\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1581,7 +1185,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"COUTURIER-ADJOVI\",\n  \"identifiantDemandePaiement\": \"RTP-P2C-MAG-20260422-001\",\n  \"montant\": 35000,\n  \"dateHeureLimiteAction\": \"2026-04-22T18:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250709090909\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"N'GUESSAN\",\n    \"prenom\": \"Akissi\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1995-0007890\",\n    \"dateNaissance\": \"1995-09-18\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Millionnaire\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"ADJOVI\",\n    \"prenom\": \"Koffi\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1980-0005678\",\n    \"dateNaissance\": \"1980-02-10\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Atelier Couture — Marché Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250709090909\"\n  },\n  \"motif\": \"Confection 2 tenues traditionnelles\",\n  \"referenceClient\": \"COM-ADJOVI-20260422\",\n  \"marchand\": {\n    \"codeMarchand\": \"1055\",\n    \"categorieCodeMarchand\": \"5697\",\n    \"nomMarchand\": \"ADJOVI COUTURE\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 35000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"COUTURIER-ADJOVI\",\n  \"identifiantDemandePaiement\": \"RTP-P2C-MAG-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T18:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606070707\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250709090909\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"N'GUESSAN\",\n    \"prenom\": \"Akissi\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1995-0007890\",\n    \"dateNaissance\": \"1995-09-18\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Millionnaire\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606070707\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"ADJOVI\",\n    \"prenom\": \"Koffi\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1980-0005678\",\n    \"dateNaissance\": \"1980-02-10\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Atelier Couture — Marché Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250709090909\"\n  },\n  \"motif\": \"Confection 2 tenues traditionnelles\",\n  \"referenceClient\": \"COM-ADJOVI-20260422\",\n  \"marchand\": {\n    \"codeMarchand\": \"1055\",\n    \"categorieCodeMarchand\": \"5697\",\n    \"nomMarchand\": \"ADJOVI COUTURE\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1615,7 +1219,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"AGENT-PICASH-RIVIERA\",\n  \"identifiantDemandePaiement\": \"RTP-PICASH-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T16:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250505050505\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"OUATTARA\",\n    \"prenom\": \"Adama\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1983-0004567\",\n    \"dateNaissance\": \"1983-06-30\",\n    \"lieuNaissance\": \"Korhogo\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Riviera 2\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606060606\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AGENT PICASH RIVIERA\",\n    \"prenom\": \"Bernard\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1978-0001122\",\n    \"dateNaissance\": \"1978-12-01\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Point Agent PICASH — Station Riviera\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250505050505\"\n  },\n  \"motif\": \"Retrait cash auprès d'un agent PICASH\",\n  \"referenceClient\": \"PICASH-RET-20260422-0042\",\n  \"montantRetrait\": 100000,\n  \"fraisRetrait\": 500\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"AGENT-PICASH-RIVIERA\",\n  \"identifiantDemandePaiement\": \"RTP-PICASH-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T16:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250606060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250505050505\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"OUATTARA\",\n    \"prenom\": \"Adama\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1983-0004567\",\n    \"dateNaissance\": \"1983-06-30\",\n    \"lieuNaissance\": \"Korhogo\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Riviera 2\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250606060606\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AGENT PICASH RIVIERA\",\n    \"prenom\": \"Bernard\",\n    \"genre\": \"1\",\n    \"typeClient\": \"C\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1978-0001122\",\n    \"dateNaissance\": \"1978-12-01\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Point Agent PICASH — Station Riviera\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250505050505\"\n  },\n  \"motif\": \"Retrait cash auprès d'un agent PICASH\",\n  \"referenceClient\": \"PICASH-RET-20260422-0042\",\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1649,7 +1253,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PICO-MARCHAND-PLATEAU\",\n  \"identifiantDemandePaiement\": \"RTP-PICO-20260422-001\",\n  \"montant\": 12500,\n  \"dateHeureLimiteAction\": \"2026-04-22T20:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250404040404\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI55556666777788889999000\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUAME\",\n    \"prenom\": \"Serge\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1990-0002345\",\n    \"dateNaissance\": \"1990-04-25\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence des Ambassades\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250404040404\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PICO MARCHAND PLATEAU\",\n    \"raisonSociale\": \"PICO MARCHAND PLATEAU SARL\",\n    \"denominationSociale\": \"PICO PLATEAU\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2022-B-9998887\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue du Commerce, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521200200\"\n  },\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"referenceClient\": \"TICKET-PICO-20260422-1337\",\n  \"marchand\": {\n    \"codeMarchand\": \"6621\",\n    \"categorieCodeMarchand\": \"5812\",\n    \"nomMarchand\": \"PICO PLATEAU RESTO\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 12500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"PICO-MARCHAND-PLATEAU\",\n  \"identifiantDemandePaiement\": \"RTP-PICO-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T20:00:00Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250404040404\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI55556666777788889999000\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KOUAME\",\n    \"prenom\": \"Serge\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1990-0002345\",\n    \"dateNaissance\": \"1990-04-25\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence des Ambassades\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250404040404\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"PICO MARCHAND PLATEAU\",\n    \"raisonSociale\": \"PICO MARCHAND PLATEAU SARL\",\n    \"denominationSociale\": \"PICO PLATEAU\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2022-B-9998887\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Rue du Commerce, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521200200\"\n  },\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"referenceClient\": \"TICKET-PICO-20260422-1337\",\n  \"marchand\": {\n    \"codeMarchand\": \"6621\",\n    \"categorieCodeMarchand\": \"5812\",\n    \"nomMarchand\": \"PICO PLATEAU RESTO\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1683,7 +1287,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"SHOP-JUMIA-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DEL-20260422-001\",\n  \"montant\": 85000,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250808080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11122233344455566677788\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"BAMBA\",\n    \"prenom\": \"Aïcha\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1993-0008901\",\n    \"dateNaissance\": \"1993-01-08\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Les Rosiers, Marcory\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250808080808\",\n    \"email\": \"aicha.bamba@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SHOP JUMIA CI\",\n    \"raisonSociale\": \"JUMIA CI SA\",\n    \"denominationSociale\": \"JUMIA CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2014-B-1112223\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone 4C, Rue Pierre & Marie Curie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521900900\",\n    \"email\": \"service-paiement@jumia.ci\"\n  },\n  \"motif\": \"Commande e-commerce — Livraison sous 3j\",\n  \"referenceClient\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"8801\",\n    \"categorieCodeMarchand\": \"5399\",\n    \"nomMarchand\": \"JUMIA CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 85000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"SHOP-JUMIA-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DEL-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250808080808\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI11122233344455566677788\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"BAMBA\",\n    \"prenom\": \"Aïcha\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1993-0008901\",\n    \"dateNaissance\": \"1993-01-08\",\n    \"lieuNaissance\": \"Bouaké\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Les Rosiers, Marcory\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250808080808\",\n    \"email\": \"aicha.bamba@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"SHOP JUMIA CI\",\n    \"raisonSociale\": \"JUMIA CI SA\",\n    \"denominationSociale\": \"JUMIA CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2014-B-1112223\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Zone 4C, Rue Pierre & Marie Curie\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521900900\",\n    \"email\": \"service-paiement@jumia.ci\"\n  },\n  \"motif\": \"Commande e-commerce — Livraison sous 3j\",\n  \"referenceClient\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"8801\",\n    \"categorieCodeMarchand\": \"5399\",\n    \"nomMarchand\": \"JUMIA CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1717,7 +1321,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"NETFLIX-AFRICA\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-IMM-20260422-001\",\n  \"montant\": 5500,\n  \"dateHeureLimiteAction\": \"2026-04-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250909090909\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI22233344455566677788899\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KONAN\",\n    \"prenom\": \"Yves\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1987-0006789\",\n    \"dateNaissance\": \"1987-08-17\",\n    \"lieuNaissance\": \"Daloa\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250909090909\",\n    \"email\": \"yves.konan@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"NETFLIX AFRICA\",\n    \"raisonSociale\": \"NETFLIX AFRICA SARL\",\n    \"denominationSociale\": \"NETFLIX AFRICA\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2017-B-4445556\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Pyramide, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521500500\",\n    \"email\": \"billing@netflix-africa.com\"\n  },\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"referenceClient\": \"SUB-NFX-20260422-88765\",\n  \"marchand\": {\n    \"codeMarchand\": \"4577\",\n    \"categorieCodeMarchand\": \"4899\",\n    \"nomMarchand\": \"NETFLIX AFRICA\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 5500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"NETFLIX-AFRICA\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-IMM-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-22T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250909090909\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI22233344455566677788899\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"KONAN\",\n    \"prenom\": \"Yves\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1987-0006789\",\n    \"dateNaissance\": \"1987-08-17\",\n    \"lieuNaissance\": \"Daloa\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Latrille, Cocody\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250909090909\",\n    \"email\": \"yves.konan@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"NETFLIX AFRICA\",\n    \"raisonSociale\": \"NETFLIX AFRICA SARL\",\n    \"denominationSociale\": \"NETFLIX AFRICA\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2017-B-4445556\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Immeuble Pyramide, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521500500\",\n    \"email\": \"billing@netflix-africa.com\"\n  },\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"referenceClient\": \"SUB-NFX-20260422-88765\",\n  \"marchand\": {\n    \"codeMarchand\": \"4577\",\n    \"categorieCodeMarchand\": \"4899\",\n    \"nomMarchand\": \"NETFLIX AFRICA\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1751,7 +1355,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"AMAZON-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DIFF-20260422-001\",\n  \"montant\": 155000,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-05-14T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI33344455566677788899900\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"ZOHOURE\",\n    \"prenom\": \"Mireille\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1991-0005432\",\n    \"dateNaissance\": \"1991-05-23\",\n    \"lieuNaissance\": \"San-Pédro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Duncan, 2 Plateaux\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707060606\",\n    \"email\": \"mireille.zohoure@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AMAZON CI\",\n    \"raisonSociale\": \"AMAZON CI SA\",\n    \"denominationSociale\": \"AMAZON CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-6667778\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Tour BICICI, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521808080\",\n    \"email\": \"ci-billing@amazon.com\"\n  },\n  \"motif\": \"Précommande smartphone — Débit prévu au lancement\",\n  \"referenceClient\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"9911\",\n    \"categorieCodeMarchand\": \"5732\",\n    \"nomMarchand\": \"AMAZON CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 155000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"AMAZON-CI\",\n  \"identifiantDemandePaiement\": \"RTP-ECOM-DIFF-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-05-14T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250707060606\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"CI08CI33344455566677788899900\",\n  \"typeCompteClientPaye\": \"CACC\",\n  \"clientPayeur\": {\n    \"nom\": \"ZOHOURE\",\n    \"prenom\": \"Mireille\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1991-0005432\",\n    \"dateNaissance\": \"1991-05-23\",\n    \"lieuNaissance\": \"San-Pédro\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Résidence Duncan, 2 Plateaux\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707060606\",\n    \"email\": \"mireille.zohoure@email.ci\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"AMAZON CI\",\n    \"raisonSociale\": \"AMAZON CI SA\",\n    \"denominationSociale\": \"AMAZON CI\",\n    \"typeClient\": \"B\",\n    \"typeIdentifiant\": \"TXID\",\n    \"identifiant\": \"CI-2020-B-6667778\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Tour BICICI, Plateau\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2252521808080\",\n    \"email\": \"ci-billing@amazon.com\"\n  },\n  \"motif\": \"Précommande smartphone — Débit prévu au lancement\",\n  \"referenceClient\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"marchand\": {\n    \"codeMarchand\": \"9911\",\n    \"categorieCodeMarchand\": \"5732\",\n    \"nomMarchand\": \"AMAZON CI\",\n    \"villeMarchand\": \"Abidjan\",\n    \"paysMarchand\": \"CI\"\n  },\n  \"montantAchat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1785,7 +1389,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"TONTINE-ESPOIR-ORGA\",\n  \"identifiantDemandePaiement\": \"RTP-TONTINE-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250301020304\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250405060708\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"TOURE\",\n    \"prenom\": \"Aminata\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1984-0003210\",\n    \"dateNaissance\": \"1984-10-11\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Yopougon Niangon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250301020304\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"KOUADIO\",\n    \"prenom\": \"Eugénie\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1979-0002109\",\n    \"dateNaissance\": \"1979-03-15\",\n    \"lieuNaissance\": \"Bouaflé\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Trésorerie Tontine Espoir — Yopougon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250405060708\"\n  },\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceClient\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"montantRetrait\": 25000\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"TONTINE-ESPOIR-ORGA\",\n  \"identifiantDemandePaiement\": \"RTP-TONTINE-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-30T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250301020304\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250405060708\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"TOURE\",\n    \"prenom\": \"Aminata\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1984-0003210\",\n    \"dateNaissance\": \"1984-10-11\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Yopougon Niangon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250301020304\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"KOUADIO\",\n    \"prenom\": \"Eugénie\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1979-0002109\",\n    \"dateNaissance\": \"1979-03-15\",\n    \"lieuNaissance\": \"Bouaflé\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Trésorerie Tontine Espoir — Yopougon\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250405060708\"\n  },\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceClient\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"montantRetrait\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1819,7 +1423,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"DIABATE-MOUSSA\",\n  \"identifiantDemandePaiement\": \"RTP-P2P-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250202020202\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250303030303\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"KEITA\",\n    \"prenom\": \"Ibrahim\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1986-0007654\",\n    \"dateNaissance\": \"1986-12-20\",\n    \"lieuNaissance\": \"Man\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Adjamé 220 Logements\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250202020202\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"DIABATE\",\n    \"prenom\": \"Moussa\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1982-0009876\",\n    \"dateNaissance\": \"1982-07-03\",\n    \"lieuNaissance\": \"Odienné\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Koumassi Nouveau Quartier\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250303030303\"\n  },\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceClient\": \"PRET-20260315-KEITA-DIABATE\",\n  \"montantRetrait\": 50000\n}",
+              "raw": "{\n  \"typeTransaction\": \"DISP\",\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"DIABATE-MOUSSA\",\n  \"identifiantDemandePaiement\": \"RTP-P2P-20260422-001\",\n  \"montant\": 1,\n  \"dateHeureLimiteAction\": \"2026-04-25T23:59:59Z\",\n  \"codeMembreParticipantPayeur\": \"{{codeMembrePayeur}}\",\n  \"numeroCompteClientPayeur\": \"+2250202020202\",\n  \"typeCompteClientPayeur\": \"TRAN\",\n  \"numeroCompteClientPaye\": \"+2250303030303\",\n  \"typeCompteClientPaye\": \"TRAN\",\n  \"clientPayeur\": {\n    \"nom\": \"KEITA\",\n    \"prenom\": \"Ibrahim\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1986-0007654\",\n    \"dateNaissance\": \"1986-12-20\",\n    \"lieuNaissance\": \"Man\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Adjamé 220 Logements\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250202020202\"\n  },\n  \"clientPaye\": {\n    \"nom\": \"DIABATE\",\n    \"prenom\": \"Moussa\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CI-NIDN-1982-0009876\",\n    \"dateNaissance\": \"1982-07-03\",\n    \"lieuNaissance\": \"Odienné\",\n    \"paysNaissance\": \"CI\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Koumassi Nouveau Quartier\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250303030303\"\n  },\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceClient\": \"PRET-20260315-KEITA-DIABATE\",\n  \"montantRetrait\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
