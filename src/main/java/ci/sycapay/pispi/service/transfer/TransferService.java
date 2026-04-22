@@ -178,6 +178,13 @@ public class TransferService {
                     CanalCommunication.E_COMMERCE_LIVRAISON, CanalCommunication.E_COMMERCE_IMMEDIAT,
                     CanalCommunication.PARTICULIER);
 
+    private static final Set<CanalCommunication> CANALS_REQUIRING_IDENTIFIANT_TRANSACTION =
+            Set.of(
+                    CanalCommunication.QR_CODE_DYNAMIQUE, CanalCommunication.API_BUSINESS,
+                    CanalCommunication.MARCHAND_SUR_SITE, CanalCommunication.E_COMMERCE_IMMEDIAT,
+                    CanalCommunication.E_COMMERCE_LIVRAISON, CanalCommunication.PARTICULIER,
+                    CanalCommunication.FACTURE);
+
     private void validateLocalisationRules(CanalCommunication canal, TransferRequest request) {
         // GPS coordinates (latitude + longitude) are required by the AIP for physical/QR/e-commerce channels
         if (CANALS_REQUIRING_LOCALISATION.contains(canal)) {
@@ -185,6 +192,13 @@ public class TransferService {
                     || request.getLongitudePayeur() == null || request.getLongitudePayeur().isBlank()) {
                 throw new IllegalArgumentException(
                         "La localisation GPS (latitudePayeur, longitudePayeur) est obligatoire pour le canal " + canal.name());
+            }
+        }
+        // identifiantTransaction is required by the AIP for channels 400, 733, 500, 521, 520, 631, 401
+        if (CANALS_REQUIRING_IDENTIFIANT_TRANSACTION.contains(canal)) {
+            if (request.getIdentifiantTransaction() == null || request.getIdentifiantTransaction().isBlank()) {
+                throw new IllegalArgumentException(
+                        "identifiantTransaction est obligatoire pour le canal " + canal.name());
             }
         }
     }

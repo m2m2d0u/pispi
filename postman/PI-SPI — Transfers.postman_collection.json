@@ -79,7 +79,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"identifiantTransaction\": \"TXN-QR-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,7 +91,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transfers"]
             },
-            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
+            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**identifiantTransaction** : référence unique de la transaction côté appelant. Obligatoire pour ce canal.\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
           },
           "response": []
         },
