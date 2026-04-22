@@ -6,6 +6,7 @@ import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.enums.CodeRaisonSuppression;
 import ci.sycapay.pispi.enums.TypeAlias;
 import ci.sycapay.pispi.service.alias.AliasService;
+import ci.sycapay.pispi.service.alias.AliasSyncService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class AliasController {
 
     private final AliasService aliasService;
+    private final AliasSyncService aliasSyncService;
 
     @Operation(summary = "Create an alias", description = "Registers a new account alias in the RAC via the AIP. Idempotent: duplicate alias+type combinations are rejected by the AIP.")
     @PostMapping
@@ -62,5 +64,19 @@ public class AliasController {
     @GetMapping
     public ApiResponse<Page<AliasResponse>> listAliases(Pageable pageable) {
         return ApiResponse.ok(aliasService.listAliases(pageable));
+    }
+
+    @Operation(summary = "Check whether an alias needs a PI-RAC sync",
+            description = "BCEAO PI-RAC §4.4 option 2: the back office calls this endpoint "
+                    + "with its own 'client updated at' timestamp. When the local pi_alias "
+                    + "dateLastSync is older, the response is STALE_MARK_FOR_RESYNC and the "
+                    + "caller should follow up with PUT /api/v1/aliases.")
+    @GetMapping("/{aliasValue}/sync-check")
+    public ApiResponse<AliasSyncService.SyncOutcome> checkSync(
+            @Parameter(description = "The alias value to check") @PathVariable String aliasValue,
+            @Parameter(description = "ISO-8601 timestamp of the last back-office update to the client")
+            @RequestParam String backOfficeUpdatedAt) {
+        return ApiResponse.ok(aliasSyncService.checkAndFlag(
+                aliasValue, java.time.LocalDateTime.parse(backOfficeUpdatedAt)));
     }
 }

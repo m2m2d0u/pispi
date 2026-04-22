@@ -95,7 +95,29 @@ public class AliasCreationRequest {
     @Valid
     private MerchantInfo marchand;
 
-    /** Photo du client encodée en Base64 (optionnel). */
+    /**
+     * Code d'activité NAEMA du client (optionnel, 4 chiffres par convention).
+     * BCEAO PI-RAC §2.2.1: champ optionnel applicable à tout type de client.
+     * Pour un MCOD, peut aussi être dérivé de {@code marchand.categorieCodeMarchand}
+     * mais celui-ci reste le champ canonique pour les autres types.
+     */
+    @Pattern(regexp = "^\\d{1,10}$", message = "codeActivite must be 1-10 digits")
+    @Size(max = 10)
+    private String codeActivite;
+
+    /** Catégorie d'entreprise (optionnel). */
+    @Size(max = 140)
+    private String categorieEntreprise;
+
+    /**
+     * URL publique de la photo/logo du client (optionnel).
+     * Spec BCEAO §2.2.1: "Lien public du logo d'une entreprise ou d'un marchand
+     * ou d'un site ecommerce ou de la photo d'une personne" — doit commencer
+     * par {@code https://}.
+     */
+    @Pattern(regexp = "^https://.*$",
+            message = "photoClient must be a public URL starting with https://")
+    @Size(max = 500)
     private String photoClient;
 
     /**
@@ -144,29 +166,37 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that typeCompte is appropriate.
-     * Per BCEAO OpenAPI, CompteOther accepts: CACC, SVGS, LLSV, TRAN.
-     * Note: TRAL (lightweight accounts for persons without ID) is NOT available for EME participants.
+     * Validates typeCompte against the BCEAO PI-RAC v3.0.0 allowed set:
+     * {@code CACC | SVGS | TRAN | LLSV | VACC | TAXE | TRAL}.
+     *
+     * <p>v2.0.4 added {@code VACC} (tontines); {@code TRAL} is reserved for banks
+     * (participants creating accounts for persons without identification) and is
+     * filtered out of most downstream messages by the AIP when the participant
+     * is not a bank.
      */
     @JsonIgnore
-    @AssertTrue(message = "typeCompte must be one of: CACC, SVGS, LLSV, TRAN")
+    @AssertTrue(message = "typeCompte must be one of: CACC, SVGS, TRAN, LLSV, VACC, TAXE, TRAL")
     public boolean isTypeCompteValid() {
-        if (typeCompte == null) {
-            return true; // Let @NotNull handle this
-        }
-        return typeCompte == TypeCompte.CACC ||
-               typeCompte == TypeCompte.SVGS ||
-               typeCompte == TypeCompte.LLSV ||
-               typeCompte == TypeCompte.TRAN;
+        if (typeCompte == null) return true; // Let @NotNull handle it
+        return switch (typeCompte) {
+            case CACC, SVGS, TRAN, LLSV, VACC, TAXE, TRAL -> true;
+        };
     }
 
     /**
-     * Validates that identification is always provided.
-     * Note: TRAL accounts (persons without ID) are NOT available for EME participants.
+     * Validates identification per BCEAO PI-RAC v2.0.1 / v2.0.2:
+     * <ul>
+     *   <li>Optional when {@code typeCompte == TRAL} (BCEAO
+     *       {@code ClientParticulierSansIdentification}).</li>
+     *   <li>Required otherwise — {@code typeIdentifiant} + {@code identifiant}
+     *       must both be present.</li>
+     * </ul>
      */
     @JsonIgnore
-    @AssertTrue(message = "typeIdentifiant and identifiant are required")
+    @AssertTrue(message = "typeIdentifiant and identifiant are required "
+            + "(not required only for TRAL accounts)")
     public boolean isIdentificationRequired() {
+        if (typeCompte == TypeCompte.TRAL) return true;
         return client != null
                && client.getTypeIdentifiant() != null
                && client.getIdentifiant() != null
@@ -186,28 +216,31 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that MBNO alias is only created for type P (personne physique) clients.
+     * Validates that MBNO alias is created for a physical person — either a
+     * plain {@code P} or a {@code C} (personne physique commerçante per v2.0.2).
+     * The spec does not restrict MBNO ownership to type {@code P} only.
      */
     @JsonIgnore
-    @AssertTrue(message = "MBNO alias can only be created for type P (personne physique) clients")
-    public boolean isMbnoOnlyForPersonnePhysique() {
-        if (typeAlias != TypeAlias.MBNO) {
-            return true;
-        }
-        return client != null && client.getTypeClient() == TypeClient.P;
+    @AssertTrue(message = "MBNO alias can only be created for physical persons (type P or C)")
+    public boolean isMbnoOnlyForPhysicalPerson() {
+        if (typeAlias != TypeAlias.MBNO) return true;
+        return client != null
+               && (client.getTypeClient() == TypeClient.P
+                   || client.getTypeClient() == TypeClient.C);
     }
 
     /**
-     * Validates that MCOD alias is only created for type B or C clients.
+     * BCEAO PI-RAC §2.1.3: MCOD is reserved for personnes morales (type B —
+     * and G for government services). Type C is a physical person, so MCOD
+     * is NOT available for them despite v2.0.2 adding C as a client category.
      */
     @JsonIgnore
-    @AssertTrue(message = "MCOD alias can only be created for type B (business) or C (commercial) clients")
-    public boolean isMcodOnlyForBusinessOrCommercial() {
-        if (typeAlias != TypeAlias.MCOD) {
-            return true;
-        }
-        return client != null &&
-               (client.getTypeClient() == TypeClient.B || client.getTypeClient() == TypeClient.C);
+    @AssertTrue(message = "MCOD alias can only be created for type B (business) or G (government) clients — personnes morales only")
+    public boolean isMcodOnlyForLegalEntity() {
+        if (typeAlias != TypeAlias.MCOD) return true;
+        return client != null
+               && (client.getTypeClient() == TypeClient.B
+                   || client.getTypeClient() == TypeClient.G);
     }
 
     /**
@@ -247,17 +280,24 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that birth info (dateNaissance, paysNaissance, lieuNaissance) is always provided.
-     * Required for all client types — the three fields form the ISO 20022 DtAndPlcOfBirth
-     * block in PACS.008, which the AIP rejects if any of the three is missing.
+     * Per BCEAO PI-RAC v2.0.1, birth info (dateNaissance + paysNaissance +
+     * villeNaissance) is required <b>for banks</b> only; it is optional for
+     * other participant types (EMEs, SFDs). However, when any of the three is
+     * provided, <b>all three must be provided together</b> because they form
+     * the ISO 20022 {@code DtAndPlcOfBirth} block that the AIP splits atomically.
+     *
+     * <p>The service layer already blocks the EME-specific case (birth info
+     * absent) via its own checks where required; this DTO just enforces
+     * "all-or-nothing" consistency.
      */
     @JsonIgnore
-    @AssertTrue(message = "dateNaissance, paysNaissance, and lieuNaissance are required")
-    public boolean isBirthInfoRequired() {
+    @AssertTrue(message = "dateNaissance, paysNaissance, and lieuNaissance must be provided together (all three or none)")
+    public boolean isBirthInfoConsistent() {
         if (client == null) return true;
-        return client.getDateNaissance() != null && !client.getDateNaissance().isBlank()
-                && client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank()
-                && client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
+        boolean d = client.getDateNaissance() != null && !client.getDateNaissance().isBlank();
+        boolean p = client.getPaysNaissance() != null && !client.getPaysNaissance().isBlank();
+        boolean l = client.getLieuNaissance() != null && !client.getLieuNaissance().isBlank();
+        return (d && p && l) || (!d && !p && !l);
     }
 
     // ---- Type B/G required fields ----
@@ -276,15 +316,51 @@ public class AliasCreationRequest {
     }
 
     /**
-     * Validates that ville is provided for type B and G clients.
-     * Per BCEAO spec, ville is required for ClientEntreprise (B) and ClientGouvernement (G).
+     * Validates that ville is provided for type B, G, and C clients.
+     * Per BCEAO spec:
+     * - v2.0.0: ville is required for personnes morales (B, G)
+     * - v2.0.3: ville is also required for personnes physiques commerçantes (C)
      */
     @JsonIgnore
-    @AssertTrue(message = "ville is required for type B (business) and G (government) clients")
-    public boolean isVilleRequiredForBG() {
-        if (client != null && (client.getTypeClient() == TypeClient.B || client.getTypeClient() == TypeClient.G)) {
+    @AssertTrue(message = "ville is required for type B (business), G (government), and C (commercial) clients")
+    public boolean isVilleRequiredForBGC() {
+        if (client != null
+                && (client.getTypeClient() == TypeClient.B
+                    || client.getTypeClient() == TypeClient.G
+                    || client.getTypeClient() == TypeClient.C)) {
             return client.getVille() != null && !client.getVille().isBlank();
         }
         return true;
+    }
+
+    /**
+     * BCEAO PI-RAC v2.0.1: raisonSociale is required for type B (business).
+     * G (government) also carries raisonSociale in practice though the spec
+     * leaves some ambiguity — we require it for B to match the explicit rule.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "raisonSociale is required for type B (business) clients")
+    public boolean isRaisonSocialeRequiredForB() {
+        if (client != null && client.getTypeClient() == TypeClient.B) {
+            return client.getRaisonSociale() != null && !client.getRaisonSociale().isBlank();
+        }
+        return true;
+    }
+
+    /**
+     * BCEAO PI-RAC §2.2.1 (table row "Identification Fiscale"): identification
+     * fiscale is marked <b>Obligatoire</b> for entreprises (B). Government
+     * entities (G) also register with a tax ID in practice; we only enforce
+     * for B strictly per the spec wording.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "identification fiscale (typeIdentifiant=TXID + identifiant) is required for type B (business)")
+    public boolean isIdentificationFiscaleRequiredForB() {
+        if (client == null || client.getTypeClient() != TypeClient.B) return true;
+        if (client.getTypeIdentifiant() == null) return false;
+        // For B clients, typeIdentifiant must be TXID (CodeSystemeIdentification enum).
+        return "TXID".equals(client.getTypeIdentifiant().name())
+               && client.getIdentifiant() != null
+               && !client.getIdentifiant().isBlank();
     }
 }

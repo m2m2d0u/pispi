@@ -42,6 +42,17 @@ public class PiAliasRevendication {
     @Builder.Default
     private boolean verrouille = false;
 
+    /**
+     * Timestamp at which the claim entered state {@code INITIEE} (§3.1).
+     * Anchor for the day-7 lock and day-14 auto-accept schedulers.
+     */
+    @Column(name = "date_initiation")
+    private LocalDateTime dateInitiation;
+
+    /** Timestamp at which the alias was locked by the day-7 scheduler (§3.2). */
+    @Column(name = "date_verrouillage")
+    private LocalDateTime dateVerrouillage;
+
     @Column(name = "date_action")
     private LocalDateTime dateAction;
 
@@ -56,8 +67,12 @@ public class PiAliasRevendication {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        if (this.dateInitiation == null && this.statut == StatutRevendication.INITIEE) {
+            this.dateInitiation = now;
+        }
     }
 
     @PreUpdate

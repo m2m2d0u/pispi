@@ -88,7 +88,7 @@ public class NotificationCallbackController {
                 .build();
         notificationRepository.save(notification);
 
-        WebhookEventType webhookEvent = revendicationService.processInfoWarn(msgId, description);
+        WebhookEventType webhookEvent = revendicationService.processInfoWarn(msgId, payload);
 
         webhookService.notify(webhookEvent, null, msgId, payload);
         return ResponseEntity.accepted().build();

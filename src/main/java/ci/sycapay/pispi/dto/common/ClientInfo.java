@@ -147,9 +147,17 @@ public class ClientInfo {
     @Size(max = 20, message = "codePostal must not exceed 20 characters")
     private String codePostal;
 
-    /** Nom de la mère (optionnel). */
+    /** Nom de la mère (optionnel, renseigné pour une personne physique P/C). */
     @Size(max = 140, message = "nomMere must not exceed 140 characters")
     private String nomMere;
+
+    /**
+     * Numéro RCCM du commerçant — BCEAO PI-RAC v2.0.2: "Renseigné seulement pour
+     * les personnes physiques commerçantes (type C)". Optional otherwise; the
+     * alias payload builder only forwards it when {@code typeClient == C}.
+     */
+    @Size(max = 35, message = "identificationRccm must not exceed 35 characters")
+    private String identificationRccm;
 
     // ---- Cross-field validations ----
     // NOTE: Most "required for P/C" validations are moved to AliasCreationRequest

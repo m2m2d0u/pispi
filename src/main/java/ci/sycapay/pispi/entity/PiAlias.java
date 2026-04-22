@@ -113,6 +113,15 @@ public class PiAlias {
     @Column(name = "date_suppression_rac")
     private LocalDateTime dateSuppressionRac;
 
+    /**
+     * Timestamp of the last successful sync between the participant's client
+     * data and the PI-RAC record. Drives the BCEAO §4.4 synchronization
+     * mechanism — when the back-office client record has been updated after
+     * this timestamp, the sync endpoint triggers an alias modification call.
+     */
+    @Column(name = "date_last_sync")
+    private LocalDateTime dateLastSync;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

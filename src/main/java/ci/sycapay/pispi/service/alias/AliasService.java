@@ -45,6 +45,28 @@ public class AliasService {
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
 
+    // -------------------------------------------------------------------------
+    // BCEAO PI-RAC §4 — operational rules enforced here:
+    //
+    //   §4.1 Do not replicate the full alias base locally. We only persist
+    //        aliases we registered on behalf of our own clients (the AIP is
+    //        the single source of truth for everything else). Do not add a
+    //        background import job that mirrors PI-RAC into pi_alias.
+    //
+    //   §4.2 Do not cache RAC search results. searchAlias() below calls the
+    //        AIP on every invocation — do not introduce a @Cacheable, Redis
+    //        cache, or similar layer on that method. The AIP enforces its
+    //        own rate limits; run an external gateway (API gateway / WAF)
+    //        if per-participant throttling is needed in addition.
+    //
+    //   §4.3 Authentication / access control: confirm via the deployment
+    //        manifest that /api/v1/aliases/** is fronted by a gateway that
+    //        enforces AuthN. If running exposed, add a SecurityFilterChain.
+    //
+    //   §4.4 Synchronization: AliasSyncService + the sync-check endpoint
+    //        + modifyAlias bumping dateLastSync implements option 2.
+    // -------------------------------------------------------------------------
+
     @Transactional
     public AliasResponse createAlias(AliasCreationRequest request) {
         String codeMembre = properties.getCodeMembre();
@@ -113,8 +135,26 @@ public class AliasService {
                 .build();
     }
 
+    /**
+     * BCEAO PI-RAC §2.1.3: MCOD uniqueness is scoped <b>per participant</b> —
+     * the same MCOD value can coexist across different participants. MBNO and
+     * SHID remain globally unique, so we keep the broader check for those.
+     */
     private void checkDuplicateByAliasValue(String aliasValue, TypeAlias typeAlias) {
         if (aliasValue == null) return;
+
+        if (typeAlias == TypeAlias.MCOD) {
+            String codeMembre = properties.getCodeMembre();
+            aliasRepository.findByAliasValueAndTypeAliasAndCodeMembreParticipantAndStatutIn(
+                            aliasValue, typeAlias, codeMembre, BLOCKING_STATUSES)
+                    .ifPresent(existing -> {
+                        throw new DuplicateRequestException(
+                                "Alias", aliasValue + "@" + codeMembre,
+                                existing.getStatut().name());
+                    });
+            return;
+        }
+
         aliasRepository.findByAliasValueAndTypeAliasAndStatutIn(aliasValue, typeAlias, BLOCKING_STATUSES)
                 .ifPresent(existing -> {
                     throw new DuplicateRequestException("Alias", aliasValue, existing.getStatut().name());
@@ -252,6 +292,14 @@ public class AliasService {
             throw e;
         }
 
+        // BCEAO §4.4: bump the last-sync timestamp on every successful
+        // modification so subsequent sync-check calls see an up-to-date row.
+        LocalDateTime syncAt = LocalDateTime.now();
+        for (PiAlias row : affected) {
+            row.setDateLastSync(syncAt);
+        }
+        aliasRepository.saveAll(affected);
+
         return AliasResponse.builder()
                 .endToEndId(endToEndId)
                 .statut(StatutOperationAlias.EN_COURS)
@@ -352,6 +400,17 @@ public class AliasService {
                 .build();
     }
 
+    /**
+     * BCEAO PI-RAC §4.2 — "Les participants doivent interroger la base des
+     * alias avant chaque transaction pour s'assurer de l'exactitude des
+     * informations. Ils ne doivent pas mettre en cache les requêtes."
+     *
+     * <p>Every invocation of this method MUST hit the AIP. Do NOT wrap this
+     * in {@code @Cacheable}, add a Redis cache layer, memoise results, or
+     * otherwise shortcut the network round trip — even if a benchmark makes
+     * it tempting. Rate limiting (if you need it in front of the AIP's own
+     * quota) belongs at the gateway, not here.
+     */
     public Map<String, Object> searchAlias(String alias) {
         String codeMembre = properties.getCodeMembre();
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
@@ -435,14 +494,26 @@ public class AliasService {
         if (c.getVille() != null) payload.put("villeClient", c.getVille());
         if (c.getEmail() != null) payload.put("emailClient", c.getEmail());
         if (c.getCodePostal() != null) payload.put("codePostaleClient", c.getCodePostal());
+        if (c.getNomMere() != null) payload.put("nomMere", c.getNomMere());
         if (request.getPhotoClient() != null) payload.put("photoClient", request.getPhotoClient());
+
+        // v2.0.2: identificationRccm is reserved for personnes physiques commerçantes (type C).
+        if (c.getTypeClient() == TypeClient.C && c.getIdentificationRccm() != null) {
+            payload.put("identificationRccm", c.getIdentificationRccm());
+        }
+
+        // Generic optional BCEAO fields — apply to any client type when provided.
+        if (request.getCodeActivite() != null) payload.put("codeActivite", request.getCodeActivite());
+        if (request.getCategorieEntreprise() != null) payload.put("categorieEntreprise", request.getCategorieEntreprise());
 
         // preConfirmation is only valid for type B (personne morale) clients
         if (c.getTypeClient() == TypeClient.B && request.getPreConfirmation() != null) {
             payload.put("preConfirmation", request.getPreConfirmation());
         }
 
-        // Merchant fields only carried on the MCOD leg.
+        // Merchant fields only carried on the MCOD leg. categorieCodeMarchand is
+        // the merchant-specific flavour of codeActivite — prefer the merchant's
+        // MCC over any generic request.codeActivite when MCOD.
         if (request.getMarchand() != null && effectiveType == TypeAlias.MCOD) {
             if (request.getMarchand().getNomMarchand() != null) payload.put("denominationSociale", request.getMarchand().getNomMarchand());
             if (request.getMarchand().getCategorieCodeMarchand() != null) payload.put("codeActivite", request.getMarchand().getCategorieCodeMarchand());

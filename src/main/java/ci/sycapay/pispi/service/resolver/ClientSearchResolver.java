@@ -2,12 +2,15 @@ package ci.sycapay.pispi.service.resolver;
 
 import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.entity.PiMessageLog;
+import ci.sycapay.pispi.enums.AliasStatus;
 import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.TypeCompte;
+import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
+import ci.sycapay.pispi.repository.PiAliasRepository;
 import ci.sycapay.pispi.repository.PiMessageLogRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,6 +32,7 @@ import java.util.Map;
 public class ClientSearchResolver {
 
     private final PiMessageLogRepository messageLogRepository;
+    private final PiAliasRepository aliasRepository;
     private final ObjectMapper objectMapper;
 
     public ResolvedClient resolve(String endToEndIdSearch, String side) {
@@ -116,6 +120,21 @@ public class ClientSearchResolver {
 
         String valeurAlias = str(data, "valeurAlias");
         String codeMembreParticipant = str(data, "participant");
+
+        // Per BCEAO PI-RAC §3.2, a LOCKED alias must not carry any payment.
+        // When the resolved alias corresponds to a local row (we may be the
+        // détenteur, OR have cached the alias for another reason) and it is
+        // LOCKED, refuse the operation here rather than emit a message the
+        // AIP would reject.
+        if (valeurAlias != null) {
+            aliasRepository.findByAliasValue(valeurAlias).ifPresent(local -> {
+                if (local.getStatut() == AliasStatus.LOCKED) {
+                    throw new InvalidStateException(
+                            "Alias " + valeurAlias + " is LOCKED (revendication en cours) — "
+                                    + "no payment can be initiated against it until the claim resolves.");
+                }
+            });
+        }
 
         log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch);
         return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias, codeMembreParticipant);

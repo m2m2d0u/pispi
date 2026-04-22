@@ -38,10 +38,17 @@ public class RevendicationController {
         return ApiResponse.ok(service.getClaimStatus(identifiantRevendication));
     }
 
-    @Operation(summary = "Accept an inbound alias claim", description = "Accepts a revendication initiated by another participant targeting an alias owned by this PI. Notifies the AIP of the acceptance.")
+    @Operation(summary = "Accept an inbound alias claim",
+            description = "Accepts a revendication initiated by another participant targeting an "
+                    + "alias owned by this PI. Per BCEAO PI-RAC v3.0.0 §3.3, the acceptance must "
+                    + "declare whether it came from the CLIENT (holder explicitly accepted) or "
+                    + "from the PARTICIPANT (default; also used by the day-14 auto-accept job).")
     @PostMapping("/incoming/{id}/accept")
-    public ApiResponse<RevendicationResponse> acceptClaim(@Parameter(description = "Revendication identifier") @PathVariable String id) {
-        return ApiResponse.ok(service.acceptClaim(id));
+    public ApiResponse<RevendicationResponse> acceptClaim(
+            @Parameter(description = "Revendication identifier") @PathVariable String id,
+            @Parameter(description = "Author of the acceptance: CLIENT or PARTICIPANT (defaults to PARTICIPANT)")
+            @RequestParam(defaultValue = "PARTICIPANT") String auteurAction) {
+        return ApiResponse.ok(service.acceptClaim(id, auteurAction));
     }
 
     @Operation(summary = "Reject an inbound alias claim", description = "Rejects a revendication initiated by another participant. The alias remains with the current owner.")
