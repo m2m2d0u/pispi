@@ -69,7 +69,7 @@ public class TransferService {
                 ? payeur
                 : resolveClientFromCodification(request.getCodificationPaye(), "paye");
 
-        validateLocalisationRules(request.getCanalCommunication(), payeur, paye);
+        validateLocalisationRules(request.getCanalCommunication(), request);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -178,24 +178,14 @@ public class TransferService {
                     CanalCommunication.E_COMMERCE_LIVRAISON, CanalCommunication.E_COMMERCE_IMMEDIAT,
                     CanalCommunication.PARTICULIER);
 
-    private void validateLocalisationRules(CanalCommunication canal, ResolvedClient payeur, ResolvedClient paye) {
-        log.info("Validate the localisation rules");
-        // Rule 1: ville required for B/G/C type clients
-        for (var entry : new Object[][]{{payeur, "payeur"}, {paye, "paye"}}) {
-            ResolvedClient client = (ResolvedClient) entry[0];
-            String side = (String) entry[1];
-            TypeClient type = client.clientInfo().getTypeClient();
-            if ((type == TypeClient.B || type == TypeClient.G || type == TypeClient.C)
-                    && (client.clientInfo().getVille() == null || client.clientInfo().getVille().isBlank())) {
+    private void validateLocalisationRules(CanalCommunication canal, TransferRequest request) {
+        // GPS coordinates (latitude + longitude) are required by the AIP for physical/QR/e-commerce channels
+        if (CANALS_REQUIRING_LOCALISATION.contains(canal)) {
+            if (request.getLatitudePayeur() == null || request.getLatitudePayeur().isBlank()
+                    || request.getLongitudePayeur() == null || request.getLongitudePayeur().isBlank()) {
                 throw new IllegalArgumentException(
-                        "La ville est obligatoire pour le " + side + " de type " + type.name());
+                        "La localisation GPS (latitudePayeur, longitudePayeur) est obligatoire pour le canal " + canal.name());
             }
-        }
-        // Rule 2: villeClientPayeur required for merchant/QR/e-commerce channels
-        if (CANALS_REQUIRING_LOCALISATION.contains(canal)
-                && (payeur.clientInfo().getVille() == null || payeur.clientInfo().getVille().isBlank())) {
-            throw new IllegalArgumentException(
-                    "La localisation (ville) du client payeur est obligatoire pour le canal " + canal.name());
         }
     }
 
@@ -410,6 +400,11 @@ public class TransferService {
 
         // montantAchat and document omitted: AIP maps them to RmtInf/Strd which conflicts
         // with motif → RmtInf/Ustrd. PI SPI rejects PACS.008.001.10 messages containing Strd.
+        if (request.getLatitudePayeur() != null)
+            payload.put("latitudeClientPayeur", request.getLatitudePayeur());
+        if (request.getLongitudePayeur() != null)
+            payload.put("longitudeClientPayeur", request.getLongitudePayeur());
+
         if (request.getMontantRetrait() != null)
             payload.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
         if (request.getFraisRetrait() != null)

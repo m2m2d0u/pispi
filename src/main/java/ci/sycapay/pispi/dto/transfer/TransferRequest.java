@@ -51,6 +51,14 @@ public class TransferRequest {
     @Valid
     private DocumentInfo document;
 
+    /** GPS latitude du payeur — obligatoire pour les canaux QR, marchand, e-commerce. */
+    @Size(max = 20)
+    private String latitudePayeur;
+
+    /** GPS longitude du payeur — obligatoire pour les canaux QR, marchand, e-commerce. */
+    @Size(max = 20)
+    private String longitudePayeur;
+
     private BigDecimal montantAchat;
     private BigDecimal montantRetrait;
     private BigDecimal fraisRetrait;

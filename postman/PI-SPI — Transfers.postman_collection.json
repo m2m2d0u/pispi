@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "c2f4a8e1-3b17-4d9a-ae52-8f6c1d0b3e77",
     "name": "PI-SPI — Transfers",
-    "description": "Collection de tests pour les opérations de virement (PACS.008 / PACS.002 / PACS.028 / ADMI.002) du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/transfers`                              — initier un virement (PACS.008)\n- `GET    /api/v1/transfers/{endToEndId}`                 — consulter un virement\n- `GET    /api/v1/transfers`                              — lister les virements (paginé)\n- `POST   /api/v1/transfers/{endToEndId}/status`          — interroger le statut (PACS.028)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/accept` — accepter un virement entrant (PACS.002 ACSP)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/reject` — rejeter un virement entrant (PACS.002 RJCT)\n\n**Callbacks AIP → PI-SPI**\n- `POST   /transferts`          — réception virement entrant (PACS.008)\n- `POST   /transferts/reponses` — résultat virement (PACS.002)\n- `POST   /transferts/echecs`   — rejet structurel (ADMI.002)\n\n**Résolution automatique des participants**\n- `endToEndIdSearchPayeur` : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement les informations du payeur depuis `pi_message_log`.\n- `codificationPaye` : codification interne de l'alias du payé (ex: `CIE002-MB-20260422-00001`) — PI-SPI reconstruit automatiquement les informations du bénéficiaire depuis `pi_alias`.\n\n**typeTransaction (enum)** : `PRMG` (paiement marchand/gouvernement) | `DISP` (disponibilité/virement libre)\n\n**canalCommunication (enum)** : `ORDRE_TRANSFERT` (999) | `QR_CODE` (731) | `ADRESSE_PAIEMENT` (633) | `QR_CODE_STATIQUE` (000) | `QR_CODE_DYNAMIQUE` (400) | `API_BUSINESS` (733) | `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `PARTICULIER` (631) | `USSD` (300)\n\n**statutTransaction (VirementReponse)** : `ACSP` (accepté en cours de règlement) | `RJCT` (rejeté)\n\n**Champs générés automatiquement par PI-SPI** : `msgId`, `endToEndId`, `dateHeureAcceptation`, `deviseCompteClientPayeur` = XOF, `deviseCompteClientPaye` = XOF, tous les champs client payeur/payé.",
+    "description": "Collection de tests pour les opérations de virement (PACS.008 / PACS.002 / PACS.028 / ADMI.002) du connecteur PI-SPI Sycapay.\n\n**Endpoints exposés**\n- `POST   /api/v1/transfers`                              — initier un virement (PACS.008)\n- `GET    /api/v1/transfers/{endToEndId}`                 — consulter un virement\n- `GET    /api/v1/transfers`                              — lister les virements (paginé)\n- `POST   /api/v1/transfers/{endToEndId}/status`          — interroger le statut (PACS.028)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/accept` — accepter un virement entrant (PACS.002 ACSP)\n- `POST   /api/v1/transfers/incoming/{endToEndId}/reject` — rejeter un virement entrant (PACS.002 RJCT)\n\n**Callbacks AIP → PI-SPI**\n- `POST   /transferts`          — réception virement entrant (PACS.008)\n- `POST   /transferts/reponses` — résultat virement (PACS.002)\n- `POST   /transferts/echecs`   — rejet structurel (ADMI.002)\n\n**Résolution automatique des participants**\n- `endToEndIdSearchPayeur` : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement les informations du payeur depuis `pi_message_log`.\n- `codificationPaye` : codification interne de l'alias du payé (ex: `CIE002-MB-20260422-00001`) — PI-SPI reconstruit automatiquement les informations du bénéficiaire depuis `pi_alias`.\n\n**typeTransaction (enum)** : `PRMG` (paiement marchand/gouvernement) | `DISP` (disponibilité/virement libre)\n\n**canalCommunication (enum)** : `ORDRE_TRANSFERT` (999) | `QR_CODE` (731) | `ADRESSE_PAIEMENT` (633) | `QR_CODE_STATIQUE` (000) | `QR_CODE_DYNAMIQUE` (400) | `API_BUSINESS` (733) | `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `PARTICULIER` (631) | `USSD` (300)\n\n**statutTransaction (VirementReponse)** : `ACSP` (accepté en cours de règlement) | `RJCT` (rejeté)\n\n**Localisation GPS obligatoire** : les canaux `QR_CODE` (731), `ADRESSE_PAIEMENT` (633), `QR_CODE_STATIQUE` (000), `QR_CODE_DYNAMIQUE` (400), `FACTURE` (401), `MARCHAND_SUR_SITE` (500), `E_COMMERCE_LIVRAISON` (520), `E_COMMERCE_IMMEDIAT` (521) et `PARTICULIER` (631) requièrent obligatoirement `latitudePayeur` et `longitudePayeur` (coordonnées GPS du payeur, format décimal WGS-84).\n\n**Champs générés automatiquement par PI-SPI** : `msgId`, `endToEndId`, `dateHeureAcceptation`, `deviseCompteClientPayeur` = XOF, `deviseCompteClientPaye` = XOF, tous les champs client payeur/payé.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "24650068"
   },
@@ -51,7 +51,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"montantAchat\": 15000\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"montant\": 15000,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Achat courses supermarché\",\n  \"identifiantTransaction\": \"TXN-KONDJANI-20260422-001\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 15000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -63,7 +63,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transfers"]
             },
-            "description": "Paiement marchand (`PRMG`) via présence physique en magasin (`MARCHAND_SUR_SITE` → code AIP `500`).\n\n**codificationPaye** : pointe vers l'alias MCOD ou MBNO du marchand dans `pi_alias`.\n**identifiantTransaction** : référence interne mappée vers `identifiantTransaction` dans le payload AIP.\n**montantAchat** : montant HT de l'achat (entier XOF)."
+            "description": "Paiement marchand (`PRMG`) via présence physique en magasin (`MARCHAND_SUR_SITE` → code AIP `500`).\n\n**codificationPaye** : pointe vers l'alias MCOD ou MBNO du marchand dans `pi_alias`.\n**identifiantTransaction** : référence interne mappée vers `identifiantTransaction` dans le payload AIP.\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal — l'AIP les mappe vers `latitudeClientPayeur` / `longitudeClientPayeur` dans le PACS.008.\n**montantAchat** : montant HT de l'achat (entier XOF)."
           },
           "response": []
         },
@@ -79,7 +79,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"montantAchat\": 7500\n}",
+              "raw": "{\n  \"typeTransaction\": \"PRMG\",\n  \"canalCommunication\": \"QR_CODE_DYNAMIQUE\",\n  \"montant\": 7500,\n  \"endToEndIdSearchPayeur\": \"{{searchEndToEndIdPayeur}}\",\n  \"codificationPaye\": \"{{codificationPaye}}\",\n  \"motif\": \"Paiement via QR code\",\n  \"latitudePayeur\": \"5.3600\",\n  \"longitudePayeur\": \"-4.0083\",\n  \"montantAchat\": 7500\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,7 +91,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transfers"]
             },
-            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne."
+            "description": "Paiement via QR code dynamique (`QR_CODE_DYNAMIQUE` → code AIP `400`). L'alias du marchand (`aliasClientPaye`) est résolu automatiquement depuis la codification interne.\n\n**latitudePayeur** / **longitudePayeur** : coordonnées GPS du payeur (WGS-84, format décimal). Obligatoires pour ce canal."
           },
           "response": []
         },
