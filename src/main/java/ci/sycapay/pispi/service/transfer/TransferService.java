@@ -9,6 +9,7 @@ import ci.sycapay.pispi.dto.transfer.TransferResponse;
 import ci.sycapay.pispi.entity.PiAlias;
 import ci.sycapay.pispi.entity.PiMessageLog;
 import ci.sycapay.pispi.entity.PiTransfer;
+import ci.sycapay.pispi.enums.CanalCommunication;
 import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
@@ -34,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.formatDateTime;
 import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
@@ -61,10 +63,13 @@ public class TransferService {
         }
 
         ResolvedClient payeur = resolveClientFromSearchLog(request.getEndToEndIdSearchPayeur(), "payeur");
+
         // BCEAO rule: for DISP, payeur and paye must be the same person
         ResolvedClient paye = request.getTypeTransaction() == TypeTransaction.DISP
                 ? payeur
                 : resolveClientFromCodification(request.getCodificationPaye(), "paye");
+
+        validateLocalisationRules(request.getCanalCommunication(), payeur, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -104,7 +109,7 @@ public class TransferService {
                 .statut(TransferStatus.PEND)
                 .build();
         transferRepository.save(transfer);
-
+        log.info("Transfer initiated with payload: {}", aipPayload);
         aipClient.post("/transferts", aipPayload);
 
         return toResponse(transfer);
@@ -159,6 +164,39 @@ public class TransferService {
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_028, MessageDirection.OUTBOUND, pacs028, null, null);
         aipClient.post("/transferts/statut", pacs028);
+    }
+
+    // -------------------------------------------------------------------------
+    // Pre-send BCEAO validation
+    // -------------------------------------------------------------------------
+
+    private static final Set<CanalCommunication> CANALS_REQUIRING_LOCALISATION =
+            Set.of(
+                    CanalCommunication.QR_CODE, CanalCommunication.ADRESSE_PAIEMENT,
+                    CanalCommunication.QR_CODE_STATIQUE, CanalCommunication.QR_CODE_DYNAMIQUE,
+                    CanalCommunication.FACTURE, CanalCommunication.MARCHAND_SUR_SITE,
+                    CanalCommunication.E_COMMERCE_LIVRAISON, CanalCommunication.E_COMMERCE_IMMEDIAT,
+                    CanalCommunication.PARTICULIER);
+
+    private void validateLocalisationRules(CanalCommunication canal, ResolvedClient payeur, ResolvedClient paye) {
+        log.info("Validate the localisation rules");
+        // Rule 1: ville required for B/G/C type clients
+        for (var entry : new Object[][]{{payeur, "payeur"}, {paye, "paye"}}) {
+            ResolvedClient client = (ResolvedClient) entry[0];
+            String side = (String) entry[1];
+            TypeClient type = client.clientInfo().getTypeClient();
+            if ((type == TypeClient.B || type == TypeClient.G || type == TypeClient.C)
+                    && (client.clientInfo().getVille() == null || client.clientInfo().getVille().isBlank())) {
+                throw new IllegalArgumentException(
+                        "La ville est obligatoire pour le " + side + " de type " + type.name());
+            }
+        }
+        // Rule 2: villeClientPayeur required for merchant/QR/e-commerce channels
+        if (CANALS_REQUIRING_LOCALISATION.contains(canal)
+                && (payeur.clientInfo().getVille() == null || payeur.clientInfo().getVille().isBlank())) {
+            throw new IllegalArgumentException(
+                    "La localisation (ville) du client payeur est obligatoire pour le canal " + canal.name());
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -276,7 +314,7 @@ public class TransferService {
         String valeurAlias = getString(data, "valeurAlias");
         String codeMembreParticipant = getString(data, "participant");
 
-        log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch); // NOSONAR — log is the Slf4j logger here
+        log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch);
         return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias, codeMembreParticipant);
     }
 
@@ -370,15 +408,8 @@ public class TransferService {
         if (request.getReferenceBulk() != null)
             payload.put("referenceBulk", request.getReferenceBulk());
 
-        if (request.getDocument() != null) {
-            if (request.getDocument().getCodeTypeDocument() != null)
-                payload.put("typeDocumentReference", request.getDocument().getCodeTypeDocument().name());
-            if (request.getDocument().getIdentifiantDocument() != null)
-                payload.put("numeroDocumentReference", request.getDocument().getIdentifiantDocument());
-        }
-
-        if (request.getMontantAchat() != null)
-            payload.put("montantAchat", request.getMontantAchat().toBigInteger().toString());
+        // montantAchat and document omitted: AIP maps them to RmtInf/Strd which conflicts
+        // with motif → RmtInf/Ustrd. PI SPI rejects PACS.008.001.10 messages containing Strd.
         if (request.getMontantRetrait() != null)
             payload.put("montantRetrait", request.getMontantRetrait().toBigInteger().toString());
         if (request.getFraisRetrait() != null)
@@ -393,6 +424,7 @@ public class TransferService {
                 .msgId(t.getMsgId())
                 .statut(t.getStatut())
                 .codeRaison(t.getCodeRaison())
+                .detailEchec(t.getDetailEchec())
                 .montant(t.getMontant())
                 .codeMembreParticipantPayeur(t.getCodeMembrePayeur())
                 .codeMembreParticipantPaye(t.getCodeMembrePaye())

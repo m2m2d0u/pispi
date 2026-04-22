@@ -3,6 +3,8 @@ package ci.sycapay.pispi.controller.callback;
 import ci.sycapay.pispi.dto.common.ApiResponse;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
+import ci.sycapay.pispi.enums.TransferStatus;
+import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.alias.AliasCallbackService;
 import ci.sycapay.pispi.service.alias.RevendicationService;
@@ -24,6 +26,7 @@ public class MiscCallbackController {
     private final MessageLogService messageLogService;
     private final AliasCallbackService aliasCallbackService;
     private final RevendicationService revendicationService;
+    private final PiTransferRepository transferRepository;
 
     // ---- Notification failures ----
 
@@ -60,8 +63,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias search response")
     @PostMapping("/alias/recherche/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveAliasSearchResponse(@RequestBody Map<String, Object> payload) {
-        String endToEndId = (String) payload.get("endToEndId");
         log.info("Alias search response received: {}", payload);
+        String endToEndId = (String) payload.get("endToEndId");
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_SEARCH, MessageDirection.INBOUND, payload, 202, null);
 
         // Process callback: update or create alias with data from PI-RAC
@@ -73,8 +76,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias creation response")
     @PostMapping("/alias/creation/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveAliasCreationResponse(@RequestBody Map<String, Object> payload) {
-        String idCreationAlias = (String) payload.get("idCreationAlias");
         log.info("Alias creation response received: {}", payload);
+        String idCreationAlias = (String) payload.get("idCreationAlias");
         if (idCreationAlias != null && messageLogService.isDuplicate(idCreationAlias)) {
             return ResponseEntity.accepted().build();
         }
@@ -89,8 +92,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias modification response")
     @PostMapping("/alias/modification/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveAliasModificationResponse(@RequestBody Map<String, Object> payload) {
-        String alias = (String) payload.get("alias");
         log.info("Alias modification response received: {}", payload);
+        String alias = (String) payload.get("alias");
         if (alias != null && messageLogService.isDuplicate("MOD_" + alias)) {
             return ResponseEntity.accepted().build();
         }
@@ -105,8 +108,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive alias deletion response")
     @PostMapping("/alias/suppression/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveAliasDeletionResponse(@RequestBody Map<String, Object> payload) {
-        String alias = (String) payload.get("alias");
         log.info("Alias deletion response received: {}", payload);
+        String alias = (String) payload.get("alias");
         if (alias != null && messageLogService.isDuplicate("DEL_" + alias)) {
             return ResponseEntity.accepted().build();
         }
@@ -123,8 +126,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim response")
     @PostMapping("/revendications/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimResponse(@RequestBody Map<String, Object> payload) {
-        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim response received: {}", payload);
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
         revendicationService.processClaimResponse(payload);
         return ResponseEntity.accepted().build();
@@ -133,8 +136,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim recovery response")
     @PostMapping("/revendications/recuperation/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimRecoveryResponse(@RequestBody Map<String, Object> payload) {
-        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim recovery response received: {}", payload);
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
         revendicationService.processClaimRecuperationResponse(payload);
         return ResponseEntity.accepted().build();
@@ -143,8 +146,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim acceptance response")
     @PostMapping("/revendications/acceptation/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimAcceptanceResponse(@RequestBody Map<String, Object> payload) {
-        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim acceptance response received: {}", payload);
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
         revendicationService.processClaimAcceptationResponse(payload);
         return ResponseEntity.accepted().build();
@@ -153,8 +156,8 @@ public class MiscCallbackController {
     @Operation(summary = "Receive claim rejection response")
     @PostMapping("/revendications/rejet/reponses")
     public ResponseEntity<ApiResponse<Void>> receiveClaimRejectionResponse(@RequestBody Map<String, Object> payload) {
-        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         log.info("Claim rejection response received: {}", payload);
+        String identifiantRevendication = (String) payload.get("identifiantRevendication");
         messageLogService.log(null, identifiantRevendication, IsoMessageType.RAC_REVENDICATION, MessageDirection.INBOUND, payload, 202, null);
         revendicationService.processClaimRejetResponse(payload);
         return ResponseEntity.accepted().build();
@@ -182,7 +185,19 @@ public class MiscCallbackController {
     @PostMapping("/messages-iso/echec-envoi")
     public ResponseEntity<ApiResponse<Void>> receiveIsoSendFailure(@RequestBody Map<String, Object> payload) {
         log.error("ISO message send failure: {}", payload);
-        messageLogService.log(null, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 202, null);
+        String msgId = (String) payload.get("msgId");
+        String detail = (String) payload.get("detailEchec");
+        messageLogService.log(null, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 202, detail);
+
+        if (msgId != null) {
+            transferRepository.findByMsgId(msgId).ifPresent(transfer -> {
+                transfer.setStatut(TransferStatus.ECHEC);
+                transfer.setCodeRaison("AIP_ERR");
+                transfer.setDetailEchec(detail);
+                transferRepository.save(transfer);
+            });
+        }
+
         return ResponseEntity.accepted().build();
     }
 

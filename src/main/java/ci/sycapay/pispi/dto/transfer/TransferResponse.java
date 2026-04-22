@@ -18,6 +18,7 @@ public class TransferResponse {
     private String msgId;
     private TransferStatus statut;
     private String codeRaison;
+    private String detailEchec;
     private BigDecimal montant;
     private String codeMembreParticipantPayeur;
     private String codeMembreParticipantPaye;
