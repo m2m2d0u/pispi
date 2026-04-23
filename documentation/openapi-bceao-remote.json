@@ -1,0 +1,3728 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "x-logo": {
+      "url": "https://developers.pi-bceao.com/assets/images/logo/Logo_SPI_1.png"
+    },
+    "title": "PI SPI  - Application mobile - OpenAPI 3.0",
+    "description": "# Généralités\nAPI du backend de l'application Mobile du projet d'interopérabilité des services financiers numériques\n\n## Contexte et Objectifs\nConformément au cadre réglementaire de l'interopérabilité dans l'espace UEMOA, chaque institution financière participante doit mettre à disposition de sa clientèle (Particuliers de type P et Commerçants de type C selon PI-RAC) une application mobile conforme aux standards définis par la BCEAO.\n\nCette API standardisée permet l'intégration avec l'application mobile de référence fournie par la BCEAO\n\n## Options d'Implémentation\nLes participants ont le choix entre :\n1. **Utilisation de l'application mobile** - Personnalisation via thèmes (couleurs, logos) tout en conservant l'expérience utilisateur\n2. **Intégration modulaire** - Réutilisation des composants (widgets) dans leurs applications existantes\n\n## Fonctionnalités\n- Gestion des alias de comptes\n- QR Code Interopérable\n- Transfert de fonds\n- Demande d'annulation d'un transfert emis\n- Retour de fonds d'un transfet reçu\n- Demandes de paiement\n\n# Sécurité\nLe cryptage des échanges avec `TLS v1.2+` est obligatoire pour tous les échanges.\n\n`OAuth 2.0` est utilisé pour l'authentification avec flux d'autorisation PKCE (Proof Key for Code Exchange).\n\n# Gestion des erreurs\nEn ce qui concerne les réponses notifiant une erreur, PI utilise le format décrit dans la `RFC 7807` qui décrit comment les API peuvent renvoyer des informations d'erreur de manière standardisée.  Une telle réponse contient les éléments suivants :\n<table>\n  <tr>\n    <td><b>type</b></td>\n    <td>Le champ \"type\" est une URI unique qui identifie le type de problème. L’URI peut être relative.</td>\n  </tr>\n  <tr>\n    <td><b>title</b></td>\n    <td>Le champ \"title\"  fournit une description courte pour comprendre le problème. Il est identique pour le même type de problème.</td>\n  </tr>\n  <tr>\n    <td><b>detail</b></td>\n    <td>Le champ \"detail\" donne des explications sur le problème.</td>\n  </tr>\n  <tr>\n    <td><b>instance</b></td>\n    <td>Il indique une référence URI de ressource concernée par le problème. Il est optionnel.</td>\n  </tr>\n  <tr>\n    <td><b>status</b></td>\n    <td>Le champ \"status\" renvoie le code de statut HTTP qui a déclenché cette réponse. Ce champ est optionnel.</td>\n  </tr>\n</table>\n\nPour donner des informations détaillées sur le problème, des extensions sont permises. Les extensions sont des champs additionnels qui peuvent figurer dans la réponse.\n\nCi-dessous un exemple de réponse en JSON:\n<img src=\"./images/exemple-erreur-json.png\" />\n\nIci, le problème `format-invalide` __(identifié par son type URI)__  indique la raison de l’erreur `400` retournée par le serveur lors de la création d’un client; deux extensions sont ajoutées: `typeClient` qui indique le __champ incorrect__, et `invalid-params` qui indiquent les __paramètres invalides et la raison d’invalidité__.\n\nPar ailleurs, l'URI de type d'un problème devrait référencer une page HTML expliquant comment résoudre le problème.\nCependant des types prédéfinis existent: c’est le cas du type `about:blank` qui indique que __le problème n'a pas de sémantique supplémentaire au-delà de celle du code de statut HTTP__.\nLorsque `about:blank` est utilisé, le champ `title` est le même que le libellé du statut HTTP.",
+    "contact": {
+      "email": "pisfn-sandbox@bceao.int"
+    },
+    "version": "1.0.0"
+  },
+  "externalDocs": {
+    "description": "Exigences minimales de l'interface utilisateur",
+    "url": "https://pi-bceao.com"
+  },
+  "tags": [
+    {
+      "name": "Alias de compte",
+      "description": "Un alias de compte est une identification choisie par un client qui lui permet de recevoir des transferts sans fournir les informations d’identification de son compte."
+    },
+    {
+      "name": "Revendications",
+      "description": "Une réclamation est envoyée par un client pour revendiquer la propriété d'un alias de compte. L’alias de type MBNO est le seul type qui peut être revendiqué.\nLa revendication fait suite à une demande de création d’alias qui a été rejetée par PI-RAC parce que l’alias est déjà enregistré dans le système pour un autre client.\n"
+    },
+    {
+      "name": "Compte et Solde",
+      "description": "Détails d'un compte"
+    },
+    {
+      "name": "Liste des participants",
+      "description": "Liste des participants de la plateforme d'interopérabilité PI SPI.\nAfin d'éviter les réjets par PI, le participant doit obligatoirement vérifier que le participant destinataire de la demande de paiement ou du transfert de fond est actif.\n"
+    },
+    {
+      "name": "Gestion des transactions",
+      "description": "* les transferts émis et reçus\n* les demandes de paiement émis et reçus\n* Les demandes d'annulation émis et reçus\n* Les retours de fonds reçus\n"
+    },
+    {
+      "name": "Gestion des souscriptions",
+      "description": "Paiements programmés et Abonnements"
+    },
+    {
+      "name": "Gestion des notifications",
+      "description": "La gestion des notifications permet la traitement :\n  * Des demandes de paiements reçus\n  * Des demandes de paiements rejetés\n  * Des demandes d'annulation reçus\n  * Des demandes d'annulation rejetés\n  * Des revendications d'alias\n"
+    }
+  ],
+  "security": [
+    {
+      "OAuth 2.0": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "SwaggerHub API Auto Mocking",
+      "url": "https://virtserver.swaggerhub.com/KHDIOP/PI-Mobile/1.0.0"
+    }
+  ],
+  "paths": {
+    "/alias": {
+      "post": {
+        "tags": [
+          "Alias de compte"
+        ],
+        "summary": "Créer un alias",
+        "operationId": "aliasCreer",
+        "requestBody": {
+          "description": "Une demande de création d'alias contient les informations sur le type d'alias et la valeur de l'alias dans le cas du MBNO",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasCreationRequete"
+              },
+              "examples": {
+                "aliasCreerSHID": {
+                  "$ref": "#/components/examples/post-shid-request"
+                },
+                "aliasCreerMBNO": {
+                  "$ref": "#/components/examples/post-mbno-request"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Dans le cas du SHID l'alias est créé automatiquement.\nDans le cas du MBNO, un code OTP sera envoyé au client sur le numéro de téléphone donné. L'endpoint suivant permet de soumettre le code OTP pour la création effective de l'alias de compte.\n",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasCreationReponse"
+                },
+                "examples": {
+                  "aliasCreerSHID": {
+                    "$ref": "#/components/examples/post-shid-response"
+                  },
+                  "aliasCreerMBNO": {
+                    "$ref": "#/components/examples/post-mbno-response"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Interdiction de créer l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "limit-pp": {
+                    "$ref": "#/components/examples/post-shid-error-limit"
+                  },
+                  "alias-existe-deja": {
+                    "$ref": "#/components/examples/post-shid-error-exist"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/alias/{cle}": {
+      "put": {
+        "tags": [
+          "Alias de compte"
+        ],
+        "summary": "Confirmer la création",
+        "operationId": "aliasCreerConfirmer",
+        "parameters": [
+          {
+            "name": "cle",
+            "in": "path",
+            "description": "Le numéro de téléphone",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Permet d'envoyer le code OTP saisi par le client pour confirmer la création d'un alias avec le numéro de téléphone",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasConfirmationRequete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "alias  MBNO créé avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasCreationReponse"
+                },
+                "examples": {
+                  "aliasCreerMBNO": {
+                    "$ref": "#/components/examples/post-mbno-response-confirmation"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Interdiction de créer l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "limit-pp": {
+                    "$ref": "#/components/examples/post-shid-error-limit"
+                  },
+                  "alias-existe-deja": {
+                    "$ref": "#/components/examples/post-mbno-error-exist"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Alias de compte"
+        ],
+        "summary": "Supprimer un alias",
+        "description": "Permet de supprimer un alias de compte",
+        "operationId": "aliasSupprimer",
+        "parameters": [
+          {
+            "name": "cle",
+            "in": "path",
+            "description": "la valeur de l'alias MBNO ou SHID à supprimer",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "L'alias a été supprimée avec succès"
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Une revendication est en cours sur cet alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "L'alias n'existe pas dans le système",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Alias de compte"
+        ],
+        "summary": "Récuperer un alias",
+        "description": "Cette API permet de récupérer l'alias d'un client",
+        "operationId": "aliasRecupererParCompte",
+        "parameters": [
+          {
+            "name": "cle",
+            "in": "path",
+            "description": "Numéro de compte du client",
+            "required": true,
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alias récupéré avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Alias"
+                },
+                "examples": {
+                  "shid": {
+                    "$ref": "#/components/examples/post-shid-response"
+                  },
+                  "mbno": {
+                    "$ref": "#/components/examples/post-mbno-response-confirmation"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "Un alias avec cette clé n'existe pas",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/alias/revendications": {
+      "post": {
+        "tags": [
+          "Revendications"
+        ],
+        "summary": "Créer",
+        "description": "Revendiquer un alias de compte",
+        "operationId": "revendicationInitier",
+        "requestBody": {
+          "description": "Une demande de revendication d'alias contient les informations sur le numéro de téléphone et le compte",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasRevendicationInitiationRequete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Revendication envoyée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRevendicationInitiationReponse"
+                },
+                "examples": {
+                  "aliasRevendicationInitier": {
+                    "$ref": "#/components/examples/details-initiee"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Une revendication est en cours sur cet alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "La revendication n'existe pas ou est archivée",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/alias/revendications/{id}": {
+      "get": {
+        "tags": [
+          "Revendications"
+        ],
+        "summary": "Récuperer",
+        "description": "Récuperer les détails d'une revendication à partir de son id",
+        "operationId": "revendicationRecuperer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id de la revendication",
+            "required": true,
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRevendication"
+                },
+                "examples": {
+                  "aliasRevendicationInitiee": {
+                    "$ref": "#/components/examples/details-initiee"
+                  },
+                  "aliasRevendicationAcceptee": {
+                    "$ref": "#/components/examples/details-acceptee"
+                  },
+                  "aliasRevendicationRejetee": {
+                    "$ref": "#/components/examples/details-rejetee"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "Une revendication avec cet id n'existe pas ou est archivée",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/alias/revendications/{id}/reponses": {
+      "put": {
+        "tags": [
+          "Revendications"
+        ],
+        "summary": "Répondre",
+        "description": "Donner sa réponse à une revendication reçue - Acceptation ou Rejet",
+        "operationId": "revendicationRepondre",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id de la revendication",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Permet d'envoyer la décision du client",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasRevendicationReponseRequete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Revendication acceptée avec succès ou Rejet de la revendication initiée (à confirmer)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRevendication"
+                },
+                "examples": {
+                  "aliasRevendicationRefusee": {
+                    "description": "Rejet de la revendication initiée",
+                    "$ref": "#/components/examples/details-initiee"
+                  },
+                  "aliasRevendicationAcceptee": {
+                    "description": "Revendication acceptée",
+                    "$ref": "#/components/examples/details-acceptee"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Revendication terminée ou clôturée",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/alias/revendications/{id}/rejets": {
+      "put": {
+        "tags": [
+          "Revendications"
+        ],
+        "summary": "Rejeter",
+        "description": "Confirmer le rejet d'une revendication en envoyant le code OTP reçu par SMS après appel de l'endpoint précédent",
+        "operationId": "revendicationRejeter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id de la revendication",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Permet d'envoyer la décision du client",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasConfirmationRequete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Revendication rejetée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasRevendication"
+                },
+                "examples": {
+                  "aliasRevendicationRejetée": {
+                    "description": "Revendication rejetée",
+                    "$ref": "#/components/examples/details-rejetee"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Revendication terminée ou clôturée",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/comptes/{id}/soldes": {
+      "get": {
+        "tags": [
+          "Compte et Solde"
+        ],
+        "summary": "Consulter solde",
+        "description": "Pour obtenir le solde du compte",
+        "operationId": "compteSoldeRecuperer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Le numéro de compte du client",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opération réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompteSoldeReponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/comptes/{id}/details": {
+      "get": {
+        "tags": [
+          "Compte et Solde"
+        ],
+        "summary": "Consulter details",
+        "description": "Pour obtenir les details sur le compte et le client",
+        "operationId": "compteDetailsRecuperer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Le numéro de compte du client",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opération réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompteDetailsReponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/participants": {
+      "get": {
+        "tags": [
+          "Liste des participants"
+        ],
+        "summary": "Récupérer",
+        "description": "Pour obtenir la liste des participants",
+        "operationId": "participantLister",
+        "responses": {
+          "200": {
+            "description": "Transactions récupérées.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipantListeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts": {
+      "post": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Initier un transfert",
+        "description": "Cet endpoint permet d'initier un transfert:\n  - En utilisant un alias\n  - En utilisant un numéro IBAN\n  - En utilisant un numéro de compte\n  - En scannant un QR Code\n  - En programmant le transfert\n  - En envoyant une demande de paiement\n",
+        "operationId": "transactionInitier",
+        "requestBody": {
+          "description": "Données nécessaires pour initier une transaction.\n\n- Cas des paiements programmés\n  Lorsque la transaction est programmée (la date de début est donnée), le participant n'execute pas immédiatement la transaction.\n\n- Cas des demandes de paiement:\n  Lorsque le canal est 631 alors le participant doit dans le backend le remplacer par 500 si son client est un Commerçant Type C.\n",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionInitiationRequete"
+              },
+              "examples": {
+                "transfertAlias": {
+                  "$ref": "#/components/examples/initier-alias-request"
+                },
+                "transfertIBAN": {
+                  "$ref": "#/components/examples/initier-iban-request"
+                },
+                "transfertOthr": {
+                  "$ref": "#/components/examples/initier-othr-request"
+                },
+                "transfert731": {
+                  "$ref": "#/components/examples/initier-731-request"
+                },
+                "transfert400": {
+                  "$ref": "#/components/examples/initier-400-request"
+                },
+                "transfertProgramme": {
+                  "$ref": "#/components/examples/initier-progr-request"
+                },
+                "transfertAbonnement": {
+                  "$ref": "#/components/examples/initier-abon-request"
+                },
+                "rtp631": {
+                  "$ref": "#/components/examples/initier-631-request"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Opération réussie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                },
+                "examples": {
+                  "transfertAlias": {
+                    "$ref": "#/components/examples/initier-alias-response"
+                  },
+                  "transfertIBAN": {
+                    "$ref": "#/components/examples/initier-iban-response"
+                  },
+                  "transfertOthr": {
+                    "$ref": "#/components/examples/initier-othr-response"
+                  },
+                  "transfert731": {
+                    "$ref": "#/components/examples/initier-731-response"
+                  },
+                  "transfert400": {
+                    "$ref": "#/components/examples/initier-731-response"
+                  },
+                  "transfertProgramme": {
+                    "$ref": "#/components/examples/initier-progr-response"
+                  },
+                  "transfertAbonnement": {
+                    "$ref": "#/components/examples/initier-abon-response"
+                  },
+                  "rtp631": {
+                    "$ref": "#/components/examples/initier-631-response"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "Alias recherchée introuvable ou numéro de compte n'existe pas chez le participant destinataire",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Lister les transactions",
+        "description": "Cette API retourne la liste des transactions",
+        "operationId": "transactionLister",
+        "parameters": [
+          {
+            "name": "compte",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "Le compte pour lequel on liste les transactions"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/SortBy"
+          },
+          {
+            "name": "sens",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "debit",
+                "credit"
+              ],
+              "description": "Le sens de la transaction"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dateOperation",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Date d'irrevocabilite",
+              "description": "Permet de rechercher selon la date de la transaction:\n  - Si le paramètre se termine par `[gte]`, la recherche inclura les transferts irrévocables après ou égale à cette date\n  - Si le paramètre se termine par `[lte]`, la recherche inclura les transferts irrévocables avant ou égale à cette date\n  - Si le paramètre se termine par `[gt]`, la recherche inclura les transferts irrévocables après la date spécifiée.\n  - Si le paramètre se termine par `[lt]`, la recherche inclura les transferts irrévocables avant la date spécifiée.\n  - Sinon, la recherche inclura les transferts irrévocables exactement à la date spécifiée."
+            }
+          },
+          {
+            "name": "clientPaye",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "title": "n° ou alias de compte du client payé / bénéficiaire",
+              "description": "Recherche et retourne les transferts envoyées à un bénéficiaire (client payé)"
+            }
+          },
+          {
+            "name": "clientPayeur",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "title": "n° ou alias de compte du client payeur",
+              "description": "Recherche et retourne les transferts reçus d'un client payeur"
+            }
+          },
+          {
+            "name": "compte",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "title": "Numéro de compte du client"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transactions récupérées.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}": {
+      "put": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Confirmer transfert / Accepter RTP",
+        "description": "Permet de confirmer l'envoi du transfert aprés l'initiation.\n  - Après la recherche d'alias\n  - Apres la vérification d'identité\n  - A l'acceptation de la demande de paiement\n",
+        "operationId": "transactionConfirmer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionConfirmCommand"
+              },
+              "examples": {
+                "confirmerTransfert": {
+                  "$ref": "#/components/examples/confirmer-alias-request"
+                },
+                "confirmerRTP": {
+                  "$ref": "#/components/examples/rtp-accepter-request"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction en cours d'envoi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                },
+                "examples": {
+                  "transfertConfirme": {
+                    "$ref": "#/components/examples/confirmer-alias-response"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Récuperer une transaction",
+        "operationId": "transactionRecuperer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "id de la transaction",
+            "required": true,
+            "explode": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "Une Transaction avec ce id n'existe pas",
+            "$ref": "#/components/responses/RessourceInexistant"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}/reponses": {
+      "get": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Recevoir la réponse au transfert de fonds",
+        "operationId": "transactionReponse",
+        "description": "Endpoint Server-Sent Events (SSE) permettant de recevoir les réponses asynchrones d’un transfert donné.\n\n- Ce flux est utilisé après l'appel de confirmation (`PUT /transferts/{id}`)\n- Il renvoie les mises à jour de statut (acception, rejet, rejet avec motif, etc.)\n- Le client doit maintenir la connexion ouverte pour recevoir les événements en temps réel\n\n⚠️ Ce flux utilise le protocole **SSE (Server-Sent Events)** avec le header `Accept: text/event-stream`.\n",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant (endToEndId) de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flux SSE de réponses à la transaction",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionConfirmResponse"
+                },
+                "examples": {
+                  "transfertIrrevocable": {
+                    "$ref": "#/components/examples/confirmer-reponse-irr"
+                  },
+                  "transfertRejete": {
+                    "$ref": "#/components/examples/confirmer-reponse-rej"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}/retours": {
+      "put": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Retourner les fonds",
+        "description": "Permet de retourner les fonds d'un transfert reçu\n",
+        "operationId": "transactionRetourner",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retour de fonds en cours d'envoi"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}/retours/reponses": {
+      "get": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Recevoir la réponse au retour de fonds",
+        "operationId": "transactionReponse",
+        "description": "Endpoint Server-Sent Events (SSE) permettant de recevoir les réponses asynchrones d’un transfert donné.\n\n- Ce flux est utilisé après l'appel de confirmation (`PUT /transferts/{id}/retours`)\n- Il renvoie les mises à jour de statut (irrevocable, rejete)\n- Le client doit maintenir la connexion ouverte pour recevoir les événements en temps réel\n\n⚠️ Ce flux utilise le protocole **SSE (Server-Sent Events)** avec le header `Accept: text/event-stream`.\n",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant (endToEndId) de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flux SSE de réponses au retour",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionConfirmResponse"
+                },
+                "examples": {
+                  "transfertIrrevocable": {
+                    "$ref": "#/components/examples/confirmer-reponse-irr"
+                  },
+                  "transfertRejete": {
+                    "$ref": "#/components/examples/confirmer-reponse-rej"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}/annulations": {
+      "put": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Demander l'annulation",
+        "description": "Permet de demander l'annulation d'un transfert émis\n",
+        "operationId": "transactionAnnuler",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionCancelCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Demande d'annulation envoyée"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/transferts/{id}/rejets": {
+      "put": {
+        "tags": [
+          "Gestion des transactions"
+        ],
+        "summary": "Rejeter une transaction",
+        "description": "Permet de rejeter une demande de paiement ou une demande d'annulation\n",
+        "operationId": "transactionRejeter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "L'identifiant de la transaction",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionRejectCommand"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction rejetée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/souscriptions": {
+      "post": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Créer",
+        "description": "Créer un paiement programmé ou un abonnement",
+        "operationId": "souscriptionCreer",
+        "requestBody": {
+          "description": "Details d'une programmation à créer",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SouscriptionCreationRequete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Souscription crée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "403": {
+            "description": "Interdiction de créer l'alias",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem7807"
+                },
+                "examples": {
+                  "limit-pp": {
+                    "$ref": "#/components/examples/post-shid-error-limit"
+                  },
+                  "alias-existe-deja": {
+                    "$ref": "#/components/examples/post-shid-error-exist"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/souscriptions/{compte}": {
+      "get": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Lister",
+        "operationId": "souscriptionLister",
+        "parameters": [
+          {
+            "name": "compte",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "title": "Numéro de compte du client"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des souscriptions liés au compte",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/souscriptions/{id}": {
+      "delete": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Supprimer",
+        "description": "Pour supprimer une souscription",
+        "operationId": "souscriptionSupprimer",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifiant de la souscription"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "souscription supprimée avec succès"
+          },
+          "400": {
+            "$ref": "#/components/responses/FormatInvalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Modifier",
+        "operationId": "souscriptionModifier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifiant de la souscription"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "motif": {
+                    "type": "string",
+                    "example": "Paiement facture "
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "souscription modifiée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "404": {
+            "description": "ressource indisponible."
+          },
+          "405": {
+            "description": "Données invalides"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/souscriptions/{id}/desactivations": {
+      "put": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Desactiver",
+        "operationId": "souscriptionDesactiver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifiant de la souscription"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "souscription désactivée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ressource indisponible."
+          },
+          "405": {
+            "description": "Données invalides."
+          }
+        }
+      }
+    },
+    "/souscriptions/{id}/reactivations": {
+      "put": {
+        "tags": [
+          "Gestion des souscriptions"
+        ],
+        "summary": "Réactiver",
+        "operationId": "souscriptionReactiver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Identifiant de la souscription"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "souscription réactivée avec succès",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AutorisationsManquantes"
+          },
+          "429": {
+            "$ref": "#/components/responses/LimiteUtilisationDepasse"
+          },
+          "500": {
+            "$ref": "#/components/responses/ProblemeServeur"
+          }
+        }
+      }
+    },
+    "/notifications/{compte}": {
+      "get": {
+        "tags": [
+          "Gestion des notifications"
+        ],
+        "summary": "Lister les notifications",
+        "description": "Retourne la liste des notifications d'un compte",
+        "parameters": [
+          {
+            "compte": null,
+            "name": "compte",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CI0123456789"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "name": "dateDebut",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filtre les notifications après cette date"
+          },
+          {
+            "name": "dateFin",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "Filtre les notifications avant cette date"
+          },
+          {
+            "name": "type[in]",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Types de notifications séparés par virgule",
+            "example": "RTP_INITIEE,ANNULATION_DEMANDEE"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Mot-clé pour filtrer les notifications"
+          },
+          {
+            "$ref": "#/components/parameters/SortBy"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des notifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationListe"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{compte}/non-lues": {
+      "get": {
+        "tags": [
+          "Gestion des notifications"
+        ],
+        "summary": "Compter les non lues",
+        "description": "Retourne le nombre de notifications non lues pour un compte",
+        "parameters": [
+          {
+            "compte": null,
+            "name": "compte",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "CI0123456789"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nombre de notifications non lues",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "example": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/notifications/{id}": {
+      "put": {
+        "tags": [
+          "Gestion des notifications"
+        ],
+        "summary": "Marquer comme lue",
+        "description": "Met à jour la date de lecture d'une notification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "notif-123456"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "dateLecture": {
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2023-08-18T14:15:22.999Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification mise à jour",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Notification"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "OAuth 2.0": {
+        "type": "oauth2",
+        "description": "Cette API utilise OAuth2 pour la gestion de la sécurité des APIs"
+      }
+    },
+    "parameters": {
+      "Page": {
+        "in": "query",
+        "name": "page",
+        "required": false,
+        "schema": {
+          "title": "Page demandée",
+          "description": "Page à retourner par la requête. s'il n'est pas renseigné, le PSP renvera la valeur par defaut."
+        }
+      },
+      "Limit": {
+        "in": "query",
+        "name": "limit",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "title": "Nombre d'élements maximum à retourner",
+          "minimum": 0,
+          "default": 0,
+          "description": "Nombre maximum d'éléments renvoyés dans la réponse"
+        }
+      },
+      "SortBy": {
+        "in": "query",
+        "name": "sort_by",
+        "required": false,
+        "schema": {
+          "title": "Clé de tri et ordre de tri",
+          "description": "Clé de tri des données Si la clé de tri commence par `-` , on trie par ordre décroissant sinon par ordre croissant",
+          "example": "-dateOperation"
+        }
+      },
+      "Champs": {
+        "in": "query",
+        "name": "fields",
+        "required": false,
+        "schema": {
+          "title": "Champs des données à retourner",
+          "description": "la liste des champs à retourner pour ne consulter que des informations spécifiques",
+          "example": "endToEndId,montant,dateOperation"
+        }
+      }
+    },
+    "schemas": {
+      "Problem7807": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Référence URI qui identifie le type de problème",
+            "example": "about:blank"
+          },
+          "title": {
+            "type": "string",
+            "description": "Un bref résumé du problème",
+            "example": "Bad Request"
+          },
+          "status": {
+            "type": "integer",
+            "description": "Le code d'état HTTP pour cette occurrence du problème",
+            "example": 400
+          },
+          "detail": {
+            "type": "string",
+            "description": "Explication spécifique à cette occurrence du problème"
+          },
+          "invalid-params": {
+            "type": "array",
+            "description": "Liste des paramètres invalides",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Nom du paramètre invalide"
+                },
+                "reason": {
+                  "type": "string",
+                  "description": "Raison de l'invalidité du paramètre"
+                }
+              }
+            }
+          }
+        }
+      },
+      "Pays": {
+        "type": "string",
+        "enum": [
+          "CI",
+          "SN",
+          "ML",
+          "GW",
+          "BF",
+          "NE",
+          "BJ",
+          "TG"
+        ],
+        "title": "Pays",
+        "description": "Le pays du client\nBJ: Bénin\nBF: Burkina Faso\nCI: Côte d'Ivoire\nGW: Guinée Bissau\nTG: Togo\nSN: Sénégal\nML: Mali\nNE: Niger\n",
+        "example": "GW"
+      },
+      "ListeMeta": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "total d'elements correspondants à la recherche"
+          },
+          "previous": {
+            "type": "string",
+            "description": "numérou ou identifiant de la page précédente"
+          },
+          "next": {
+            "type": "string",
+            "description": "numérou ou identifiant de la page suivante"
+          },
+          "current": {
+            "type": "string",
+            "description": "numérou ou identifiant de la page actuelle"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "nombre d'elements retournés"
+          }
+        },
+        "required": [
+          "total",
+          "current",
+          "limit"
+        ]
+      },
+      "AliasCreationRequete": {
+        "type": "object",
+        "oneOf": [
+          {
+            "title": "MBNO",
+            "properties": {
+              "cle": {
+                "type": "string",
+                "pattern": "^\\+(?:229|226|225|223|221|220|228|228)\\d{7,8}$",
+                "description": "Le numero de téléphone"
+              },
+              "type": {
+                "type": "string",
+                "pattern": "MBNO",
+                "description": "Le type d'alias à créer (SHID ou MBNO)"
+              },
+              "compte": {
+                "type": "string",
+                "description": "Le numéro de compte auquel sera lié l'alias à créer"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "cle",
+              "type",
+              "compte"
+            ]
+          },
+          {
+            "title": "SHID",
+            "properties": {
+              "type": {
+                "type": "string",
+                "pattern": "SHID",
+                "description": "Le type d'alias à créer (SHID ou MBNO)"
+              },
+              "compte": {
+                "type": "string",
+                "description": "Le numéro de compte auquel sera lié l'alias à créer"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "compte"
+            ]
+          }
+        ]
+      },
+      "AliasCreationReponse": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "description": "La valeur de l'alias créé"
+          },
+          "shid": {
+            "type": "string",
+            "description": "si alias mbno un shid est également généré"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "MBNO",
+              "SHID"
+            ],
+            "description": "Le type d'alias créé"
+          },
+          "compte": {
+            "type": "string",
+            "description": "Le compte auquel est lié l'alias"
+          },
+          "pays": {
+            "type": "string",
+            "description": "Le pays du compte auquel est lié l'alias",
+            "$ref": "#/components/schemas/Pays"
+          }
+        },
+        "required": [
+          "type",
+          "compte",
+          "pays",
+          "cle"
+        ]
+      },
+      "AliasConfirmationRequete": {
+        "type": "object",
+        "properties": {
+          "otp": {
+            "type": "string",
+            "description": "Le code OTP envoyé par SMS au client",
+            "pattern": "^[0-9]{6}$",
+            "minLength": 6,
+            "maxLength": 6,
+            "example": "123456",
+            "x-validation-message": "Le code OTP doit être composé de 6 chiffres"
+          }
+        }
+      },
+      "Alias": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string",
+            "description": "Clé de l'alias"
+          },
+          "type": {
+            "$ref": "#/components/schemas/AliasType",
+            "description": "Type de l'alias"
+          },
+          "shid": {
+            "type": "string",
+            "description": "SHID de l'alias"
+          }
+        },
+        "required": [
+          "cle",
+          "type"
+        ]
+      },
+      "AliasType": {
+        "type": "string",
+        "description": "Type de l'alias",
+        "enum": [
+          "SHID",
+          "MBNO"
+        ]
+      },
+      "AliasRevendication": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifiant unique de la revendication",
+            "example": "+22111000458_1741263133994"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Alias faisant l'objet de la revendication",
+            "example": "+22111000458"
+          },
+          "statut": {
+            "type": "string",
+            "description": "Statut courant de la revendication",
+            "enum": [
+              "INITIEE",
+              "REJETEE",
+              "ACCEPTEE"
+            ],
+            "example": "INITIEE"
+          },
+          "dateDemande": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de soumission de la revendication",
+            "example": "2023-05-15T14:30:00Z"
+          },
+          "dateVerrouillage": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de verrouillage de l'alias",
+            "example": "2023-05-16T09:15:00Z"
+          },
+          "dateCloture": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de clôture de la revendication",
+            "example": "2023-05-20T16:45:00Z"
+          },
+          "dateAction": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de la dernière action sur la revendication",
+            "nullable": true,
+            "example": "2023-05-18T11:20:00Z"
+          },
+          "shid": {
+            "$ref": "#/components/schemas/Alias",
+            "description": "Alias SHID du client après acceptation de la revendication",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "alias",
+          "statut",
+          "dateDemande",
+          "dateVerrouillage",
+          "dateCloture"
+        ]
+      },
+      "AliasRevendicationInitiationRequete": {
+        "type": "object",
+        "properties": {
+          "compte": {
+            "type": "string",
+            "description": "Le numéro de compte auquel est lié l'alias"
+          },
+          "alias": {
+            "type": "string",
+            "pattern": "^\\+(?:229|226|225|223|221|220|228|228)\\d{7,8}$",
+            "description": "L'alias MBNO"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "compte",
+          "alias"
+        ]
+      },
+      "AliasRevendicationInitiationReponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Identifiant unique de la revendication",
+            "example": "+22111000458_1741263133994"
+          },
+          "alias": {
+            "type": "string",
+            "description": "Alias faisant l'objet de la revendication",
+            "example": "+22111000458"
+          },
+          "statut": {
+            "type": "string",
+            "description": "Statut courant de la revendication",
+            "enum": [
+              "INITIEE"
+            ],
+            "example": "INITIEE"
+          },
+          "dateDemande": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de soumission de la revendication",
+            "example": "2023-05-15T14:30:00Z"
+          },
+          "dateVerrouillage": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de verrouillage de l'alias",
+            "example": "2023-05-16T09:15:00Z"
+          },
+          "dateCloture": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date de clôture de la revendication",
+            "example": "2023-05-20T16:45:00Z"
+          }
+        },
+        "required": [
+          "id",
+          "alias",
+          "statut",
+          "dateDemande",
+          "dateVerrouillage",
+          "dateCloture"
+        ]
+      },
+      "AliasRevendicationReponseRequete": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "boolean",
+            "description": "`true` pour dire qu'on accepte\n`false` pour dire qu'on refuse\n"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "CompteSoldeReponse": {
+        "type": "object",
+        "properties": {
+          "solde": {
+            "type": "number",
+            "example": 1000
+          }
+        },
+        "required": [
+          "solde"
+        ]
+      },
+      "CompteDetailsReponse": {
+        "type": "object",
+        "properties": {
+          "alias": {
+            "$ref": "#/components/schemas/Alias"
+          },
+          "compte": {
+            "$ref": "#/components/schemas/Compte"
+          },
+          "client": {
+            "$ref": "#/components/schemas/Client"
+          },
+          "dateCreation": {
+            "type": "string",
+            "format": "date",
+            "description": "Date de création de l'alias"
+          },
+          "dateModification": {
+            "type": "string",
+            "format": "date",
+            "description": "Date de modification de l'alias"
+          }
+        },
+        "required": [
+          "alias",
+          "client",
+          "compte",
+          "dateCreation"
+        ]
+      },
+      "Compte": {
+        "type": "object",
+        "properties": {
+          "participant": {
+            "type": "string",
+            "description": "Code du participant"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CACC",
+              "SVG",
+              "LLSV",
+              "TRAN"
+            ],
+            "description": "Type de compte"
+          },
+          "numero": {
+            "type": "string",
+            "description": "Numéro de compte"
+          },
+          "agence": {
+            "type": "string",
+            "description": "Agence du compte"
+          },
+          "dateOuverture": {
+            "type": "string",
+            "format": "date",
+            "description": "Date d'ouverture du compte"
+          }
+        },
+        "required": [
+          "participant",
+          "agence",
+          "numero",
+          "type",
+          "dateOuverture"
+        ]
+      },
+      "Client": {
+        "type": "object",
+        "properties": {
+          "categorie": {
+            "$ref": "#/components/schemas/ClientCategorie"
+          },
+          "nom": {
+            "type": "string",
+            "description": "Nom du client"
+          },
+          "genre": {
+            "$ref": "#/components/schemas/ClientGenre"
+          },
+          "nationalite": {
+            "type": "string",
+            "description": "Nationalité du client"
+          },
+          "paysResidence": {
+            "type": "string",
+            "description": "Pays de résidence du client"
+          },
+          "telephone": {
+            "type": "string",
+            "description": "Numéro de téléphone du client"
+          },
+          "photo": {
+            "type": "string",
+            "description": "Lien vers la photo du client"
+          },
+          "dateNaissance": {
+            "type": "string",
+            "format": "date",
+            "description": "Date de naissance du client personne physique"
+          },
+          "paysNaissance": {
+            "type": "string",
+            "description": "Pays de naissance du client personne physique"
+          },
+          "villeNaissance": {
+            "type": "string",
+            "description": "Ville de naissance du client personne physique"
+          },
+          "nomMere": {
+            "type": "string",
+            "description": "Nom de la mère du client personne physique"
+          },
+          "identificationNationale": {
+            "type": "string",
+            "description": "Identification nationale du client personne physique"
+          },
+          "numeroPasseport": {
+            "type": "string",
+            "description": "Numéro de passeport du client personne physique"
+          },
+          "email": {
+            "type": "string",
+            "description": "Adresse e-mail du client personne physique"
+          },
+          "adresse": {
+            "type": "string",
+            "description": "Adresse du client personne physique"
+          },
+          "codePostale": {
+            "type": "string",
+            "description": "Code postal du client personne physique"
+          }
+        }
+      },
+      "ClientCategorie": {
+        "type": "string",
+        "description": "Catégorie du client",
+        "enum": [
+          "B",
+          "P",
+          "G"
+        ]
+      },
+      "ClientGenre": {
+        "type": "string",
+        "description": "Genre du client",
+        "enum": [
+          "0",
+          "1"
+        ]
+      },
+      "Participant": {
+        "type": "object",
+        "properties": {
+          "pays": {
+            "type": "string",
+            "description": "Le pays du participant",
+            "$ref": "#/components/schemas/Pays"
+          },
+          "codeMembre": {
+            "type": "string",
+            "description": "Code membre du participant"
+          },
+          "nomMembre": {
+            "type": "string",
+            "description": "Le nom membre du participant"
+          },
+          "codeBanque": {
+            "type": "string",
+            "description": "Code de la banque si le participant est une banque"
+          },
+          "statut": {
+            "type": "string",
+            "description": "Le statut du participant"
+          }
+        },
+        "required": [
+          "codeMembre",
+          "nomMembre",
+          "nomOfficiel",
+          "statut"
+        ]
+      },
+      "ParticipantListeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Participant"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListeMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "TransactionInitiationRequete": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TransactionImmediat"
+          },
+          {
+            "$ref": "#/components/schemas/TransactionDemandePaiement"
+          },
+          {
+            "$ref": "#/components/schemas/TransactionProgramme"
+          },
+          {
+            "$ref": "#/components/schemas/TransactionAbonnement"
+          }
+        ]
+      },
+      "TransactionInitiationDatas": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "Type d'opération à effectuer",
+            "enum": [
+              "send_now",
+              "send_schedule",
+              "receive_now"
+            ],
+            "example": "send_now"
+          },
+          "compte": {
+            "type": "string",
+            "description": "Numéro de compte du client connecté",
+            "example": "123456789"
+          },
+          "montant": {
+            "type": "number",
+            "format": "double",
+            "description": "Montant de la transaction",
+            "minimum": 1,
+            "example": 10000
+          },
+          "canal": {
+            "type": "string",
+            "nullable": true,
+            "description": "Canal d'initiation",
+            "enum": [
+              "633",
+              "731",
+              "400",
+              "631"
+            ]
+          },
+          "latitude": {
+            "type": "string",
+            "description": "La latitude à laquelle se trouve le client payeur pour initier le transfert"
+          },
+          "longitude": {
+            "type": "string",
+            "description": "La longitude à laquelle se trouve le client payeur pour initier le transfert"
+          },
+          "motif": {
+            "type": "string",
+            "title": "motif du transfert"
+          }
+        },
+        "required": [
+          "action",
+          "compte",
+          "montant",
+          "canal",
+          "latitude",
+          "longitude"
+        ]
+      },
+      "TransactionImmediat": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransactionInitiationDatas"
+          },
+          {
+            "type": "object",
+            "oneOf": [
+              {
+                "required": [
+                  "alias"
+                ],
+                "title": "Transfert par alias",
+                "properties": {
+                  "action": {
+                    "const": "send_now"
+                  },
+                  "canal": {
+                    "const": "633"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "Alias du bénéficiaire"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "iban",
+                  "payePSP"
+                ],
+                "title": "Transfert par IBAN",
+                "properties": {
+                  "action": {
+                    "const": "send_now"
+                  },
+                  "canal": {
+                    "const": "633"
+                  },
+                  "iban": {
+                    "type": "string",
+                    "description": "IBAN du bénéficiaire",
+                    "example": "CI45CI0080101307430029018"
+                  },
+                  "payePSP": {
+                    "type": "string",
+                    "description": "Code PSP du bénéficiaire",
+                    "example": "SNB000"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "othr",
+                  "payePSP"
+                ],
+                "title": "Transfert par Autre compte",
+                "properties": {
+                  "action": {
+                    "const": "send_now"
+                  },
+                  "canal": {
+                    "const": "633"
+                  },
+                  "othr": {
+                    "type": "string",
+                    "description": "Autre référence de compte",
+                    "example": "REF-789456"
+                  },
+                  "payePSP": {
+                    "type": "string",
+                    "description": "Code PSP du bénéficiaire",
+                    "example": "SNB000"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "alias"
+                ],
+                "title": "Transfert par QR Code statique",
+                "properties": {
+                  "action": {
+                    "const": "send_now"
+                  },
+                  "canal": {
+                    "const": "731"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "Alias du bénéficiaire"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "alias",
+                  "txId"
+                ],
+                "title": "Transfert par QR Code dynamique",
+                "properties": {
+                  "action": {
+                    "const": "send_now"
+                  },
+                  "canal": {
+                    "const": "731"
+                  },
+                  "alias": {
+                    "type": "string",
+                    "description": "Alias du bénéficiaire"
+                  },
+                  "txId": {
+                    "type": "string",
+                    "description": "L'identifiant de la transaction extraite du QR Code"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "TransactionProgramme": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransactionInitiationDatas"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "send_schedule"
+              },
+              "canal": {
+                "const": "633"
+              },
+              "dateDebut": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de première exécution",
+                "example": "2023-06-01T00:00:00Z"
+              },
+              "alias": {
+                "type": "string",
+                "description": "Alias du bénéficiaire"
+              },
+              "iban": {
+                "type": "string",
+                "description": "IBAN du bénéficiaire",
+                "example": "CI45CI0080101307430029018"
+              },
+              "othr": {
+                "type": "string",
+                "description": "Autre référence de compte",
+                "example": "REF-789456"
+              },
+              "payePSP": {
+                "type": "string",
+                "description": "Code PSP du bénéficiaire",
+                "example": "SNB000"
+              }
+            },
+            "required": [
+              "dateDebut"
+            ]
+          }
+        ]
+      },
+      "TransactionAbonnement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransactionInitiationDatas"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "send_schedule"
+              },
+              "canal": {
+                "const": "633"
+              },
+              "dateDebut": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Date de première exécution",
+                "example": "2023-06-01T00:00:00Z"
+              },
+              "dateFin": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true,
+                "description": "Date de dernière exécution",
+                "example": "2023-12-31T00:00:00Z"
+              },
+              "frequence": {
+                "$ref": "#/components/schemas/TransactionFrequence"
+              },
+              "periodicite": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Périodicité (en unités de fréquence)",
+                "example": 1
+              },
+              "alias": {
+                "type": "string",
+                "description": "Alias du bénéficiaire"
+              },
+              "iban": {
+                "type": "string",
+                "description": "IBAN du bénéficiaire",
+                "example": "CI45CI0080101307430029018"
+              },
+              "othr": {
+                "type": "string",
+                "description": "Autre référence de compte",
+                "example": "REF-789456"
+              },
+              "payePSP": {
+                "type": "string",
+                "description": "Code PSP du bénéficiaire",
+                "example": "SNB000"
+              }
+            },
+            "required": [
+              "dateDebut",
+              "frequence"
+            ]
+          }
+        ]
+      },
+      "TransactionDemandePaiement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TransactionInitiationDatas"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "const": "receive_now"
+              },
+              "canal": {
+                "const": "631"
+              },
+              "alias": {
+                "type": "string",
+                "description": "Alias du client payeur"
+              }
+            },
+            "required": [
+              "alias"
+            ]
+          }
+        ]
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "compte": {
+            "type": "string",
+            "description": "Numéro de compte du client connecté",
+            "example": "123456789"
+          },
+          "alias": {
+            "type": "string",
+            "nullable": true,
+            "description": "Alias de compte du client connecté",
+            "example": "user123"
+          },
+          "canal": {
+            "$ref": "#/components/schemas/TransactionCanal",
+            "nullable": true
+          },
+          "montant": {
+            "type": "number",
+            "format": "double",
+            "description": "Montant de la transaction",
+            "minimum": 1,
+            "example": 10000
+          },
+          "montantFrais": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Montant des frais appliqués",
+            "example": 1
+          },
+          "endToEndId": {
+            "type": "string",
+            "description": "Identifiant unique end-to-end",
+            "example": "TXN-2023-123456"
+          },
+          "txId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Identifiant technique de la transaction",
+            "example": "TXN67890"
+          },
+          "sens": {
+            "type": "string",
+            "description": "Sens de la transaction",
+            "enum": [
+              "debit",
+              "credit"
+            ],
+            "example": "debit"
+          },
+          "motif": {
+            "type": "string",
+            "nullable": true,
+            "description": "Motif de l'opération",
+            "example": "Transfert"
+          },
+          "clientNom": {
+            "type": "string",
+            "description": "Nom du client concerné",
+            "example": "Jean Dupont"
+          },
+          "clientPays": {
+            "type": "string",
+            "description": "Code pays du client",
+            "example": "CI"
+          },
+          "clientPSP": {
+            "type": "string",
+            "nullable": true,
+            "description": "Identifiant PSP du client",
+            "example": "PSP12345"
+          },
+          "clientPSPNom": {
+            "type": "string",
+            "nullable": true,
+            "description": "Nom du PSP du client",
+            "example": "Banque XYZ"
+          },
+          "clientPhoto": {
+            "type": "string",
+            "nullable": true,
+            "description": "URL de la photo du client",
+            "example": "https://example.com/photo.jpg"
+          },
+          "clientCompte": {
+            "type": "string",
+            "nullable": true,
+            "description": "Compte du client bénéficiaire",
+            "example": "CI9876543210"
+          },
+          "clientAlias": {
+            "type": "string",
+            "nullable": true,
+            "description": "Alias du client bénéficiaire",
+            "example": "recipient123"
+          },
+          "dateOperation": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date d'irrévocabilité de la transaction",
+            "example": "2023-05-15T14:30:00Z"
+          },
+          "statut": {
+            "type": "string",
+            "nullable": true,
+            "description": "Statut courant de la transaction",
+            "enum": [
+              "irrevocable",
+              "rejete",
+              "initie",
+              "desactive"
+            ],
+            "example": "irrevocable"
+          },
+          "statutRaison": {
+            "type": "string",
+            "nullable": true,
+            "description": "Raison du statut actuel",
+            "example": "Transaction validée"
+          },
+          "facture": {
+            "type": "string",
+            "nullable": true,
+            "description": "Référence de facture associée",
+            "example": "FACT-12345"
+          },
+          "dateDebut": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de début pour les paiements programmés",
+            "example": "2023-05-16T00:00:00Z"
+          },
+          "dateFin": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de fin pour les paiements programmés",
+            "example": "2023-12-31T00:00:00Z"
+          },
+          "frequence": {
+            "$ref": "#/components/schemas/TransactionFrequence",
+            "nullable": true
+          },
+          "periodicite": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Périodicité en nombre de jours/mois",
+            "minimum": 2,
+            "example": 1
+          },
+          "subscriptionId": {
+            "type": "string",
+            "nullable": true,
+            "description": "ID d'abonnement pour paiements récurrents",
+            "example": "SUB-123"
+          },
+          "retourDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de retour de fonds",
+            "example": "2023-05-17T10:15:00Z"
+          },
+          "retourStatut": {
+            "type": "string",
+            "nullable": true,
+            "description": "Statut du retour de fonds",
+            "enum": [
+              "irrevocable",
+              "rejete",
+              "initie",
+              "desactive"
+            ],
+            "example": "irrevocable"
+          },
+          "retourStatutRaison": {
+            "type": "string",
+            "nullable": true,
+            "description": "Raison du statut de retour",
+            "example": "Remboursement accepté"
+          },
+          "annulationRaison": {
+            "$ref": "#/components/schemas/TransactionCancelReason",
+            "nullable": true
+          },
+          "annulationDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date d'annulation",
+            "example": "2023-05-16T15:45:00Z"
+          },
+          "annulationStatut": {
+            "type": "string",
+            "nullable": true,
+            "description": "Statut de la demande d'annulation",
+            "enum": [
+              "irrevocable",
+              "rejete",
+              "initie",
+              "desactive"
+            ],
+            "example": "rejete"
+          },
+          "annulationStatutRaison": {
+            "type": "string",
+            "nullable": true,
+            "description": "Raison du statut d'annulation",
+            "example": "Transaction déjà traitée"
+          },
+          "dateDemande": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de la demande de paiement",
+            "example": "2023-05-15T09:00:00Z"
+          },
+          "dateReponse": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date limite de réponse",
+            "example": "2023-05-22T23:59:59Z"
+          },
+          "dateExpiration": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date d'expiration de la demande",
+            "example": "2023-05-30T23:59:59Z"
+          },
+          "remise": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Montant de remise appliquée",
+            "example": 1000
+          },
+          "retraitAchat": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Montant d'achat pour retrait PICO",
+            "example": 5000
+          },
+          "retraitMontant": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Montant net du retrait",
+            "example": 45000
+          },
+          "retraitFrais": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Frais appliqués au retrait",
+            "example": 500
+          },
+          "differe": {
+            "type": "boolean",
+            "nullable": true,
+            "description": "Indicateur de débit différé",
+            "example": false
+          },
+          "differeFrequence": {
+            "$ref": "#/components/schemas/TransactionFrequence",
+            "nullable": true
+          },
+          "differeOccurence": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Nombre d'occurrences différées",
+            "example": 3
+          },
+          "differeMontant": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Montant différé",
+            "example": 15000
+          }
+        },
+        "required": [
+          "compte",
+          "montant",
+          "sens",
+          "clientNom",
+          "clientPays",
+          "endToEndId"
+        ]
+      },
+      "TransactionCanal": {
+        "type": "string",
+        "enum": [
+          "731",
+          "633",
+          "999",
+          "000",
+          "400",
+          "631",
+          "500",
+          "521",
+          "520",
+          "401"
+        ],
+        "description": "Canal de communication utilisé pour la transaction.\n  - \"Transfert par QR Code\"\n  - \"Transfert par alias ou compte\"\n  - \"Ordre de transfert bancaire\"\n  - \"Paiement par QR Code Statique\"\n  - \"Paiement par QR Code Dynamique\"\n  - \"Transfert par request to pay\"\n  - \"Paiement par Request To Pay sur site\"\n  - \"Demande de Paiement e-commerce immédiat\"\n  - \"Demande de Paiement e-commerce à la livraison\"\n  - \"Autres Demande de Paiement/Factures\"\n"
+      },
+      "TransactionFrequence": {
+        "type": "string",
+        "description": "Fréquence de paiement",
+        "enum": [
+          "J",
+          "S",
+          "M",
+          "A"
+        ],
+        "example": "M"
+      },
+      "TransactionListeResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Transaction"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListeMeta"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "TransactionCancelReason": {
+        "type": "string",
+        "description": "Raison d'annulation d'un transfert emis\n- \"AC03\" # Erreur sur le destinataire\n- \"AM09\" # Erreur sur le montant\n- \"SVNR\" # Service non rendu\n- \"DUPL\" # Transaction déjà payée\n- \"FRAD\" # Suspicion de fraude\n",
+        "enum": [
+          "AC03",
+          "AM09",
+          "SVNR",
+          "DUPL",
+          "FRAD"
+        ],
+        "example": "AM09"
+      },
+      "TransactionConfirmCommand": {
+        "type": "object",
+        "description": "Modèle de confirmation d'une transaction",
+        "required": [
+          "montant",
+          "confirmationDate",
+          "confirmationMethode"
+        ],
+        "properties": {
+          "confirmationDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date/heure de confirmation au format ISO 8601",
+            "example": "2023-05-15T14:30:00Z"
+          },
+          "confirmationMethode": {
+            "type": "string",
+            "description": "Méthode de confirmation utilisée",
+            "enum": [
+              "biometry",
+              "pin"
+            ],
+            "example": "biometry"
+          },
+          "montant": {
+            "type": "number",
+            "format": "double",
+            "description": "Montant de la transaction",
+            "minimum": 1,
+            "example": 10000
+          },
+          "motif": {
+            "type": "string",
+            "title": "motif du transfert"
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Coordonnée GPS de confirmation",
+            "example": 5.336318
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true,
+            "description": "Coordonnée GPS de confirmation",
+            "example": -4.027751
+          }
+        }
+      },
+      "TransactionConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "statut": {
+            "type": "string",
+            "enum": [
+              "en_attente",
+              "irrevocable",
+              "rejete"
+            ]
+          },
+          "dateIrrevocabilite": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "codeRejet": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TransactionCancelCommand": {
+        "type": "object",
+        "description": "Modèle d'annulation d'une transaction",
+        "required": [
+          "raison"
+        ],
+        "properties": {
+          "raison": {
+            "$ref": "#/components/schemas/TransactionCancelReason"
+          }
+        }
+      },
+      "TransactionRejectCommand": {
+        "type": "object",
+        "description": "Modèle de rejet d'une transaction",
+        "required": [
+          "raison"
+        ],
+        "properties": {
+          "raison": {
+            "$ref": "#/components/schemas/TransactionRejectReason"
+          }
+        }
+      },
+      "TransactionRejectReason": {
+        "type": "string",
+        "enum": [
+          "BE05",
+          "AM09",
+          "APAR",
+          "RR07",
+          "FR01",
+          "CUST"
+        ],
+        "example": "AM09",
+        "description": "Raison d'annulation d'une demande\n- \"AM09\" Le montant reçu ne correspond pas au montant convenu ou attendu.\n- \"BE05\" La partie qui a initié le message n'est pas reconnue par le client final.\n- \"APAR\" Le paiement demandé a déjà été effectué par le payeur.\n- \"RR07\" Le justificatif de la demande de paiement est invalide (lorsque par exemple le numéro de facture est invalide)\n- \"FR01\" Suspicion de fraude\n- \"CUST\" Décision du client (envoyée pour rejeter une demande d'annulation)\n"
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "notif-123456"
+          },
+          "type": {
+            "$ref": "#/components/schemas/NotificationType"
+          },
+          "idObject": {
+            "type": "string",
+            "description": "Référence de l'objet concerné",
+            "example": "txn-789012"
+          },
+          "dateAction": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2023-05-15T10:15:00Z"
+          },
+          "dateLecture": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "example": "2023-05-15T14:30:00Z"
+          },
+          "details": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "example": {
+              "montant": 50000,
+              "emetteur": "user123"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "idObject",
+          "dateAction"
+        ]
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "REVENDICATION_INITIEE",
+          "ANNULATION_DEMANDEE",
+          "ANNULATION_REJETEE",
+          "RTP_INITIEE",
+          "RTP_RECUE"
+        ],
+        "example": "RTP_RECUE"
+      },
+      "NotificationListe": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ListeMeta"
+          }
+        }
+      },
+      "SouscriptionCreationRequete": {
+        "type": "object",
+        "required": [
+          "dateDebut"
+        ],
+        "properties": {
+          "dateDebut": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de début pour les paiements programmés",
+            "example": "2023-05-16T00:00:00Z"
+          },
+          "dateFin": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Date de fin pour les paiements programmés",
+            "example": "2023-12-31T00:00:00Z"
+          },
+          "frequence": {
+            "$ref": "#/components/schemas/TransactionFrequence",
+            "nullable": true
+          },
+          "periodicite": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Périodicité en nombre de jours/mois",
+            "minimum": 2,
+            "example": 1
+          },
+          "endToEndId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Id de la souscription",
+            "example": "SUB-123"
+          }
+        }
+      }
+    },
+    "responses": {
+      "FormatInvalide": {
+        "description": "La requête est malformée",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleBadRequestJSON"
+              }
+            }
+          }
+        }
+      },
+      "AutorisationsManquantes": {
+        "description": "Autorisations manquantes",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleUnauthorizedJSON"
+              }
+            }
+          }
+        }
+      },
+      "ProblemeServeur": {
+        "description": "Erreur inattendue du serveur",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleInternalServerErrorJSON"
+              }
+            }
+          }
+        }
+      },
+      "LimiteUtilisationDepasse": {
+        "description": "Quota de requêtes dépassé",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807Exemple429JSON"
+              }
+            }
+          }
+        }
+      },
+      "RessourceInexistant": {
+        "description": "La ressource n'existe pas dans le système",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem7807"
+            },
+            "examples": {
+              "exemple": {
+                "$ref": "#/components/examples/Problem7807ExempleNotFoundJSON"
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "Problem7807ExempleBadRequestJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Bad Request",
+          "status": 400,
+          "detail": "Invalid request body"
+        }
+      },
+      "Problem7807ExempleUnauthorizedJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Unauthorized",
+          "status": 401,
+          "detail": "Autorisations insuffisantes"
+        }
+      },
+      "Problem7807ExempleNotFoundJSON": {
+        "summary": "Problème ressource inexistant",
+        "value": {
+          "type": "about:blank",
+          "title": "NotFound",
+          "status": 404,
+          "detail": "La ressource n'existe pas dans le système"
+        }
+      },
+      "Problem7807ExempleInternalServerErrorJSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Internal Server Error",
+          "status": 500,
+          "detail": "Une erreur inattendue a empêché le serveur de traiter la requête."
+        }
+      },
+      "Problem7807Exemple429JSON": {
+        "summary": "Problème format invalide",
+        "value": {
+          "type": "about:blank",
+          "title": "Too Many Requests",
+          "status": 429,
+          "detail": "Dépassement du quota d’appels API: envoie de trop de requêtes en un temps donné."
+        }
+      },
+      "post-shid-request": {
+        "summary": "Création d’un alias de type SHID",
+        "value": {
+          "compte": "NumeroCompteDuClient",
+          "type": "SHID"
+        }
+      },
+      "post-mbno-request": {
+        "summary": "Création d’un alias de type MBNO",
+        "value": {
+          "compte": "NumeroCompteDuClient",
+          "type": "MBNO",
+          "cle": 221779999999
+        }
+      },
+      "post-shid-response": {
+        "summary": "Réponse Création d’un alias de type SHID",
+        "value": {
+          "compte": "NumeroCompteDuClient",
+          "type": "SHID",
+          "cle": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "pays": "CI"
+        }
+      },
+      "post-mbno-response": {
+        "summary": "Réponse Création d’un alias de type MBNO",
+        "value": {
+          "compte": "NumeroCompteDuClient",
+          "type": "MBNO",
+          "cle": 221779999999,
+          "pays": "SN"
+        }
+      },
+      "post-shid-error-limit": {
+        "summary": "Erreur - Création d’un alias de type SHID - Limit",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Vous avez atteint la mlimite du nombre d'alias que vous pouvez créer pour ce compte"
+        }
+      },
+      "post-shid-error-exist": {
+        "summary": "Erreur - Création d’un alias de type SHID - Limit",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Vous avez déjà un alias pour ce compte",
+          "object": {
+            "compte": "NumeroCompteDuClient",
+            "type": "SHID",
+            "cle": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+            "pays": "CI"
+          }
+        }
+      },
+      "post-mbno-response-confirmation": {
+        "summary": "Réponse Création d’un alias de type MBNO",
+        "value": {
+          "compte": "NumeroCompteDuClient",
+          "type": "MBNO",
+          "cle": 221779999999,
+          "pays": "SN",
+          "shid": "c7ff9992-1af8-4a67-a7ff-c574eba510b7"
+        }
+      },
+      "post-mbno-error-exist": {
+        "summary": "Erreur - Création d’un alias de type SHID - Limit",
+        "value": {
+          "type": "about:blank",
+          "title": "Forbidden",
+          "status": 403,
+          "detail": "Vous avez déjà un alias pour ce compte",
+          "object": {
+            "compte": "NumeroCompteDuClient",
+            "type": "MBNO",
+            "cle": 221779999999,
+            "pays": "SN",
+            "shid": "c7ff9992-1af8-4a67-a7ff-c574eba510b7"
+          }
+        }
+      },
+      "details-initiee": {
+        "summary": "Revendication initiée",
+        "value": {
+          "id": "+22111000458_1741263133994",
+          "alias": "+22111000458",
+          "statut": "INITIEE",
+          "dateDemande": "2023-05-10T08:00:00Z",
+          "dateVerrouillage": "2023-05-11T10:30:00Z",
+          "dateCloture": "2023-05-15T17:00:00Z"
+        }
+      },
+      "details-acceptee": {
+        "summary": "Revendication acceptée",
+        "value": {
+          "id": "+22111000458_1741263133994",
+          "alias": "+22111000458",
+          "statut": "ACCEPTEE",
+          "dateDemande": "2023-05-10T08:00:00Z",
+          "dateVerrouillage": "2023-05-11T10:30:00Z",
+          "dateCloture": "2023-05-15T17:00:00Z",
+          "dateAction": "2023-05-11T14:15:00Z",
+          "shid": {
+            "compte": "NumeroCompteDuClient",
+            "type": "SHID",
+            "cle": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+            "pays": "CI"
+          }
+        }
+      },
+      "details-rejetee": {
+        "summary": "Revendication rejetée",
+        "value": {
+          "id": "+22111000458_1741263133994",
+          "alias": "+22111000458",
+          "statut": "REJETEE",
+          "dateDemande": "2023-05-10T08:00:00Z",
+          "dateVerrouillage": "2023-05-11T10:30:00Z",
+          "dateCloture": "2023-05-15T17:00:00Z",
+          "dateAction": "2023-05-12T14:15:00Z"
+        }
+      },
+      "initier-alias-request": {
+        "summary": "Transfert par alias",
+        "value": {
+          "action": "send_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5"
+        }
+      },
+      "initier-iban-request": {
+        "summary": "Transfert par IBAN",
+        "value": {
+          "action": "send_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "iban": "CI93CI0080111301134291200589",
+          "payePSP": "CIB000"
+        }
+      },
+      "initier-othr-request": {
+        "summary": "Transfert par autre compte",
+        "value": {
+          "action": "send_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "othr": 221779999999,
+          "payePSP": "CIB000"
+        }
+      },
+      "initier-731-request": {
+        "summary": "Transfert par QR Code statique",
+        "value": {
+          "action": "send_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "731",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5"
+        }
+      },
+      "initier-400-request": {
+        "summary": "Paiement par QR Code dynamique",
+        "value": {
+          "action": "send_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "400",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "txId": "TX1236547889"
+        }
+      },
+      "initier-progr-request": {
+        "summary": "Paiement programmé (par alias)",
+        "value": {
+          "action": "send_schedule",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "dateDebut": "2023-05-02T00:00:00Z"
+        }
+      },
+      "initier-abon-request": {
+        "summary": "Abonnement (le 02 de chaque mois)",
+        "value": {
+          "action": "send_schedule",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "dateDebut": "2023-05-02T00:00:00Z",
+          "frequence": "M"
+        }
+      },
+      "initier-631-request": {
+        "summary": "Demande de paiement",
+        "value": {
+          "action": "receive_now",
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "631",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "alias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "motif": "Cotisation sortie"
+        }
+      },
+      "initier-alias-response": {
+        "summary": "Transfert par alias - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "GW",
+          "clientNom": "Khadija Ndiaye",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie"
+        }
+      },
+      "initier-iban-response": {
+        "summary": "Transfert par IBAN - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientCompte": "CI93CI0080111301134291200589",
+          "clientPSP": "CIB000",
+          "clientPays": "GW",
+          "clientNom": "Soro Marc Salio",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie"
+        }
+      },
+      "initier-othr-response": {
+        "summary": "Transfert par autre compte - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientCompte": "CI93CI0080111301134291200589",
+          "clientPSP": "CIB000",
+          "clientPays": "GW",
+          "clientNom": "Seini Mariam",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie"
+        }
+      },
+      "initier-731-response": {
+        "summary": "Transfert par QR Code Statique - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "731",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "GW",
+          "clientNom": "Khadija Ndiaye",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie"
+        }
+      },
+      "initier-progr-response": {
+        "summary": "Paiement programmé (par alias) - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "GW",
+          "clientNom": "Khadija Ndiaye",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie",
+          "dateDebut": "2023-05-02T00:00:00Z"
+        }
+      },
+      "initier-abon-response": {
+        "summary": "Abonnement (le 02 de chaque mois) - Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "CI",
+          "clientNom": "Doucoure & Soro Business",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie",
+          "dateDebut": "2023-05-02T00:00:00Z",
+          "frequence": "M"
+        }
+      },
+      "initier-631-response": {
+        "summary": "Demande de paiement - Reponse",
+        "value": {
+          "compte": "123456789",
+          "sens": "debit",
+          "montant": 1000,
+          "canal": "631",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "GW",
+          "clientNom": "Khadija Ndiaye",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie",
+          "motif": "Cotisation sortie"
+        }
+      },
+      "confirmer-alias-request": {
+        "summary": "Confirmer le transfert par alias",
+        "value": {
+          "montant": 1000,
+          "confirmationMethode": "biometry",
+          "confirmationDate": "2023-08-18T14:15:22.999Z"
+        }
+      },
+      "rtp-accepter-request": {
+        "summary": "Confirmer le transfert par RTP - Accepter la demande",
+        "value": {
+          "montant": 1000,
+          "confirmationMethode": "biometry",
+          "confirmationDate": "2023-08-18T14:15:22.999Z",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "motif": "Motif envoyée dans la demande RTP"
+        }
+      },
+      "confirmer-alias-response": {
+        "summary": "Confirmation du transfert par alias _ Reponse",
+        "value": {
+          "compte": "123456789",
+          "montant": 1000,
+          "canal": "633",
+          "latitude": 14.6707583,
+          "longitude": -17.426762,
+          "clientAlias": "539335b7-ed13-408a-995e-83cb0f3ce0a5",
+          "clientPhoto\"": "https://static.euronews.com/articles/stories/07/35/63/70/1440x810_cmsv2_52be993f-0568-57fd-92d9-8b08cfbfadfa-7356370.jpg",
+          "clientPays": "GW",
+          "clientNom": "Khadija Ndiaye",
+          "endToEndId": "ESNB00120230420153555KXvozkpNvhUk7c",
+          "statut": "initie"
+        }
+      },
+      "confirmer-reponse-irr": {
+        "summary": "Reponse transfert irrevocable",
+        "value": {
+          "statut": "irrevocable",
+          "dateIrrevocabilite": "2023-08-18T14:15:22.999Z"
+        }
+      },
+      "confirmer-reponse-rej": {
+        "summary": "Reponse transfert rejeté",
+        "value": {
+          "statut": "rejete",
+          "codeRejet": "AM04"
+        }
+      }
+    }
+  }
+}
