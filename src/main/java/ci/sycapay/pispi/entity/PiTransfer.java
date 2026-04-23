@@ -91,17 +91,13 @@ public class PiTransfer {
     @Column(name = "motif", length = 140)
     private String motif;
 
-    @Column(name = "reference_client", length = 35)
-    private String referenceClient;
-
-    @Column(name = "montant_achat", precision = 18, scale = 2)
-    private BigDecimal montantAchat;
-
-    @Column(name = "montant_retrait", precision = 18, scale = 2)
-    private BigDecimal montantRetrait;
-
-    @Column(name = "frais_retrait", precision = 18, scale = 2)
-    private BigDecimal fraisRetrait;
+    /**
+     * Identifiant de transaction ({@code <CdtTrfTxInf>/<PmtId>/<TxId>}).
+     * Required by the BCEAO AIP for canals 400/733/500/521/520/631/401
+     * (spec §4.3.1.1, V27 migration).
+     */
+    @Column(name = "identifiant_transaction", length = 35)
+    private String identifiantTransaction;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
@@ -109,9 +105,6 @@ public class PiTransfer {
 
     @Column(name = "code_raison", length = 10)
     private String codeRaison;
-
-    @Column(name = "detail_echec", length = 500)
-    private String detailEchec;
 
     @Column(name = "msg_id_reponse", length = 35)
     private String msgIdReponse;
@@ -122,8 +115,125 @@ public class PiTransfer {
     @Column(name = "date_heure_irrevocabilite")
     private LocalDateTime dateHeureIrrevocabilite;
 
-    @Column(name = "rtp_end_to_end_id", length = 35)
-    private String rtpEndToEndId;
+    // -------------------------------------------------------------------------
+    // V24 — mobile two-phase flow snapshot columns
+    // -------------------------------------------------------------------------
+    // Payé identity snapshot (built from a RAC_SEARCH result at init time)
+    @Column(name = "pays_client_paye", length = 2)
+    private String paysClientPaye;
+
+    @Column(name = "identifiant_client_paye", length = 35)
+    private String identifiantClientPaye;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_identifiant_client_paye", length = 4)
+    private CodeSystemeIdentification typeIdentifiantClientPaye;
+
+    @Column(name = "alias_paye", length = 50)
+    private String aliasPaye;
+
+    @Column(name = "iban_client_paye", length = 34)
+    private String ibanClientPaye;
+
+    @Column(name = "identification_fiscale_commercant_paye", length = 35)
+    private String identificationFiscaleCommercantPaye;
+
+    @Column(name = "identification_rccm_client_paye", length = 35)
+    private String identificationRccmClientPaye;
+
+    @Column(name = "ville_client_paye", length = 35)
+    private String villeClientPaye;
+
+    @Column(name = "adresse_client_paye", length = 140)
+    private String adresseClientPaye;
+
+    // Payeur identity snapshot
+    @Column(name = "pays_client_payeur", length = 2)
+    private String paysClientPayeur;
+
+    @Column(name = "identifiant_client_payeur", length = 35)
+    private String identifiantClientPayeur;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_identifiant_client_payeur", length = 4)
+    private CodeSystemeIdentification typeIdentifiantClientPayeur;
+
+    @Column(name = "alias_payeur", length = 50)
+    private String aliasPayeur;
+
+    @Column(name = "iban_client_payeur", length = 34)
+    private String ibanClientPayeur;
+
+    @Column(name = "identification_fiscale_commercant_payeur", length = 35)
+    private String identificationFiscaleCommercantPayeur;
+
+    @Column(name = "identification_rccm_client_payeur", length = 35)
+    private String identificationRccmClientPayeur;
+
+    @Column(name = "ville_client_payeur", length = 35)
+    private String villeClientPayeur;
+
+    @Column(name = "adresse_client_payeur", length = 140)
+    private String adresseClientPayeur;
+
+    // Confirmation metadata (PUT /transferts/{id})
+    @Column(name = "confirmation_date")
+    private LocalDateTime confirmationDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "confirmation_methode", length = 10)
+    private ConfirmationMethode confirmationMethode;
+
+    @Column(name = "latitude_client_payeur", length = 20)
+    private String latitudeClientPayeur;
+
+    @Column(name = "longitude_client_payeur", length = 20)
+    private String longitudeClientPayeur;
+
+    // Audit — link back to the RAC_SEARCH log entry that produced each snapshot
+    @Column(name = "rac_search_ref_paye", length = 50)
+    private String racSearchRefPaye;
+
+    @Column(name = "rac_search_ref_payeur", length = 50)
+    private String racSearchRefPayeur;
+
+    // -------------------------------------------------------------------------
+    // V25 — schedule (Programme / Abonnement) metadata
+    // -------------------------------------------------------------------------
+    // On a schedule parent row: action=SEND_SCHEDULE carries the recipe.
+    // On an immediate transfer:  action=SEND_NOW (or null for legacy rows).
+    // On a spawned execution:    action=SEND_NOW + parent_schedule_id set.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "action", length = 15)
+    private TransactionAction action;
+
+    @Column(name = "date_debut")
+    private LocalDateTime dateDebut;
+
+    @Column(name = "date_fin")
+    private LocalDateTime dateFin;
+
+    // Hibernate 7 maps @Enumerated(STRING) + length=1 to CHAR(1) by default;
+    // pin to varchar(1) to match the V25 migration (same workaround we use
+    // for type_client elsewhere in the entity graph).
+    @Enumerated(EnumType.STRING)
+    @Column(name = "frequence", length = 1, columnDefinition = "varchar(1)")
+    private TransactionFrequence frequence;
+
+    @Column(name = "periodicite")
+    private Integer periodicite;
+
+    @Column(name = "next_execution_date")
+    private java.time.LocalDate nextExecutionDate;
+
+    @Column(name = "parent_schedule_id")
+    private Long parentScheduleId;
+
+    @Column(name = "active")
+    private Boolean active;
+
+    @Column(name = "subscription_id", length = 50)
+    private String subscriptionId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

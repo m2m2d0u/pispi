@@ -166,6 +166,17 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------------------------
+    // Not-yet-implemented endpoints — intentional stubs (e.g. Phase-3 scope)
+    // -------------------------------------------------------------------------
+
+    @ExceptionHandler(UnsupportedOperationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotImplemented(UnsupportedOperationException ex) {
+        log.warn("Not-yet-implemented endpoint invoked: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(ApiResponse.error(501, "NOT_IMPLEMENTED", ex.getMessage()));
+    }
+
+    // -------------------------------------------------------------------------
     // Catch-all
     // -------------------------------------------------------------------------
 

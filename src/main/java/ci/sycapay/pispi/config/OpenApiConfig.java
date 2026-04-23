@@ -39,7 +39,7 @@ public class OpenApiConfig {
                         new Server().url("http://localhost:8080").description("Local"),
                         new Server().url("https://pi-spi.sycapay.ci").description("Production")))
                 .tags(List.of(
-                        new Tag().name("Transfers").description("Initiate and manage credit transfers (PACS.008 / PACS.002 / PACS.028)"),
+                        new Tag().name("Transactions (mobile)").description("Unified mobile-facing transfer endpoints per BCEAO remote spec — send_now (PACS.008), receive_now (PAIN.013), send_schedule (Programme / Abonnement)"),
                         new Tag().name("Request to Pay").description("Create and manage Request-to-Pay operations (PAIN.013 / PAIN.014)"),
                         new Tag().name("Aliases").description("Manage account aliases in the RAC (creation, modification, deletion, search)"),
                         new Tag().name("Revendications").description("Manage alias ownership claim operations"),

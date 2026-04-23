@@ -35,6 +35,27 @@ public class ClientSearchResolver {
     private final PiAliasRepository aliasRepository;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Resolve a participant from the latest inbound RAC_SEARCH log entry whose
+     * payload carries the given {@code aliasValue}. Used by the mobile-facing
+     * {@code POST /api/v1/transferts} flow where the client submits a raw
+     * alias (not a pre-computed {@code endToEndIdSearch}) — we look the alias
+     * up in the existing search log, grab its {@code endToEndId}, and delegate
+     * to the primary {@link #resolve(String, String)} path so the parsing /
+     * ClientInfo-building code stays in one place.
+     *
+     * <p>Throws {@link ResourceNotFoundException} if no RAC_SEARCH result is
+     * on file for the alias — the caller is expected to emit a RAC_SEARCH
+     * first (per §4.2, no caching means this is a single-use lookup).
+     */
+    public ResolvedClient resolveByAlias(String aliasValue, String side) {
+        PiMessageLog entry = messageLogRepository
+                .findLatestRacSearchByAliasValue(aliasValue)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun résultat de recherche d'alias (RAC_SEARCH) pour l'alias", aliasValue));
+        return resolve(entry.getEndToEndId(), side);
+    }
+
     public ResolvedClient resolve(String endToEndIdSearch, String side) {
         PiMessageLog entry = messageLogRepository
                 .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
@@ -117,22 +138,48 @@ public class ClientSearchResolver {
         String identificationFiscale = str(data, "identificationFiscale");
         String identificationRccm = str(data, "identificationRccm");
 
-        // identificationFiscaleCommercant* is required in pacs.008 / pain.013 when the
-        // client provided their fiscal/RCCM ID at alias enrollment (spec §4.3.1.1 p.72-73).
-        //   B / G: identificationFiscale is BOTH the primary TXID AND the commercial fiscal ID.
-        //   C:     identificationFiscale is only the commercial fiscal ID (primary stays NIDN/CCPT).
+        // Identification routing for pacs.008 / pain.013 (spec §4.3.1.1 p.66-73).
+        //
+        // XSD path for ALL these fields is <Dbtr>/<Id>/<OrgId>/<Othr>, and the
+        // BCEAO restricted schema caps <Othr> at maxOccurs=1 inside <OrgId>.
+        // We therefore MUST pick exactly one identifier per side.
+        //
+        //   B / G (personnes morales):
+        //     - identificationFiscale is the canonical TXID and is how PI-RAC
+        //       keys the account. Emit it as numeroIdentification + systeme=TXID.
+        //     - identificationFiscaleCommercant stays null — it's redundant for
+        //       B/G (same value, same path) and emitting both triggers the
+        //       "Element 'Othr': not expected" XSD rejection observed earlier.
+        //     - If there's no fiscal but there's an RCCM, emit that as the
+        //       sole identifier via numeroRCCMClient* (the builder picks that
+        //       up when identificationFiscaleCommercant is null).
+        //
+        //   C (commerçant individuel):
+        //     - Primary stays NIDN/CCPT (personal ID); identificationFiscale
+        //       is the DISTINCT commercial fiscal ID, emitted as
+        //       identificationFiscaleCommercant. Two different values map to
+        //       the same XSD path — handled by the payload builder choosing
+        //       one per-message (BE01 risk if PI-RAC disagrees on which).
+        //
+        //   P (personne physique, non commerçant):
+        //     - Primary NIDN/CCPT; no commercial fiscal ID applies.
         String identificationFiscaleCommercant = null;
 
         switch (typeClient) {
             case B, G -> {
                 if (identificationFiscale != null) {
+                    // Canonical TXID — emit as numeroIdentification + systeme=TXID
+                    // so PI-RAC can match against the account registration.
                     builder.identifiant(identificationFiscale)
                            .typeIdentifiant(CodeSystemeIdentification.TXID);
-                    identificationFiscaleCommercant = identificationFiscale;
+                    // identificationFiscaleCommercant stays null on purpose —
+                    // see header comment; emitting both breaks the XSD.
                 } else if (identificationRccm != null) {
-                    // RCCM is passed to ResolvedClient and picked up as numeroRCCMClient* in
-                    // the payload builder (identificationFiscaleCommercant stays null so the
-                    // else-if branch fires).
+                    // No fiscal ID — RCCM becomes the sole identifier.
+                    // The payload builder picks up identificationRccm via the
+                    // numeroRCCMClient* branch when identificationFiscale-
+                    // Commercant is null (and we leave identifiant null here
+                    // to avoid another double-<Othr>).
                 } else {
                     log.warn("Client {} (type {}) has no identificationFiscale in the RAC_SEARCH "
                                     + "log — pacs.008 / pain.013 will fail BE01 "

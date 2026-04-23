@@ -1,0 +1,1752 @@
+{
+  "info": {
+    "_postman_id": "1a3393cd-e9df-4df8-8ef4-06ac47ea0ad2",
+    "name": "PI-SPI — Transferts (mobile)",
+    "description": "Scénarios BCEAO pacs.008 adaptés au nouvel endpoint mobile /api/v1/transferts (TransactionInitiationRequest oneOf). Flow en deux phases : POST /transferts (initier, retourne statut=initie) puis PUT /transferts/{id} (confirmer, émet PACS.008 ou PAIN.013). Chaque initiation capture `endToEndId` dans la variable `lastEndToEndId` — la requête `Confirmer la dernière transaction` du dossier Flux utilise cette variable automatiquement.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Scénarios BCEAO send_now (pacs.008)",
+      "item": [
+        {
+          "name": "B2B",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 400 (Paiement par QR Code dynamique)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement B2B par QR code dynamique\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 400 sans pacs.008 préalable au payé",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasBFirst}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"500\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"B2B marchand sur site — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"520\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"B2B e-commerce livraison — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"521\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"B2B e-commerce immédiat — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 733",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"733\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Règlement B2B via intégration API business\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 999 par vérification d'identité avec motif structured",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "B2C",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2C' avec le canal 400 (Paiement par QR Code dynamique)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Règlement B2C artisan par QR code dynamique\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2C' avec le canal 500 (Demande de paiement marchand sur site)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"500\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement B2C chez un artisan sur site\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "B2P",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 000 Paiement par QR Code statique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"000\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Remboursement de frais via QR statique\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 300 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"631\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert B2P canal 631 — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 733 (Paiement provenant de l'API Business)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"733\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Versement salaire — mois d'avril 2026\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "P2B",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 000 avec motif non structuré",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"000\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Merci pour le pain et les viennoiseries, à demain !\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' par alias avec le canal 300 (USSD avec alias MCOD)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement USSD via code marchand (alias MCOD)\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasMCOD}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 400 Paiement par QR Code dynamique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2B par QR code dynamique — courses supermarché\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 401 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"401\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"P2B via canal FACTURE — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"500\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"P2B marchand sur site — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"520\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"P2B e-commerce livraison — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"521\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"P2B e-commerce immédiat — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "P2C",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 300 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 400 Paiement par QR Code dynamique",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2C artisan par QR code dynamique\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 500",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"500\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2C chez le couturier sur site\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2C' avec le canal 999 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "P2P",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"631\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert P2P — attendu: rejet FF05\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 633 par vérification d'identité",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 731 par alias",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"731\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert P2P via QR code (par alias)\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 999 par alias",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert familial P2P par ordre de transfert (résolu par alias)\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                }
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Paiements programmés (send_schedule)",
+      "item": [
+        {
+          "name": "Envoyer un paiement programmé (abonnement mensuel P2C)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"send_schedule\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement programmé — abonnement coiffure mensuelle\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\",\n  \"dateDebut\": \"2026-05-01T00:00:00Z\",\n  \"frequence\": \"M\",\n  \"periodicite\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastEndToEndId', id);",
+                  "        console.log('Captured lastEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rejets PAIN.014 (RTP — endpoint legacy)",
+      "item": [
+        {
+          "name": "Envoyer un pain.014 avec statut RJCT avec raison AC06 par le participant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"AC06\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Envoyer un pain.014 avec statut RJCT avec raison AM09 par le client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"AM09\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flux — confirmation / annulation / rejet / retour / désactivation",
+      "item": [
+        {
+          "name": "Confirmer la dernière transaction (PUT /transferts/{id})",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{lastEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{lastEndToEndId}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmationDate\": \"2026-04-23T10:30:00Z\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.36,\n  \"longitude\": -4.0083\n}"
+            }
+          }
+        },
+        {
+          "name": "Récupérer la dernière transaction (GET /transferts/{id})",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{lastEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{lastEndToEndId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Lister les transactions (GET /transferts)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts?page=0&size=20"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Annuler la dernière transaction émise (PUT /transferts/{id}/annulations)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{lastEndToEndId}}/annulations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{lastEndToEndId}}",
+                "annulations"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"AM09\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Retourner les fonds d'un transfert reçu (PUT /transferts/{id}/retours)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{incomingEndToEndId}}/retours",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{incomingEndToEndId}}",
+                "retours"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rejeter une demande de paiement reçue (PUT /transferts/{id}/rejets)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{incomingRtpEndToEndId}}/rejets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{incomingRtpEndToEndId}}",
+                "rejets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"raison\": \"AM09\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Désactiver un paiement programmé (DELETE /transferts/{id})",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{lastEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{lastEndToEndId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "compteB",
+      "value": "BCI001B001"
+    },
+    {
+      "key": "compteP",
+      "value": "BCI001P001"
+    },
+    {
+      "key": "searchPayeurB",
+      "value": "ECIE002XJWE2E00014000000000000010"
+    },
+    {
+      "key": "searchPayeurP",
+      "value": "ECIE002XJWE2E00014000000000000011"
+    },
+    {
+      "key": "aliasB",
+      "value": "+22500000020"
+    },
+    {
+      "key": "aliasBFirst",
+      "value": "+22500000021"
+    },
+    {
+      "key": "aliasC",
+      "value": "+22500000022"
+    },
+    {
+      "key": "aliasP",
+      "value": "+22500000023"
+    },
+    {
+      "key": "aliasMCOD",
+      "value": "999001"
+    },
+    {
+      "key": "lastEndToEndId",
+      "value": ""
+    },
+    {
+      "key": "incomingEndToEndId",
+      "value": "ECIE001XJWE2E00014000000000000002"
+    },
+    {
+      "key": "incomingRtpEndToEndId",
+      "value": "ECIE002XJWE2E00014000000000000002"
+    },
+    {
+      "key": "codeMembrePayeur",
+      "value": "CIE002"
+    }
+  ]
+}

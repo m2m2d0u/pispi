@@ -57,7 +57,7 @@ public class RequestToPayController {
     }
 
     @Operation(summary = "Accept an inbound Request-to-Pay",
-               description = "Acknowledges acceptance of an inbound RTP. The subsequent credit transfer (PACS.008) should be initiated separately via POST /api/v1/transfers.")
+               description = "Acknowledges acceptance of an inbound RTP. The subsequent credit transfer (PACS.008) should be initiated separately via POST /api/v1/transferts (action=send_now).")
     @PostMapping("/incoming/{endToEndId}/accept")
     public ResponseEntity<ApiResponse<Void>> acceptRtp(@Parameter(description = "End-to-end identifier of the inbound RTP") @PathVariable String endToEndId) {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());

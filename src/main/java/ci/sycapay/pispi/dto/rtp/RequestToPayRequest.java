@@ -21,11 +21,10 @@ import java.math.BigDecimal;
  * Payload for initiating an outbound Request-to-Pay (PAIN.013 — BCEAO
  * {@code DemandePaiement}).
  *
- * <p>Follows the lean {@code TransferRequest} pattern — the payeur and payé
- * are identified by the {@code endToEndId} of a prior inbound RAC_SEARCH log
- * entry. The service resolves the full client identity (nom, type, iban/other,
- * alias, codeMembreParticipant, etc.) from {@code pi_message_log} and flattens
- * it into the BCEAO payload.
+ * <p>Lean pattern: the payeur and payé are identified by the {@code endToEndId}
+ * of a prior inbound RAC_SEARCH log entry. The service resolves the full
+ * client identity (nom, type, iban/other, alias, codeMembreParticipant, etc.)
+ * from {@code pi_message_log} and flattens it into the BCEAO payload.
  *
  * <p>Only the fields that the caller must supply on top of the resolved data
  * are carried here (canal, amount, motif, remise, document reference, etc.).

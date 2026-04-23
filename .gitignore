@@ -35,5 +35,7 @@ build/
 
 *.jar
 
+BCEAO-Doc.pdf
+
 src/main/resources/client/*
 src/main/resources/truststore/*
