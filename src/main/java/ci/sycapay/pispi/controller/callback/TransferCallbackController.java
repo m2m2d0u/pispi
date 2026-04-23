@@ -59,6 +59,14 @@ public class TransferCallbackController {
         String typeClientPayeurStr = (String) payload.get("typeClientPayeur");
         String typeComptePayeStr   = (String) payload.get("typeCompteClientPaye");
         String typeClientPayeStr   = (String) payload.get("typeClientPaye");
+        // typeTransaction + canalCommunication are both optional on inbound
+        // pacs.008 — BCEAO omits typeTransaction on most canals (it's only
+        // mandated for "paiement programmé" per spec §4.3.1.1 p.69) and leaving
+        // canalCommunication out is rare but not impossible for misc callbacks.
+        // Guard both with null checks; otherwise TypeTransaction.valueOf(null)
+        // blows up with NPE and kills the whole callback.
+        String typeTransactionStr  = (String) payload.get("typeTransaction");
+        String canalCommunicationStr = (String) payload.get("canalCommunication");
 
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(msgId)
@@ -68,8 +76,8 @@ public class TransferCallbackController {
                 .devise("XOF")
                 .codeMembrePayeur((String) payload.get("codeMembreParticipantPayeur"))
                 .codeMembrePaye(payload.getOrDefault("codeMembreParticipantPaye", properties.getCodeMembre()).toString())
-                .typeTransaction(TypeTransaction.valueOf((String) payload.get("typeTransaction")))
-                .canalCommunication(CanalCommunication.fromCode((String) payload.get("canalCommunication")))
+                .typeTransaction(typeTransactionStr != null ? TypeTransaction.valueOf(typeTransactionStr) : null)
+                .canalCommunication(canalCommunicationStr != null ? CanalCommunication.fromCode(canalCommunicationStr) : null)
                 .nomClientPayeur((String) payload.get("nomClientPayeur"))
                 .prenomClientPayeur((String) payload.get("prenomClientPayeur"))
                 .typeClientPayeur(typeClientPayeurStr != null ? TypeClient.valueOf(typeClientPayeurStr) : null)
