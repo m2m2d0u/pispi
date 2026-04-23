@@ -117,10 +117,10 @@ public class ClientSearchResolver {
         String identificationFiscale = str(data, "identificationFiscale");
         String identificationRccm = str(data, "identificationRccm");
 
-        // For type C (commerçant), identificationFiscale from RAC_SEARCH is the
-        // merchant's commercial fiscal ID — separate from the personal NIDN/CCPT.
-        // It must be forwarded to the pacs.008 as identificationFiscaleCommercant*,
-        // not used as the primary systemeIdentification* (which must remain NIDN/CCPT).
+        // identificationFiscaleCommercant* is required in pacs.008 / pain.013 when the
+        // client provided their fiscal/RCCM ID at alias enrollment (spec §4.3.1.1 p.72-73).
+        //   B / G: identificationFiscale is BOTH the primary TXID AND the commercial fiscal ID.
+        //   C:     identificationFiscale is only the commercial fiscal ID (primary stays NIDN/CCPT).
         String identificationFiscaleCommercant = null;
 
         switch (typeClient) {
@@ -128,6 +128,11 @@ public class ClientSearchResolver {
                 if (identificationFiscale != null) {
                     builder.identifiant(identificationFiscale)
                            .typeIdentifiant(CodeSystemeIdentification.TXID);
+                    identificationFiscaleCommercant = identificationFiscale;
+                } else if (identificationRccm != null) {
+                    // RCCM is passed to ResolvedClient and picked up as numeroRCCMClient* in
+                    // the payload builder (identificationFiscaleCommercant stays null so the
+                    // else-if branch fires).
                 } else {
                     log.warn("Client {} (type {}) has no identificationFiscale in the RAC_SEARCH "
                                     + "log — pacs.008 / pain.013 will fail BE01 "
