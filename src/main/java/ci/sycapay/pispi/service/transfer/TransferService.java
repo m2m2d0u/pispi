@@ -220,7 +220,13 @@ public class TransferService {
         payload.put("paysClientPayeur", payeur.clientInfo().getPays());
         payload.put("typeCompteClientPayeur", payeur.typeCompte().name());
         payload.put("deviseCompteClientPayeur", "XOF");
-        payload.put("otherClientPayeur", payeur.other());
+        // IBAN vs other: exactly one should be non-null per RAC_SEARCH spec §4.1.4.2.
+        // Sending the wrong field (or null) is the primary trigger of BE01.
+        if (payeur.iban() != null) {
+            payload.put("ibanClientPayeur", payeur.iban());
+        } else if (payeur.other() != null) {
+            payload.put("otherClientPayeur", payeur.other());
+        }
 
         // Payeur — optional
         if (payeur.clientInfo().getAdresse() != null)
@@ -240,6 +246,11 @@ public class TransferService {
             payload.put("numeroIdentificationClientPayeur", payeur.clientInfo().getIdentifiant());
         if (payeur.aliasValue() != null)
             payload.put("aliasClientPayeur", payeur.aliasValue());
+        // Type C: commercial identifiers required when provided at alias enrollment
+        if (payeur.identificationFiscaleCommercant() != null)
+            payload.put("identificationFiscaleCommercantPayeur", payeur.identificationFiscaleCommercant());
+        else if (payeur.identificationRccm() != null)
+            payload.put("numeroRCCMClientPayeur", payeur.identificationRccm());
 
         // Payé — required
         payload.put("nomClientPaye", paye.clientInfo().getNom());
@@ -247,7 +258,11 @@ public class TransferService {
         payload.put("paysClientPaye", paye.clientInfo().getPays());
         payload.put("typeCompteClientPaye", paye.typeCompte().name());
         payload.put("deviseCompteClientPaye", "XOF");
-        payload.put("otherClientPaye", paye.other());
+        if (paye.iban() != null) {
+            payload.put("ibanClientPaye", paye.iban());
+        } else if (paye.other() != null) {
+            payload.put("otherClientPaye", paye.other());
+        }
 
         // Payé — optional
         if (paye.clientInfo().getAdresse() != null)
@@ -267,6 +282,11 @@ public class TransferService {
             payload.put("numeroIdentificationClientPaye", paye.clientInfo().getIdentifiant());
         if (paye.aliasValue() != null)
             payload.put("aliasClientPaye", paye.aliasValue());
+        // Type C: commercial identifiers required when provided at alias enrollment
+        if (paye.identificationFiscaleCommercant() != null)
+            payload.put("identificationFiscaleCommercantPaye", paye.identificationFiscaleCommercant());
+        else if (paye.identificationRccm() != null)
+            payload.put("numeroRCCMClientPaye", paye.identificationRccm());
 
         // Optional transfer fields
         if (request.getTypeTransaction() != null)

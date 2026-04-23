@@ -88,6 +88,7 @@ public class RequestToPayService {
 
         log.info("RTP PAIN.013 emitted: endToEndId={} payeur={} paye={}",
                 endToEndId, payeur.codeMembre(), codeMembre);
+        log.info("RTP PAIN.013 payload: {}", pain013);
         aipClient.post("/demandes-paiements", pain013);
 
         return toResponse(rtp);
@@ -307,13 +308,25 @@ public class RequestToPayService {
         putIfNotBlank(p, "villeNaissanceClientPayeur", payeurInfo.getLieuNaissance());
         putIfNotBlank(p, "paysNaissanceClientPayeur", payeurInfo.getPaysNaissance());
         putIfNotBlank(p, "paysClientPayeur", payeurInfo.getPays());
-        putIfNotBlank(p, "otherClientPayeur", payeur.other());
+        // IBAN vs other: send the correct account field per §4.1.4.2 spec.
+        if (payeur.iban() != null) {
+            p.put("ibanClientPayeur", payeur.iban());
+        } else {
+            putIfNotBlank(p, "otherClientPayeur", payeur.other());
+        }
         p.put("typeCompteClientPayeur", payeur.typeCompte().name());
         p.put("deviseCompteClientPayeur", "XOF");
         putIfNotBlank(p, "aliasClientPayeur", payeur.aliasValue());
         putIfNotBlank(p, "codeMembreParticipantPayeur", payeur.codeMembre());
-        putIfNotBlank(p, "identificationFiscaleCommercantPayeur",
-                request.getIdentificationFiscaleCommercantPayeur());
+        // Type C commercial IDs: prefer resolved from RAC_SEARCH, fall back to caller override
+        String idFiscCommPayeur = payeur.identificationFiscaleCommercant() != null
+                ? payeur.identificationFiscaleCommercant()
+                : request.getIdentificationFiscaleCommercantPayeur();
+        if (idFiscCommPayeur != null) {
+            p.put("identificationFiscaleCommercantPayeur", idFiscCommPayeur);
+        } else if (payeur.identificationRccm() != null) {
+            p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
+        }
 
         // Payé party — flat fields (resolved).
         ClientInfo payeInfo = paye.clientInfo();
@@ -331,12 +344,22 @@ public class RequestToPayService {
         putIfNotBlank(p, "villeNaissanceClientPaye", payeInfo.getLieuNaissance());
         putIfNotBlank(p, "paysNaissanceClientPaye", payeInfo.getPaysNaissance());
         putIfNotBlank(p, "paysClientPaye", payeInfo.getPays());
-        putIfNotBlank(p, "otherClientPaye", paye.other());
+        if (paye.iban() != null) {
+            p.put("ibanClientPaye", paye.iban());
+        } else {
+            putIfNotBlank(p, "otherClientPaye", paye.other());
+        }
         p.put("typeCompteClientPaye", paye.typeCompte().name());
         p.put("deviseCompteClientPaye", "XOF");
         putIfNotBlank(p, "aliasClientPaye", paye.aliasValue());
-        putIfNotBlank(p, "identificationFiscaleCommercantPaye",
-                request.getIdentificationFiscaleCommercantPaye());
+        String idFiscCommPaye = paye.identificationFiscaleCommercant() != null
+                ? paye.identificationFiscaleCommercant()
+                : request.getIdentificationFiscaleCommercantPaye();
+        if (idFiscCommPaye != null) {
+            p.put("identificationFiscaleCommercantPaye", idFiscCommPaye);
+        } else if (paye.identificationRccm() != null) {
+            p.put("numeroRCCMClientPaye", paye.identificationRccm());
+        }
 
         // -----------------------------------------------------------------
         // RmtInf mutual exclusion — BCEAO pain.013 XSD accepts EITHER

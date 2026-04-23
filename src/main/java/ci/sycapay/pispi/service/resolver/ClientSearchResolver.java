@@ -115,6 +115,13 @@ public class ClientSearchResolver {
         String identificationNationale = str(data, "identificationNationale");
         String numeroPasseport = str(data, "numeroPasseport");
         String identificationFiscale = str(data, "identificationFiscale");
+        String identificationRccm = str(data, "identificationRccm");
+
+        // For type C (commerçant), identificationFiscale from RAC_SEARCH is the
+        // merchant's commercial fiscal ID — separate from the personal NIDN/CCPT.
+        // It must be forwarded to the pacs.008 as identificationFiscaleCommercant*,
+        // not used as the primary systemeIdentification* (which must remain NIDN/CCPT).
+        String identificationFiscaleCommercant = null;
 
         switch (typeClient) {
             case B, G -> {
@@ -144,6 +151,13 @@ public class ClientSearchResolver {
                     builder.identifiant(identificationFiscale)
                            .typeIdentifiant(CodeSystemeIdentification.TXID);
                 }
+                // Type C: identificationFiscale is ALSO the commercial fiscal ID
+                // (identificationFiscaleCommercant* in pacs.008 / pain.013).
+                // identificationRccm is the RCCM variant (mutually exclusive).
+                if (typeClient == TypeClient.C) {
+                    identificationFiscaleCommercant = identificationFiscale;
+                    builder.identificationRccm(identificationRccm);
+                }
             }
         }
         String email = str(data, "email");
@@ -151,6 +165,7 @@ public class ClientSearchResolver {
 
         String valeurAlias = str(data, "valeurAlias");
         String codeMembreParticipant = str(data, "participant");
+        String iban = str(data, "iban");
 
         // Per BCEAO PI-RAC §3.2, a LOCKED alias must not carry any payment.
         // When the resolved alias corresponds to a local row (we may be the
@@ -168,7 +183,8 @@ public class ClientSearchResolver {
         }
 
         log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch);
-        return new ResolvedClient(builder.build(), other, typeCompte, valeurAlias, codeMembreParticipant);
+        return new ResolvedClient(builder.build(), other, iban, typeCompte, valeurAlias,
+                codeMembreParticipant, identificationFiscaleCommercant, identificationRccm);
     }
 
     private static String str(Map<String, Object> map, String key) {
