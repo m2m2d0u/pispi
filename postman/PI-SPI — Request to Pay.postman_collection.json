@@ -420,6 +420,136 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Consultation",
+      "description": "Lecture de l'état local des demandes de paiement (PAIN.013 / PAIN.014).",
+      "item": [
+        {
+          "name": "Récupérer une demande de paiement par endToEndId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/{{rtpEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "{{rtpEndToEndId}}"
+              ]
+            },
+            "description": "Retourne l'état local d'une demande de paiement identifiée par son `endToEndId`. Fonctionne pour les demandes **sortantes** (initiées par ce PI) et **entrantes** (reçues via callback `/demandes-paiements`)."
+          },
+          "response": []
+        },
+        {
+          "name": "Lister les demandes de paiement sortantes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp?page=0&size=20&sort=createdAt,desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0",
+                  "description": "Numéro de page (0-based)"
+                },
+                {
+                  "key": "size",
+                  "value": "20",
+                  "description": "Nombre d'éléments par page"
+                },
+                {
+                  "key": "sort",
+                  "value": "createdAt,desc",
+                  "description": "Tri par date de création décroissante"
+                }
+              ]
+            },
+            "description": "Retourne la liste paginée de toutes les demandes de paiement **initiées par ce PI** (direction `OUTBOUND`). Utilise la pagination Spring (`page`, `size`, `sort`)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Demandes entrantes",
+      "description": "Traitement des demandes de paiement reçues via callback `/demandes-paiements` (PAIN.013 inbound) — rejet (PAIN.014) ou acceptation.",
+      "item": [
+        {
+          "name": "Rejeter une demande de paiement entrante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"MS03\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "reject"
+              ]
+            },
+            "description": "Émet une réponse de rejet PAIN.014 (`ReponseDemandePaiement`) à l'AIP pour une demande entrante reçue via `/demandes-paiements`.\n\n**codeRaison** : code BCEAO au format `[A-Z]{2}\\d{2}`. Exemples courants :\n- `MS03` — Raison non spécifiée\n- `AM04` — Provision insuffisante\n- `AM09` — Montant incorrect\n- `MD01` — Pas de mandat"
+          },
+          "response": []
+        },
+        {
+          "name": "Accepter une demande de paiement entrante",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp",
+                "incoming",
+                "{{incomingRtpEndToEndId}}",
+                "accept"
+              ]
+            },
+            "description": "Marque une demande de paiement entrante comme acceptée (HTTP 202). Le virement de crédit (PACS.008) doit ensuite être initié séparément via `POST /api/v1/transferts` avec `action=send_now` en référençant cet `endToEndId`."
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [

@@ -1,5 +1,6 @@
 package ci.sycapay.pispi.dto.rtp;
 
+import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.RtpStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,4 +25,5 @@ public class RequestToPayResponse {
     private String codeMembreParticipantPaye;
     private String transferEndToEndId;
     private String createdAt;
+    private MessageDirection messageDirection;
 }

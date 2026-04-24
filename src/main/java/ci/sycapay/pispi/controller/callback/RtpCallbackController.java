@@ -50,6 +50,7 @@ public class RtpCallbackController {
     @PostMapping("/demandes-paiements")
     public ResponseEntity<Void> receiveRtp(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("PAIN.013 received: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 
@@ -128,6 +129,7 @@ public class RtpCallbackController {
     @PostMapping("/demandes-paiements/reponses")
     public ResponseEntity<Void> receiveRtpResult(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.info("PAIN.014 received: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 

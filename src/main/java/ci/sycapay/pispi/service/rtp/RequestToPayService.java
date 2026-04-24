@@ -101,8 +101,22 @@ public class RequestToPayService {
     }
 
     public Page<RequestToPayResponse> listRtps(Pageable pageable) {
-        return rtpRepository.findByDirection(MessageDirection.OUTBOUND, pageable)
+        return rtpRepository.findAll(pageable)
                 .map(this::toResponse);
+    }
+
+    /**
+     * Acknowledge acceptance of an inbound RTP locally. Per BCEAO spec,
+     * {@code ReponseDemandePaiement} (PAIN.014) only supports {@code statut: "RJCT"}
+     * — there is no acceptance message. Acceptance is signalled implicitly by
+     * initiating the PACS.008 credit transfer via POST /api/v1/transferts.
+     */
+    @Transactional
+    public void acceptRtp(String endToEndId) {
+        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
+                .orElseThrow(() -> new ResourceNotFoundException("RTP", endToEndId));
+        rtp.setStatut(RtpStatus.ACCEPTED);
+        rtpRepository.save(rtp);
     }
 
     /**
@@ -500,6 +514,7 @@ public class RequestToPayService {
                 .msgId(rtp.getMsgId())
                 .identifiantDemandePaiement(rtp.getIdentifiantDemandePaiement())
                 .statut(rtp.getStatut())
+                .messageDirection(rtp.getDirection())
                 .codeRaison(rtp.getCodeRaison())
                 .montant(rtp.getMontant())
                 .codeMembreParticipantPayeur(rtp.getCodeMembrePayeur())
