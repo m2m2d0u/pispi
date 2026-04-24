@@ -11,6 +11,7 @@ import ci.sycapay.pispi.dto.transaction.TransactionInitiationRequest;
 import ci.sycapay.pispi.dto.transaction.TransactionRejectCommand;
 import ci.sycapay.pispi.dto.transaction.TransactionResponse;
 import ci.sycapay.pispi.dto.transaction.TransactionScheduleRequest;
+import ci.sycapay.pispi.entity.PiRequestToPay;
 import ci.sycapay.pispi.entity.PiReturnRequest;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.CanalCommunication;
@@ -18,6 +19,7 @@ import ci.sycapay.pispi.enums.CodeRaisonDemandeRetourFonds;
 import ci.sycapay.pispi.enums.CodeRaisonRejetDemandeRetourFonds;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
+import ci.sycapay.pispi.enums.RtpStatus;
 import ci.sycapay.pispi.enums.TransactionRejectReason;
 import ci.sycapay.pispi.enums.TransactionAction;
 import ci.sycapay.pispi.enums.TransactionStatut;
@@ -26,6 +28,7 @@ import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.enums.TypeTransaction;
 import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
+import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -46,6 +49,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
@@ -75,6 +79,7 @@ import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
 public class TransactionService {
 
     private final PiTransferRepository transferRepository;
+    private final PiRequestToPayRepository rtpRepository;
     private final PiReturnRequestRepository returnRequestRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
@@ -500,13 +505,23 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse confirm(String endToEndId, TransactionConfirmCommand cmd) {
-        PiTransfer t = transferRepository
-                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+        Optional<PiTransfer> transferOpt = transferRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND);
+        if (transferOpt.isPresent()) {
+            return confirmTransfer(transferOpt.get(), cmd);
+        }
+        // No outbound transfer — check for an inbound RTP (BCEAO PUT /transferts/{id}
+        // covers both "Confirmer transfert" and "Accepter RTP" on the same endpoint).
+        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
+                .filter(r -> r.getDirection() == MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", endToEndId));
+        return confirmRtpAcceptance(rtp, cmd);
+    }
 
+    private TransactionResponse confirmTransfer(PiTransfer t, TransactionConfirmCommand cmd) {
         if (t.getStatut() != TransferStatus.INITIE) {
             throw new InvalidStateException(
-                    "La transaction " + endToEndId + " est en statut " + t.getStatut()
+                    "La transaction " + t.getEndToEndId() + " est en statut " + t.getStatut()
                             + " — seules les transactions INITIE peuvent être confirmées");
         }
         if (cmd.getMontant().compareTo(t.getMontant()) != 0) {
@@ -530,8 +545,94 @@ public class TransactionService {
         transferRepository.save(t);
 
         log.info("Transaction {} confirmée et PACS.008 émis [method={}]",
-                endToEndId, cmd.getConfirmationMethode());
+                t.getEndToEndId(), cmd.getConfirmationMethode());
         return toResponse(t);
+    }
+
+    /**
+     * Accept an inbound RTP via the BCEAO {@code PUT /transferts/{id}} flow.
+     * Builds and emits a PACS.008 from the RTP snapshot, creates an outbound
+     * {@link PiTransfer} row (PEND), and marks the RTP as ACCEPTED with a back-
+     * reference to the new transfer's {@code endToEndId}.
+     */
+    private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
+        if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
+            throw new InvalidStateException(
+                    "Le montant de confirmation (" + cmd.getMontant() + ") ne correspond pas "
+                            + "au montant de la demande de paiement (" + rtp.getMontant() + ")");
+        }
+
+        String codeMembre = properties.getCodeMembre();
+        String newMsgId = IdGenerator.generateMsgId(codeMembre);
+
+        CanalCommunication canal = rtp.getCanalCommunication() != null
+                ? CanalCommunication.fromCode(rtp.getCanalCommunication().getCode())
+                : null;
+
+        PiTransfer transfer = PiTransfer.builder()
+                .msgId(newMsgId)
+                .endToEndId(rtp.getEndToEndId())
+                .direction(MessageDirection.OUTBOUND)
+                .typeTransaction(TypeTransaction.PRMG)
+                .canalCommunication(canal)
+                .montant(rtp.getMontant() != null ? rtp.getMontant() : cmd.getMontant())
+                .devise("XOF")
+                // Payeur (this PI — the debtor)
+                .codeMembrePayeur(rtp.getCodeMembrePayeur() != null ? rtp.getCodeMembrePayeur() : codeMembre)
+                .ibanClientPayeur(rtp.getIbanClientPayeur())
+                .numeroComptePayeur(rtp.getOtherClientPayeur())
+                .typeComptePayeur(rtp.getTypeComptePayeur())
+                .nomClientPayeur(rtp.getNomClientPayeur())
+                .typeClientPayeur(rtp.getTypeClientPayeur())
+                .telephonePayeur(rtp.getTelephonePayeur())
+                .paysClientPayeur(rtp.getPaysClientPayeur())
+                .villeClientPayeur(rtp.getVilleClientPayeur())
+                .aliasPayeur(rtp.getAliasClientPayeur())
+                .identifiantClientPayeur(rtp.getNumeroIdentificationPayeur())
+                .typeIdentifiantClientPayeur(rtp.getSystemeIdentificationPayeur())
+                .identificationFiscaleCommercantPayeur(rtp.getIdentificationFiscalePayeur())
+                .identificationRccmClientPayeur(rtp.getNumeroRCCMPayeur())
+                // Payé (the requesting party — the creditor)
+                .codeMembrePaye(rtp.getCodeMembrePaye())
+                .ibanClientPaye(rtp.getIbanClientPaye())
+                .numeroComptePaye(rtp.getOtherClientPaye())
+                .typeComptePaye(rtp.getTypeComptePaye())
+                .nomClientPaye(rtp.getNomClientPaye())
+                .typeClientPaye(rtp.getTypeClientPaye())
+                .telephonePaye(rtp.getTelephonePaye())
+                .paysClientPaye(rtp.getPaysClientPaye())
+                .villeClientPaye(rtp.getVilleClientPaye())
+                .aliasPaye(rtp.getAliasClientPaye())
+                .identifiantClientPaye(rtp.getNumeroIdentificationPaye())
+                .typeIdentifiantClientPaye(rtp.getSystemeIdentificationPaye())
+                .identificationFiscaleCommercantPaye(rtp.getIdentificationFiscalePaye())
+                .identificationRccmClientPaye(rtp.getNumeroRCCMPaye())
+                // Transaction details
+                .motif(cmd.getMotif() != null && !cmd.getMotif().isBlank()
+                        ? cmd.getMotif() : rtp.getMotif())
+                .identifiantTransaction(rtp.getIdentifiantDemandePaiement())
+                .latitudeClientPayeur(cmd.getLatitude() != null ? cmd.getLatitude().toPlainString() : null)
+                .longitudeClientPayeur(cmd.getLongitude() != null ? cmd.getLongitude().toPlainString() : null)
+                .dateHeureExecution(LocalDateTime.now())
+                .confirmationDate(cmd.getConfirmationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime())
+                .confirmationMethode(cmd.getConfirmationMethode())
+                .statut(TransferStatus.PEND)
+                .build();
+        transferRepository.save(transfer);
+
+        Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
+        messageLogService.log(newMsgId, rtp.getEndToEndId(),
+                IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
+        log.info("Transfert payload: {}", pacs008);
+        aipClient.post("/transferts", pacs008);
+
+        rtp.setStatut(RtpStatus.ACCEPTED);
+        rtp.setTransferEndToEndId(rtp.getEndToEndId());
+        rtpRepository.save(rtp);
+
+        log.info("RTP acceptance PACS.008 émis [rtpEndToEndId={}, transferEndToEndId={}, method={}]",
+                rtp.getEndToEndId(), rtp.getEndToEndId(), cmd.getConfirmationMethode());
+        return toResponse(transfer);
     }
 
     // ------------------------------------------------------------------------
