@@ -228,9 +228,6 @@ public class TransactionService {
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
         String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
-        // The subscription_id the mobile app uses to refer to this recipe is
-        // the same as the endToEndId — simpler than a second identifier.
-        String subscriptionId = endToEndId;
 
         LocalDateTime dateDebut = request.getDateDebut()
                 .withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime();
@@ -294,7 +291,7 @@ public class TransactionService {
                 .periodicite(request.getPeriodicite())
                 .nextExecutionDate(dateDebut.toLocalDate())
                 .active(Boolean.TRUE)
-                .subscriptionId(subscriptionId)
+                .subscriptionId(endToEndId)
                 .statut(TransferStatus.INITIE)
                 .build();
         transferRepository.save(schedule);
