@@ -64,20 +64,12 @@ public class RequestToPayService {
         validatePayeRequiredFields(paye);
         validateCanalDateRules(request);
 
-        // Both msgId and endToEndId use the real codeMembre.
-        //
-        // The BCEAO OpenAPI DemandePaiement schema advertises an endToEndId
-        // pattern of [BCDF] (excluding EMEs), but the live AIP actually
-        // enforces a different rule: the endToEndId must start with
-        // "E<real-codeMembre>" — i.e. it cross-checks caller identity, and
-        // empirically accepts type E at that position (the admi.002 reason
-        // seen in practice is "le EndToEndId doit débuter par 'E<codeMembre>'",
-        // which confirms type E is allowed as long as the code matches).
-        // Any attempt to rewrite the endToEndId with a sponsor code therefore
-        // trips the caller-identity check. No sponsor split here.
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        // Per BCEAO spec, the pain.013 endToEndId is the one generated at alias-search
+        // time: the payé searched the payeur's alias — that search's endToEndId ties
+        // the RTP back to its originating RAC_SEARCH entry in pi_message_log.
+        String endToEndId = request.getEndToEndIdSearchPayeur();
 
         Map<String, Object> pain013 = buildPain013Payload(msgId, endToEndId, request, payeur, paye);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013,
@@ -445,7 +437,6 @@ public class RequestToPayService {
                 .codeMembrePayeur(payeur.codeMembre())
                 .aliasClientPayeur(payeur.aliasValue())
                 .otherClientPayeur(payeur.other())
-                .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
                 .nomClientPayeur(payeurInfo.getNom())
                 .telephonePayeur(payeurInfo.getTelephone())
@@ -462,7 +453,6 @@ public class RequestToPayService {
                 .codeMembrePaye(codeMembrePaye)
                 .aliasClientPaye(paye.aliasValue())
                 .otherClientPaye(paye.other())
-                .numeroComptePaye(paye.other())
                 .typeComptePaye(paye.typeCompte())
                 .nomClientPaye(payeInfo.getNom())
                 .telephonePaye(payeInfo.getTelephone())

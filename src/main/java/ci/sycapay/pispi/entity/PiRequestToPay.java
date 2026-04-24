@@ -35,14 +35,6 @@ public class PiRequestToPay {
     private MessageDirection direction;
 
     /**
-     * Kept for legacy compatibility only — not a BCEAO DemandePaiement field.
-     * New rows leave it null; old rows retain their previously-assigned value.
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type_transaction", length = 10)
-    private TypeTransaction typeTransaction;
-
-    /**
      * Stored as the 3-char BCEAO code ("401", "500", "520", "521", "631") via
      * {@link ci.sycapay.pispi.config.converter.CanalCommunicationRtpConverter}
      * (autoApply). Do NOT add {@code @Enumerated(EnumType.STRING)} — it would
@@ -57,9 +49,6 @@ public class PiRequestToPay {
 
     @Column(name = "devise", length = 3)
     private String devise;
-
-    @Column(name = "date_heure_execution")
-    private LocalDateTime dateHeureExecution;
 
     @Column(name = "date_heure_limite_action")
     private LocalDateTime dateHeureLimiteAction;
@@ -79,10 +68,6 @@ public class PiRequestToPay {
 
     @Column(name = "other_client_payeur", length = 70)
     private String otherClientPayeur;
-
-    /** Legacy single-column storage — kept nullable for backward compatibility. */
-    @Column(name = "numero_compte_payeur", length = 34)
-    private String numeroComptePayeur;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_payeur", length = 10)
@@ -141,10 +126,6 @@ public class PiRequestToPay {
 
     @Column(name = "other_client_paye", length = 70)
     private String otherClientPaye;
-
-    /** Legacy single-column storage — kept nullable for backward compatibility. */
-    @Column(name = "numero_compte_paye", length = 34)
-    private String numeroComptePaye;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "type_compte_paye", length = 10)
