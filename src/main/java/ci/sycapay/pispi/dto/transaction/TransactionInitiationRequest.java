@@ -19,13 +19,10 @@ import java.math.BigDecimal;
  * <pre>
  *   send_now      → {@link TransactionImmediatRequest}      (PACS.008)
  *   receive_now   → {@link TransactionDemandePaiementRequest} (PAIN.013)
- *   send_schedule → {@link TransactionProgrammeRequest}     (single deferred execution)
- *                   {@link TransactionAbonnementRequest}    (recurring — disambiguated by {@code frequence})
  * </pre>
  *
  * <p>Note: {@code send_schedule} maps to two subclasses; Jackson resolves via
  * {@code @JsonSubTypes.Type(name = "send_schedule", value = TransactionProgrammeRequest.class)}
- * plus a second alias on {@link TransactionAbonnementRequest}. In practice clients
  * should send {@code action=send_schedule} and include {@code frequence} if they
  * mean a subscription — we default to Programme and let the service promote to
  * Abonnement when {@code frequence} is present. To keep things unambiguous at

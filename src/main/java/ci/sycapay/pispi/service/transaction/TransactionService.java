@@ -43,6 +43,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -87,6 +88,7 @@ public class TransactionService {
     private final ClientSearchResolver clientSearchResolver;
     private final ReturnFundsService returnFundsService;
     private final RequestToPayService requestToPayService;
+    private final ObjectMapper objectMapper;
 
     // ------------------------------------------------------------------------
     // Initiation
@@ -121,6 +123,9 @@ public class TransactionService {
                 request.getEndToEndIdSearchPayeur(), "payeur");
         ResolvedClient paye = clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
 
+        log.info("Payeur: {}", objectMapper.writeValueAsString(payeur));
+        log.info("Paye: {}", objectMapper.writeValueAsString(paye));
+
         CanalCommunication canal = resolveCanal(request.getCanal());
         validateLocalisationRules(canal, request);
 
@@ -139,8 +144,8 @@ public class TransactionService {
                 .montant(request.getMontant())
                 .devise("XOF")
                 // Payeur snapshot
-                .codeMembrePayeur(codeMembre)
-                .numeroComptePayeur(request.getCompte())
+                .codeMembrePayeur(payeur.codeMembre())
+                .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
                 .nomClientPayeur(payeur.clientInfo().getNom())
                 .prenomClientPayeur(payeur.clientInfo().getPrenom())
@@ -439,7 +444,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(child);
         messageLogService.log(child.getMsgId(), child.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
         aipClient.post("/transferts", pacs008);
 
         log.info("Schedule execution emitted [parentEndToEndId={}, childEndToEndId={}, "
@@ -530,7 +535,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(t);
         messageLogService.log(t.getMsgId(), t.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
         aipClient.post("/transferts", pacs008);
 
         t.setStatut(TransferStatus.PEND);
@@ -620,7 +625,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
         messageLogService.log(newMsgId, rtp.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
         aipClient.post("/transferts", pacs008);
 
         rtp.setStatut(RtpStatus.ACCEPTED);
@@ -695,7 +700,7 @@ public class TransactionService {
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056,
                 MessageDirection.OUTBOUND, camt056, null, null);
-        log.info("Transfert payload: {}", camt056);
+        log.info("Transfert payload: {}", objectMapper.writeValueAsString(camt056));
         aipClient.post("/transferts/annulations", camt056);
 
         log.info("Demande d'annulation émise [endToEndId={}, raison={}]",
