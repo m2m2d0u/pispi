@@ -4,28 +4,13 @@ import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.returnfunds.ReturnFundsRequest;
 import ci.sycapay.pispi.dto.returnfunds.ReturnRejectRequest;
-import ci.sycapay.pispi.dto.transaction.TransactionCancelCommand;
-import ci.sycapay.pispi.dto.transaction.TransactionConfirmCommand;
-import ci.sycapay.pispi.dto.transaction.TransactionImmediatRequest;
-import ci.sycapay.pispi.dto.transaction.TransactionInitiationRequest;
-import ci.sycapay.pispi.dto.transaction.TransactionRejectCommand;
-import ci.sycapay.pispi.dto.transaction.TransactionResponse;
-import ci.sycapay.pispi.dto.transaction.TransactionScheduleRequest;
+import ci.sycapay.pispi.dto.rtp.RequestToPayRequest;
+import ci.sycapay.pispi.dto.rtp.RequestToPayResponse;
+import ci.sycapay.pispi.dto.transaction.*;
 import ci.sycapay.pispi.entity.PiRequestToPay;
 import ci.sycapay.pispi.entity.PiReturnRequest;
 import ci.sycapay.pispi.entity.PiTransfer;
-import ci.sycapay.pispi.enums.CanalCommunication;
-import ci.sycapay.pispi.enums.CodeRaisonDemandeRetourFonds;
-import ci.sycapay.pispi.enums.CodeRaisonRejetDemandeRetourFonds;
-import ci.sycapay.pispi.enums.IsoMessageType;
-import ci.sycapay.pispi.enums.MessageDirection;
-import ci.sycapay.pispi.enums.RtpStatus;
-import ci.sycapay.pispi.enums.TransactionRejectReason;
-import ci.sycapay.pispi.enums.TransactionAction;
-import ci.sycapay.pispi.enums.TransactionStatut;
-import ci.sycapay.pispi.enums.TransferStatus;
-import ci.sycapay.pispi.enums.TypeCompte;
-import ci.sycapay.pispi.enums.TypeTransaction;
+import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
@@ -37,13 +22,13 @@ import ci.sycapay.pispi.service.resolver.ResolvedClient;
 import ci.sycapay.pispi.service.returnfunds.ReturnFundsService;
 import ci.sycapay.pispi.service.rtp.RequestToPayService;
 import ci.sycapay.pispi.util.IdGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,10 +54,20 @@ import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
  *       {@link TransferStatus#PEND}.</li>
  * </ol>
  *
- * <p><b>Wired in this phase:</b> {@code send_now} with an {@code alias}
- * beneficiary. Other actions ({@code receive_now}, {@code send_schedule})
- * and the iban+PSP / othr+PSP beneficiary modes intentionally return
- * {@code 501 Not Implemented} until their respective sub-phases land.
+ * <p><b>Wired actions:</b>
+ * <ul>
+ *   <li>{@code send_now} with an {@code alias} beneficiary — full PACS.008
+ *       flow (the iban+PSP / othr+PSP beneficiary modes still return 501
+ *       pending the inline RAC_SEARCH work).</li>
+ *   <li>{@code send_schedule} — Programme + Abonnement: persists the recipe
+ *       and is picked up by {@link TransactionScheduleRunner} to spawn child
+ *       PACS.008 emissions.</li>
+ *   <li>{@code receive_now} — RTP: delegates to {@link RequestToPayService}
+ *       which POSTs PAIN.013 to {@code /demandes-paiements}. Roles invert
+ *       (mobile user = payé; counterparty resolved by {@code alias} = payeur).
+ *       Canal is remapped from the spec's mobile-default {@code 631} to
+ *       {@code 500} when the payé is type B/G/C.</li>
+ * </ul>
  */
 @Slf4j
 @Service
@@ -99,9 +94,8 @@ public class TransactionService {
         return switch (request.getAction()) {
             case SEND_NOW -> initiateSendNow((TransactionImmediatRequest) request);
             case SEND_SCHEDULE -> initiateSendSchedule((TransactionScheduleRequest) request);
-            case RECEIVE_NOW -> throw new UnsupportedOperationException(
-                    "receive_now (demande de paiement) sera implémenté prochainement — "
-                            + "utilisez /api/v1/request-to-pay pour le moment");
+            case RECEIVE_NOW -> initiateReceiveNow(
+                    (ci.sycapay.pispi.dto.transaction.TransactionDemandePaiementRequest) request);
         };
     }
 
@@ -123,9 +117,6 @@ public class TransactionService {
                 request.getEndToEndIdSearchPayeur(), "payeur");
         ResolvedClient paye = clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
 
-        log.info("Payeur: {}", objectMapper.writeValueAsString(payeur));
-        log.info("Paye: {}", objectMapper.writeValueAsString(paye));
-
         CanalCommunication canal = resolveCanal(request.getCanal());
         validateLocalisationRules(canal, request);
 
@@ -144,8 +135,8 @@ public class TransactionService {
                 .montant(request.getMontant())
                 .devise("XOF")
                 // Payeur snapshot
-                .codeMembrePayeur(payeur.codeMembre())
-                .numeroComptePayeur(payeur.other())
+                .codeMembrePayeur(codeMembre)
+                .numeroComptePayeur(request.getCompte())
                 .typeComptePayeur(payeur.typeCompte())
                 .nomClientPayeur(payeur.clientInfo().getNom())
                 .prenomClientPayeur(payeur.clientInfo().getPrenom())
@@ -308,6 +299,144 @@ public class TransactionService {
     }
 
     // ------------------------------------------------------------------------
+    // Initiation — receive_now (RTP / demande de paiement)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Initiate a Request-to-Pay: our client (the payé) asks a counterparty
+     * to pay. Emits a PAIN.013 to the AIP via the legacy RTP flow on
+     * {@code /demandes-paiements}.
+     *
+     * <p>Role mapping in this flow vs. {@code send_now}:
+     * <ul>
+     *   <li>Mobile user = <b>payé</b> (creditor — the one requesting money);
+     *       resolved from the {@code endToEndIdSearchPayeur} DTO bridge field
+     *       (legacy name from send_now — semantically it carries "the
+     *       initiator's own RAC_SEARCH" for both flows). Must be a
+     *       {@code properties.codeMembre} client (validated below).</li>
+     *   <li>Counterparty = <b>payeur</b> (debtor — the one being asked);
+     *       resolved from the {@code alias} field. Can be at any participant.</li>
+     * </ul>
+     *
+     * <p>Canal remap per BCEAO PI-RAC operational rules (and the remote
+     * spec's note "lorsque le canal est 631 alors le participant doit dans
+     * le backend le remplacer par 500 si son client est un Commerçant
+     * Type C"): mobile sends {@code 631}, but if the payé is B/G/C we
+     * promote to {@code 500} (marchand sur site).
+     */
+    @Transactional
+    public TransactionResponse initiateReceiveNow(
+            ci.sycapay.pispi.dto.transaction.TransactionDemandePaiementRequest request) {
+
+        // Resolve the requester (our client = paye) and the counterparty
+        // (the person being asked = payeur).
+        ResolvedClient paye = clientSearchResolver.resolve(
+                request.getEndToEndIdSearchPayeur(), "paye");
+        ResolvedClient payeur = clientSearchResolver.resolveByAlias(request.getAlias(), "payeur");
+
+        // The requester (paye) must be one of OUR clients — a payment cannot
+        // legitimately be initiated from outside our participant. Mirror of
+        // validatePayeurOwnership for the inverted role.
+        validatePayeOwnership(paye);
+
+        // Canal remap: P payé stays on 631 (particulier), B/G/C bumps to 500.
+        CanalCommunicationRtp rtpCanal =
+                remapReceiveNowCanal(paye.clientInfo().getTypeClient());
+
+        String codeMembre = properties.getCodeMembre();
+        // identifiantDemandePaiement is a free-form unique id; reusing the
+        // msgId generator gives us a 35-char unique value with the right
+        // shape (DPxxxxx... stays in line with the M/E prefixes on the
+        // other identifiers).
+        String identifiantDemande = IdGenerator.generateMsgId(codeMembre);
+
+        // The legacy RTP DTO takes endToEndIdSearchPayeur as the COUNTERPARTY's
+        // endToEndId; we look it up from the alias the mobile sent.
+        String endToEndIdSearchPayeur = clientSearchResolver
+                .findEndToEndIdByAlias(request.getAlias());
+
+        RequestToPayRequest rtpReq =
+                RequestToPayRequest.builder()
+                        .canalCommunication(rtpCanal)
+                        .clientDemandeur("X") // BCEAO InitgPty>Nm: "X" = the payé client
+                        .identifiantDemandePaiement(identifiantDemande)
+                        .montant(request.getMontant())
+                        .endToEndIdSearchPayeur(endToEndIdSearchPayeur)
+                        .endToEndIdSearchPaye(request.getEndToEndIdSearchPayeur())
+                        .latitudeClientPaye(request.getLatitude())
+                        .longitudeClientPaye(request.getLongitude())
+                        .motif(request.getMotif())
+                        .build();
+
+        RequestToPayResponse rtpResp =
+                requestToPayService.createRtp(rtpReq);
+
+        log.info("RTP PAIN.013 émis depuis le flux mobile [endToEndId={}, payé={}, payeur={}, canal={}]",
+                rtpResp.getEndToEndId(), codeMembre, payeur.codeMembre(), rtpCanal);
+
+        return toResponseFromRtp(rtpResp, paye, payeur, rtpCanal, request);
+    }
+
+    /** Choose the PAIN.013 canal based on the payé's typeClient. */
+    private CanalCommunicationRtp remapReceiveNowCanal(
+            TypeClient payeType) {
+        if (payeType == null) {
+            return CanalCommunicationRtp.PARTICULIER; // safe default
+        }
+        return switch (payeType) {
+            case B, G, C -> CanalCommunicationRtp.MARCHAND_SUR_SITE; // 500
+            case P -> CanalCommunicationRtp.PARTICULIER;             // 631
+        };
+    }
+
+    /**
+     * Refuse to initiate a receive_now whose payé (requester) doesn't belong
+//     * to our participant. Symmetric of {@link #validatePayeurOwnership} for
+     * the RTP role inversion.
+     */
+    private void validatePayeOwnership(ResolvedClient paye) {
+        String ours = properties.getCodeMembre();
+        String theirs = paye.codeMembre();
+        if (theirs != null && !theirs.equals(ours)) {
+            throw new InvalidStateException(
+                    "Le payé résolu (le demandeur) appartient au participant " + theirs
+                            + " mais nous sommes " + ours + ". "
+                            + "Une demande de paiement ne peut être émise que par un de nos "
+                            + "clients — vérifiez que 'endToEndIdSearchPayeur' pointe sur la "
+                            + "RAC_SEARCH de votre propre client (le demandeur).");
+        }
+    }
+
+    /** Map the legacy {@code RequestToPayResponse} into the unified mobile shape. */
+    private TransactionResponse toResponseFromRtp(
+            RequestToPayResponse rtp,
+            ResolvedClient paye,
+            ResolvedClient payeur,
+            CanalCommunicationRtp rtpCanal,
+            TransactionDemandePaiementRequest request) {
+        return TransactionResponse.builder()
+                .compte(paye.other() != null ? paye.other() : paye.iban())
+                .alias(paye.aliasValue())
+                .canal(rtpCanal.getCode())
+                .montant(rtp.getMontant() != null ? rtp.getMontant() : request.getMontant())
+                .endToEndId(rtp.getEndToEndId())
+                // For receive_now the mobile user is the creditor; "sens" from
+                // the requester's view is therefore "credit" (incoming money
+                // is what they expect once the payeur accepts).
+                .sens("credit")
+                .motif(request.getMotif())
+                // Counterparty snapshot — the person being asked
+                .clientNom(payeur.clientInfo().getNom())
+                .clientPays(payeur.clientInfo().getPays())
+                .clientPSP(payeur.codeMembre())
+                .clientCompte(payeur.iban() != null ? payeur.iban() : payeur.other())
+                .clientAlias(payeur.aliasValue())
+                .statut(TransactionStatut.INITIE)
+                .dateDemande(LocalDateTime.now().atOffset(ZoneOffset.UTC))
+                .build();
+    }
+
+    // ------------------------------------------------------------------------
     // Deactivate a scheduled/subscription — stops future executions
     // ------------------------------------------------------------------------
 
@@ -444,7 +573,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(child);
         messageLogService.log(child.getMsgId(), child.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        log.info("Transfert payload: {}", pacs008);
         aipClient.post("/transferts", pacs008);
 
         log.info("Schedule execution emitted [parentEndToEndId={}, childEndToEndId={}, "
@@ -535,7 +664,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(t);
         messageLogService.log(t.getMsgId(), t.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        log.info("Transfert payload: {}", pacs008);
         aipClient.post("/transferts", pacs008);
 
         t.setStatut(TransferStatus.PEND);
@@ -625,7 +754,7 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
         messageLogService.log(newMsgId, rtp.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        log.info("Transfert payload: {}", pacs008);
         aipClient.post("/transferts", pacs008);
 
         rtp.setStatut(RtpStatus.ACCEPTED);
@@ -700,7 +829,7 @@ public class TransactionService {
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056,
                 MessageDirection.OUTBOUND, camt056, null, null);
-        log.info("Transfert payload: {}", objectMapper.writeValueAsString(camt056));
+        log.info("Transfert payload: {}", camt056);
         aipClient.post("/transferts/annulations", camt056);
 
         log.info("Demande d'annulation émise [endToEndId={}, raison={}]",

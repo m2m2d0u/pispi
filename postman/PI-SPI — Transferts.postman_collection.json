@@ -1439,6 +1439,107 @@
       ]
     },
     {
+      "name": "Demandes de paiement (receive_now → PAIN.013)",
+      "item": [
+        {
+          "name": "Demande de paiement P→P (canal 631 reste — particulier ↔ particulier)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"receive_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1000,\n  \"canal\": \"631\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Demande de paiement à un particulier\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastEndToEndId', id);",
+                  "        console.log('Captured lastEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Demande de paiement B→P (canal 631 → 500 par remap — commerçant demande à un particulier)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"receive_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1000,\n  \"canal\": \"631\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Demande de paiement marchand sur site (remap 631→500)\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastEndToEndId', id);",
+                  "        console.log('Captured lastEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Rejets PAIN.014 (RTP — endpoint legacy)",
       "item": [
         {

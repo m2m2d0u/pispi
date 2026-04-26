@@ -56,6 +56,21 @@ public class ClientSearchResolver {
         return resolve(entry.getEndToEndId(), side);
     }
 
+    /**
+     * Look up just the {@code endToEndId} of the most recent inbound
+     * RAC_SEARCH carrying the given alias value, without parsing the rest of
+     * the payload. Used by the {@code receive_now} (RTP) flow to feed
+     * {@link ci.sycapay.pispi.dto.rtp.RequestToPayRequest#endToEndIdSearchPayeur}
+     * — the mobile API takes a raw alias for the counterparty, but the legacy
+     * RTP service expects an endToEndId.
+     */
+    public String findEndToEndIdByAlias(String aliasValue) {
+        return messageLogRepository.findLatestRacSearchByAliasValue(aliasValue)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Aucun résultat de recherche d'alias (RAC_SEARCH) pour l'alias", aliasValue))
+                .getEndToEndId();
+    }
+
     public ResolvedClient resolve(String endToEndIdSearch, String side) {
         PiMessageLog entry = messageLogRepository
                 .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
