@@ -36,6 +36,7 @@ build/
 *.jar
 
 BCEAO-Doc.pdf
+BCEAO Document 62-75.pdf
 
 src/main/resources/client/*
 src/main/resources/truststore/*

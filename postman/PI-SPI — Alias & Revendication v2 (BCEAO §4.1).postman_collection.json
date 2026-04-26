@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "a6fb93d5-5fe9-4ac6-bb81-676bc9c9ccf6",
+    "_postman_id": "5d91b916-e33d-4b8d-b252-4d7bdafbf864",
     "name": "PI-SPI — Alias & Revendication v2 (BCEAO §4.1)",
     "description": "v2 — aligned with BCEAO PI-RAC v3.0.0 §4.1: le PI-SPI ne réplique pas la base des alias PI-RAC. Chaque requête de création ou de modification doit désormais inclure un **`backOfficeClientId`** (clé opaque vers le système client du participant) pour que les cascades locales MBNO+SHID / MCOD fonctionnent sans que le PI-SPI ait à stocker des données personnelles.\n\n**Champ clé ajouté** : `backOfficeClientId` (max 64 car., non-PII) à la racine du body à chaque création / modification.\n\n**Payé et payeur en amont** : les autres services (Transfers, RTP) s'appuient sur un `endToEndIdSearchPayeur` / `endToEndIdSearchPaye` provenant d'un RAC_SEARCH inbound, pas sur `pi_alias` — conforme §4.2.\n\n**Endpoints exposés**\n- `POST   /api/v1/aliases`                                   — créer (CREATION avec backOfficeClientId requis)\n- `PUT    /api/v1/aliases`                                   — modifier\n- `DELETE /api/v1/aliases/{type}/{val}?raisonSuppression=…`  — supprimer\n- `GET    /api/v1/aliases/search?alias=…`                    — rechercher (§4.2: no caching)\n- `GET    /api/v1/aliases/{aliasValue}/sync-check?backOfficeUpdatedAt=…` — §4.4 sync-check\n- `POST   /api/v1/revendications`                            — initier une revendication\n- `POST   /api/v1/revendications/incoming/{id}/accept?auteurAction=…`\n- `POST   /api/v1/revendications/incoming/{id}/reject`       — rejet client\n\n**Règles BCEAO respectées** :\n- §2.1.3 : MCOD unique par participant, 2-10 chiffres, personnes morales seulement (B/G)\n- §2.2.2 : MBNO → SHID companion créé automatiquement\n- §3 : Revendications — accept auteur CLIENT|PARTICIPANT (v3.0.0), reject = CLIENT\n- §4.1 : pas de PII persisté localement ; `backOfficeClientId` en remplacement\n- §4.4 : endpoint sync-check + `dateLastSync` bumpé sur chaque modification\n\n**typeCompte valides** : `CACC`, `SVGS`, `TRAN`, `LLSV`, `VACC` (tontines), `TAXE`, `TRAL`\n\n**Téléphone UEMOA** : `^\\+(?:223|226|228|229|225|221|227|245)\\d{8,12}$`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -181,6 +181,40 @@
           "response": []
         },
         {
+          "name": "Créer alias SHID — Commerçant avec RCCM (C)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"typeAlias\": \"SHID\",\n    \"backOfficeClientId\": \"{{backOfficeClientIdAdjovi}}\",\n    \"client\": {\n        \"nom\": \"KONE\",\n        \"raisonSociale\": \"EPICERIE KONE & FILS\",\n        \"genre\": \"1\",\n        \"typeClient\": \"C\",\n        \"typeIdentifiant\": \"NIDN\",\n        \"identifiant\": \"CMI987654321\",\n        \"dateNaissance\": \"1985-06-20\",\n        \"paysNaissance\": \"CI\",\n        \"lieuNaissance\": \"Bouake\",\n        \"nationalite\": \"CI\",\n        \"adresse\": \"Marché Adjamé, Box 245\",\n        \"ville\": \"Abidjan\",\n        \"pays\": \"CI\",\n        \"telephone\": \"+2250505050505\",\n        \"email\": \"epicerie.kone@gmail.com\",\n        \"identificationRccm\": \"SNDKR2024A12345\"\n    },\n    \"numeroCompte\": \"+2250505050505\",\n    \"typeCompte\": \"TRAN\",\n    \"dateOuvertureCompte\": \"2021-07-20\",\n    \"marchand\": {\n        \"codeMarchand\": \"7654321\",\n        \"categorieCodeMarchand\": \"5411\",\n        \"nomMarchand\": \"EPICERIE KONE & FILS\",\n        \"villeMarchand\": \"Abidjan\",\n        \"paysMarchand\": \"CI\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/aliases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "aliases"
+              ]
+            },
+            "description": "Crée un alias SHID pour un commerçant (C).\n\n**typeClient** : C\n**typeIdentifiant** : TXID → champ AIP `identificationFiscale`\n`marchand.nomMarchand` → AIP `denominationSociale` ; `marchand.categorieCodeMarchand` → AIP `codeActivite` (MCC)."
+          },
+          "response": []
+        },
+        {
           "name": "Créer alias SHID — Personne physique (P)",
           "request": {
             "method": "POST",
@@ -192,7 +226,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"BF\",\n    \"lieuNaissance\": \"Ouagadougou\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"+22670707070\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Riviera Palmeraie, Cité 12\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"+2250707070707\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -226,7 +260,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdPassportClient}}\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PASSN12345678\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"SN\",\n    \"lieuNaissance\": \"Dakar\",\n    \"nationalite\": \"SN\",\n    \"adresse\": \"Quartier Résidentiel, Rue 5\",\n    \"ville\": \"Dakar\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+221771234567\",\n    \"email\": \"traore.passport@email.sn\"\n  },\n  \"numeroCompte\": \"+221771234567\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}",
+              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdPassportClient}}\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PCI12345678\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Plateau, Avenue Chardy, Résidence A\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250708090909\",\n    \"email\": \"traore.passport@mail.ci\"\n  },\n  \"numeroCompte\": \"+2250708090909\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -299,7 +333,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"dateNaissance\": \"1990-01-15\",\n    \"paysNaissance\": \"CI\",\n    \"adresse\": \"Cité Patte d'Oie, Villa 32, Rue 17\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Angré 8e Tranche, Lot 234\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -333,7 +367,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"f.ouedraogo.nouveau@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Riviera Palmeraie, Cité 12\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"f.ouattara.nouveau@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -401,7 +435,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidAnon}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PASSN87654321\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"SN\",\n    \"lieuNaissance\": \"Dakar\",\n    \"nationalite\": \"SN\",\n    \"adresse\": \"Quartier Résidentiel, Rue 5\",\n    \"ville\": \"Dakar\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+221771234567\",\n    \"email\": \"traore.passport@email.sn\"\n  },\n  \"numeroCompte\": \"+221771234567\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidAnon}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Traore\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"CCPT\",\n    \"identifiant\": \"PCI87654321\",\n    \"dateNaissance\": \"1988-05-12\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Plateau, Avenue Chardy, Résidence A\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250708090909\",\n    \"email\": \"traore.passport@mail.ci\"\n  },\n  \"numeroCompte\": \"+2250708090909\",\n  \"typeCompte\": \"TRAN\",\n  \"dateOuvertureCompte\": \"2023-09-01\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -435,7 +469,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"SN\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"ACI 2000, Hamdallaye\",\n    \"ville\": \"Bamako\",\n    \"pays\": \"ML\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -469,7 +503,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\",\n  \"photoClient\": \"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/==\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Riviera Palmeraie, Cité 12\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\",\n  \"photoClient\": \"/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/==\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -503,7 +537,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"codePostal\": \"01000\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Riviera Palmeraie, Cité 12\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\",\n    \"codePostal\": \"01000\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -571,7 +605,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Secteur 12, Rue 14.15\",\n    \"ville\": \"Ouagadougou\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22678999888\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Cocody Riviera Palmeraie, Cité 12\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250708090911\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -605,7 +639,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouedraogo\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"BFNIN789654123\",\n    \"nationalite\": \"BF\",\n    \"adresse\": \"Quartier Patte d'Oie, Villa 32\",\n    \"ville\": \"Bobo-Dioulasso\",\n    \"pays\": \"BF\",\n    \"telephone\": \"+22670707070\",\n    \"email\": \"fatimata.ouedraogo@mail.bf\"\n  },\n  \"numeroCompte\": \"BF81BF0060000000000000000001\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
+              "raw": "{\n  \"alias\": \"{{aliasShidPP}}\",\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdKouassi}}\",\n  \"client\": {\n    \"nom\": \"Ouattara\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI789654123\",\n    \"dateNaissance\": \"1993-02-24\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Bouake\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Quartier Air France, Rue 12\",\n    \"ville\": \"Bouake\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250707070707\",\n    \"email\": \"fatimata.ouattara@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2022-02-14\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -931,7 +965,6 @@
     },
     {
       "name": "Synchronisation (§4.4)",
-      "description": "BCEAO PI-RAC §4.4 — le participant doit garder ses données client alignées avec PI-RAC. Cet endpoint compare l'horodatage fourni par le back-office avec `pi_alias.date_last_sync` et renvoie l'état (UP_TO_DATE, STALE_MARK_FOR_RESYNC, UNKNOWN_ALIAS).",
       "item": [
         {
           "name": "Vérifier la fraîcheur d'un alias (sync-check)",
@@ -962,7 +995,8 @@
           },
           "response": []
         }
-      ]
+      ],
+      "description": "BCEAO PI-RAC §4.4 — le participant doit garder ses données client alignées avec PI-RAC. Cet endpoint compare l'horodatage fourni par le back-office avec `pi_alias.date_last_sync` et renvoie l'état (UP_TO_DATE, STALE_MARK_FOR_RESYNC, UNKNOWN_ALIAS)."
     }
   ],
   "variable": [

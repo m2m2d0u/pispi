@@ -22,6 +22,7 @@ import ci.sycapay.pispi.service.resolver.ResolvedClient;
 import ci.sycapay.pispi.service.returnfunds.ReturnFundsService;
 import ci.sycapay.pispi.service.rtp.RequestToPayService;
 import ci.sycapay.pispi.util.IdGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -136,7 +137,15 @@ public class TransactionService {
                 .devise("XOF")
                 // Payeur snapshot
                 .codeMembrePayeur(codeMembre)
-                .numeroComptePayeur(request.getCompte())
+                // The payer's account number MUST come from the RAC_SEARCH
+                // (authoritative PI-RAC view), not from the mobile request's
+                // self-declared {@code compte} field. Mixing sources produces
+                // a Dbtr block whose identity says "client X" but whose
+                // account belongs to "client Y" — PI-RAC rejects with
+                // BE01 InconsistenWithEndCustomer. The mobile's {@code compte}
+                // becomes purely informative until OAuth is wired and we can
+                // use it as a cross-check.
+                .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
                 .nomClientPayeur(payeur.clientInfo().getNom())
                 .prenomClientPayeur(payeur.clientInfo().getPrenom())
@@ -241,7 +250,15 @@ public class TransactionService {
                 .devise("XOF")
                 // Payeur snapshot
                 .codeMembrePayeur(codeMembre)
-                .numeroComptePayeur(request.getCompte())
+                // The payer's account number MUST come from the RAC_SEARCH
+                // (authoritative PI-RAC view), not from the mobile request's
+                // self-declared {@code compte} field. Mixing sources produces
+                // a Dbtr block whose identity says "client X" but whose
+                // account belongs to "client Y" — PI-RAC rejects with
+                // BE01 InconsistenWithEndCustomer. The mobile's {@code compte}
+                // becomes purely informative until OAuth is wired and we can
+                // use it as a cross-check.
+                .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
                 .nomClientPayeur(payeur.clientInfo().getNom())
                 .prenomClientPayeur(payeur.clientInfo().getPrenom())
@@ -573,7 +590,11 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(child);
         messageLogService.log(child.getMsgId(), child.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        try {
+            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        };
         aipClient.post("/transferts", pacs008);
 
         log.info("Schedule execution emitted [parentEndToEndId={}, childEndToEndId={}, "
@@ -664,7 +685,11 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(t);
         messageLogService.log(t.getMsgId(), t.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        try {
+            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        };
         aipClient.post("/transferts", pacs008);
 
         t.setStatut(TransferStatus.PEND);
@@ -754,7 +779,11 @@ public class TransactionService {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
         messageLogService.log(newMsgId, rtp.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        log.info("Transfert payload: {}", pacs008);
+        try {
+            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
         aipClient.post("/transferts", pacs008);
 
         rtp.setStatut(RtpStatus.ACCEPTED);
