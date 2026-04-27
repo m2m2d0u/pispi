@@ -204,6 +204,10 @@ public class PiRequestToPay {
     @Column(name = "montant_remise_paiement_immediat", precision = 18, scale = 2)
     private BigDecimal montantRemisePaiementImmediat;
 
+    /** Percentage rate remise (e.g. 5.0 = 5 %). Mutually exclusive with montantRemisePaiementImmediat. */
+    @Column(name = "taux_remise_paiement_immediat", precision = 10, scale = 4)
+    private BigDecimal tauxRemisePaiementImmediat;
+
     // -----------------------------------------------------------------------
     // Status tracking
     // -----------------------------------------------------------------------

@@ -576,15 +576,11 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
-        // BCEAO rule (explicit AIP message): PACS.008 montant = PAIN.013 montant − remise.
-        // The AIP reads the remise from its stored PAIN.013 and validates the net amount.
-        // montantAchat stays GROSS so line-sum montantAchat + montantRetrait = PAIN.013 montant.
-        BigDecimal remise = rtp.getMontantRemisePaiementImmediat();
-        BigDecimal effectiveMontant = rtp.getMontant() != null
-                ? (remise != null && remise.signum() > 0
-                        ? rtp.getMontant().subtract(remise)
-                        : rtp.getMontant())
-                : cmd.getMontant();
+        // BCEAO rule: PACS.008 montant = PAIN.013 montant − discount.
+        // Discount is either a fixed amount (montantRemisePaiementImmediat) or a percentage
+        // rate (remiseRate / tauxRemisePaiementImmediat). Amount takes precedence over rate.
+        // montantAchat stays GROSS; line-sum montantAchat + montantRetrait = PAIN.013 montant.
+        BigDecimal effectiveMontant = computeEffectiveMontant(rtp, cmd.getMontant());
 
         if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
             throw new InvalidStateException(
@@ -874,6 +870,21 @@ public class TransactionService {
     // ------------------------------------------------------------------------
     // Snapshot builder helpers
     // ------------------------------------------------------------------------
+
+    private static BigDecimal computeEffectiveMontant(PiRequestToPay rtp, BigDecimal fallback) {
+        BigDecimal gross = rtp.getMontant() != null ? rtp.getMontant() : fallback;
+        BigDecimal fixedRemise = rtp.getMontantRemisePaiementImmediat();
+        BigDecimal rateRemise = rtp.getTauxRemisePaiementImmediat();
+        if (fixedRemise != null && fixedRemise.signum() > 0) {
+            return gross.subtract(fixedRemise);
+        }
+        if (rateRemise != null && rateRemise.signum() > 0) {
+            BigDecimal discount = gross.multiply(rateRemise)
+                    .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
+            return gross.subtract(discount);
+        }
+        return gross;
+    }
 
     /**
      * Extra PACS.008 fields that are present in an inbound PAIN.013 (RTP) but have

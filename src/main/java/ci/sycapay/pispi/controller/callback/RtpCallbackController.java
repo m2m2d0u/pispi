@@ -116,6 +116,7 @@ public class RtpCallbackController {
                 .montantRetrait(parseBigDecimal(payload.get("montantRetrait")))
                 .fraisRetrait(parseBigDecimal(payload.get("fraisRetrait")))
                 .montantRemisePaiementImmediat(parseBigDecimal(payload.get("montantRemisePaiementImmediat")))
+                .tauxRemisePaiementImmediat(parseBigDecimal(payload.get("tauxRemisePaiementImmediat")))
                 .statut(RtpStatus.PENDING)
                 .build();
         rtpRepository.save(rtp);
