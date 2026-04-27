@@ -576,16 +576,6 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
-        // Compute the effective transfer amount. The AIP validates:
-        //   PACS.008 montant = PAIN.013 montant − montantRemisePaiementImmediat
-        // Omitting the remise subtraction causes AM09 (wrong amount).
-        BigDecimal remise = rtp.getMontantRemisePaiementImmediat();
-        BigDecimal effectiveMontant = (rtp.getMontant() != null)
-                ? (remise != null && remise.signum() > 0
-                        ? rtp.getMontant().subtract(remise)
-                        : rtp.getMontant())
-                : cmd.getMontant();
-
         if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
             throw new InvalidStateException(
                     "Le montant de confirmation (" + cmd.getMontant() + ") ne correspond pas "
@@ -605,7 +595,7 @@ public class TransactionService {
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
-                .montant(effectiveMontant)
+                .montant(rtp.getMontant() != null ? rtp.getMontant() : cmd.getMontant())
                 .devise("XOF")
                 // Payeur (this PI — the debtor)
                 .codeMembrePayeur(rtp.getCodeMembrePayeur() != null ? rtp.getCodeMembrePayeur() : codeMembre)
@@ -652,12 +642,12 @@ public class TransactionService {
 
         emitPacs008(transfer, buildRtpExtra(rtp));
 
-        rtp.setStatut(RtpStatus.ACCEPTED);
+        rtp.setStatut(RtpStatus.PREVALIDATION);
         rtp.setTransferEndToEndId(rtp.getEndToEndId());
         rtpRepository.save(rtp);
 
-        log.info("RTP acceptance PACS.008 émis [rtpEndToEndId={}, transferEndToEndId={}, method={}]",
-                rtp.getEndToEndId(), rtp.getEndToEndId(), cmd.getConfirmationMethode());
+        log.info("RTP PACS.008 émis, passage en PREVALIDATION [rtpEndToEndId={}, method={}]",
+                rtp.getEndToEndId(), cmd.getConfirmationMethode());
         return toResponse(transfer);
     }
 
@@ -876,11 +866,6 @@ public class TransactionService {
     // ------------------------------------------------------------------------
 
     /**
-     * Apply payer fields from a resolved client onto the builder.
-     * Account number comes from RAC_SEARCH (authoritative PI-RAC view), not from
-     * the mobile's self-declared compte — mixing sources triggers BE01 InconsistenWithEndCustomer.
-     */
-    /**
      * Extra PACS.008 fields that are present in an inbound PAIN.013 (RTP) but have
      * no equivalent column on {@link PiTransfer}: monetary breakdown and birth data.
      * The AIP validates that the accepting PACS.008 carries the same monetary
@@ -889,12 +874,18 @@ public class TransactionService {
      */
     private static Map<String, Object> buildRtpExtra(PiRequestToPay rtp) {
         Map<String, Object> extra = new HashMap<>();
+        // Mirror all monetary fields from the PAIN.013 unchanged so the AIP can
+        // match the PACS.008 back to the original request. The remise is passed
+        // as-is: the AIP uses it to compute the net settlement itself (AM09 if absent).
         if (rtp.getMontantAchat() != null)
             extra.put("montantAchat", rtp.getMontantAchat().toBigInteger().toString());
         if (rtp.getMontantRetrait() != null)
             extra.put("montantRetrait", rtp.getMontantRetrait().toBigInteger().toString());
         if (rtp.getFraisRetrait() != null)
             extra.put("fraisRetrait", rtp.getFraisRetrait().toBigInteger().toString());
+        if (rtp.getMontantRemisePaiementImmediat() != null)
+            extra.put("montantRemisePaiementImmediat",
+                    rtp.getMontantRemisePaiementImmediat().toBigInteger().toString());
         if (rtp.getDateNaissancePayeur() != null)
             extra.put("dateNaissanceClientPayeur", rtp.getDateNaissancePayeur());
         if (rtp.getVilleNaissancePayeur() != null)

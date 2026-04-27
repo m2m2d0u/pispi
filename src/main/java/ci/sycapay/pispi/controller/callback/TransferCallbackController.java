@@ -1,8 +1,10 @@
 package ci.sycapay.pispi.controller.callback;
 
 import ci.sycapay.pispi.config.PiSpiProperties;
+import ci.sycapay.pispi.entity.PiRequestToPay;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
+import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
@@ -35,6 +37,7 @@ public class TransferCallbackController {
 
     private final MessageLogService messageLogService;
     private final PiTransferRepository transferRepository;
+    private final PiRequestToPayRepository rtpRepository;
     private final WebhookService webhookService;
     private final PiSpiProperties properties;
 
@@ -113,11 +116,24 @@ public class TransferCallbackController {
 
         transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(transfer -> {
             String statut = (String) payload.get("statutTransaction");
-            transfer.setStatut(TransferStatus.valueOf(statut));
+            TransferStatus ts = TransferStatus.valueOf(statut);
+            transfer.setStatut(ts);
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);
             transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
+
+            // If this PACS.002 finalises an RTP acceptance, advance the RTP out of PREVALIDATION.
+            rtpRepository.findByEndToEndId(endToEndId)
+                    .filter(rtp -> rtp.getStatut() == RtpStatus.PREVALIDATION)
+                    .ifPresent(rtp -> {
+                        boolean accepted = ts == TransferStatus.ACCC || ts == TransferStatus.ACSC;
+                        rtp.setStatut(accepted ? RtpStatus.ACCEPTED : RtpStatus.RJCT);
+                        if (!accepted) rtp.setCodeRaison((String) payload.get("codeRaison"));
+                        rtpRepository.save(rtp);
+                        log.info("RTP {} → {} via PACS.002 [transferStatut={}]",
+                                endToEndId, rtp.getStatut(), ts);
+                    });
         });
 
         webhookService.notify(WebhookEventType.TRANSFER_RESULT, endToEndId, msgId, payload);
