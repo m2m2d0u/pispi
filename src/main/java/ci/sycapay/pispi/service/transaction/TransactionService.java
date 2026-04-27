@@ -127,58 +127,17 @@ public class TransactionService {
         String identifiantTransaction = resolveIdentifiantTransaction(
                 canal, request.getTxId(), endToEndId);
 
-        PiTransfer transfer = PiTransfer.builder()
+        PiTransfer.PiTransferBuilder builder = PiTransfer.builder()
                 .msgId(msgId)
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
                 .montant(request.getMontant())
-                .devise("XOF")
-                // Payeur snapshot
-                .codeMembrePayeur(codeMembre)
-                // The payer's account number MUST come from the RAC_SEARCH
-                // (authoritative PI-RAC view), not from the mobile request's
-                // self-declared {@code compte} field. Mixing sources produces
-                // a Dbtr block whose identity says "client X" but whose
-                // account belongs to "client Y" — PI-RAC rejects with
-                // BE01 InconsistenWithEndCustomer. The mobile's {@code compte}
-                // becomes purely informative until OAuth is wired and we can
-                // use it as a cross-check.
-                .numeroComptePayeur(payeur.other())
-                .typeComptePayeur(payeur.typeCompte())
-                .nomClientPayeur(payeur.clientInfo().getNom())
-                .prenomClientPayeur(payeur.clientInfo().getPrenom())
-                .typeClientPayeur(payeur.clientInfo().getTypeClient())
-                .telephonePayeur(payeur.clientInfo().getTelephone())
-                .paysClientPayeur(payeur.clientInfo().getPays())
-                .identifiantClientPayeur(payeur.clientInfo().getIdentifiant())
-                .typeIdentifiantClientPayeur(payeur.clientInfo().getTypeIdentifiant())
-                .aliasPayeur(payeur.aliasValue())
-                .ibanClientPayeur(payeur.iban())
-                .identificationFiscaleCommercantPayeur(payeur.identificationFiscaleCommercant())
-                .identificationRccmClientPayeur(payeur.identificationRccm())
-                .villeClientPayeur(payeur.clientInfo().getVille())
-                .adresseClientPayeur(payeur.clientInfo().getAdresse())
-                .racSearchRefPayeur(request.getEndToEndIdSearchPayeur())
-                // Payé snapshot
-                .codeMembrePaye(paye.codeMembre())
-                .numeroComptePaye(paye.other())
-                .typeComptePaye(paye.typeCompte())
-                .nomClientPaye(paye.clientInfo().getNom())
-                .prenomClientPaye(paye.clientInfo().getPrenom())
-                .typeClientPaye(paye.clientInfo().getTypeClient())
-                .telephonePaye(paye.clientInfo().getTelephone())
-                .paysClientPaye(paye.clientInfo().getPays())
-                .identifiantClientPaye(paye.clientInfo().getIdentifiant())
-                .typeIdentifiantClientPaye(paye.clientInfo().getTypeIdentifiant())
-                .aliasPaye(paye.aliasValue())
-                .ibanClientPaye(paye.iban())
-                .identificationFiscaleCommercantPaye(paye.identificationFiscaleCommercant())
-                .identificationRccmClientPaye(paye.identificationRccm())
-                .villeClientPaye(paye.clientInfo().getVille())
-                .adresseClientPaye(paye.clientInfo().getAdresse())
-                // Initiation metadata
+                .devise("XOF");
+        applyPayeurSnapshot(builder, codeMembre, payeur, request.getEndToEndIdSearchPayeur());
+        applyPayeSnapshot(builder, paye);
+        PiTransfer transfer = builder
                 .motif(request.getMotif())
                 .identifiantTransaction(identifiantTransaction)
                 .latitudeClientPayeur(request.getLatitude())
@@ -240,63 +199,21 @@ public class TransactionService {
                 ? request.getDateFin().withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime()
                 : null;
 
-        PiTransfer schedule = PiTransfer.builder()
+        PiTransfer.PiTransferBuilder scheduleBuilder = PiTransfer.builder()
                 .msgId(msgId)
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
                 .montant(request.getMontant())
-                .devise("XOF")
-                // Payeur snapshot
-                .codeMembrePayeur(codeMembre)
-                // The payer's account number MUST come from the RAC_SEARCH
-                // (authoritative PI-RAC view), not from the mobile request's
-                // self-declared {@code compte} field. Mixing sources produces
-                // a Dbtr block whose identity says "client X" but whose
-                // account belongs to "client Y" — PI-RAC rejects with
-                // BE01 InconsistenWithEndCustomer. The mobile's {@code compte}
-                // becomes purely informative until OAuth is wired and we can
-                // use it as a cross-check.
-                .numeroComptePayeur(payeur.other())
-                .typeComptePayeur(payeur.typeCompte())
-                .nomClientPayeur(payeur.clientInfo().getNom())
-                .prenomClientPayeur(payeur.clientInfo().getPrenom())
-                .typeClientPayeur(payeur.clientInfo().getTypeClient())
-                .telephonePayeur(payeur.clientInfo().getTelephone())
-                .paysClientPayeur(payeur.clientInfo().getPays())
-                .identifiantClientPayeur(payeur.clientInfo().getIdentifiant())
-                .typeIdentifiantClientPayeur(payeur.clientInfo().getTypeIdentifiant())
-                .aliasPayeur(payeur.aliasValue())
-                .ibanClientPayeur(payeur.iban())
-                .identificationFiscaleCommercantPayeur(payeur.identificationFiscaleCommercant())
-                .identificationRccmClientPayeur(payeur.identificationRccm())
-                .villeClientPayeur(payeur.clientInfo().getVille())
-                .adresseClientPayeur(payeur.clientInfo().getAdresse())
-                .racSearchRefPayeur(request.getEndToEndIdSearchPayeur())
-                // Payé snapshot
-                .codeMembrePaye(paye.codeMembre())
-                .numeroComptePaye(paye.other())
-                .typeComptePaye(paye.typeCompte())
-                .nomClientPaye(paye.clientInfo().getNom())
-                .prenomClientPaye(paye.clientInfo().getPrenom())
-                .typeClientPaye(paye.clientInfo().getTypeClient())
-                .telephonePaye(paye.clientInfo().getTelephone())
-                .paysClientPaye(paye.clientInfo().getPays())
-                .identifiantClientPaye(paye.clientInfo().getIdentifiant())
-                .typeIdentifiantClientPaye(paye.clientInfo().getTypeIdentifiant())
-                .aliasPaye(paye.aliasValue())
-                .ibanClientPaye(paye.iban())
-                .identificationFiscaleCommercantPaye(paye.identificationFiscaleCommercant())
-                .identificationRccmClientPaye(paye.identificationRccm())
-                .villeClientPaye(paye.clientInfo().getVille())
-                .adresseClientPaye(paye.clientInfo().getAdresse())
-                // Initiation metadata
+                .devise("XOF");
+        applyPayeurSnapshot(scheduleBuilder, codeMembre, payeur, request.getEndToEndIdSearchPayeur());
+        applyPayeSnapshot(scheduleBuilder, paye);
+        PiTransfer schedule = scheduleBuilder
                 .motif(request.getMotif())
                 .latitudeClientPayeur(request.getLatitude())
                 .longitudeClientPayeur(request.getLongitude())
                 .dateHeureExecution(LocalDateTime.now())
-                // Schedule metadata
                 .action(TransactionAction.SEND_SCHEDULE)
                 .dateDebut(dateDebut)
                 .dateFin(dateFin)
@@ -408,8 +325,7 @@ public class TransactionService {
 
     /**
      * Refuse to initiate a receive_now whose payé (requester) doesn't belong
-//     * to our participant. Symmetric of {@link #validatePayeurOwnership} for
-     * the RTP role inversion.
+     * to our participant.
      */
     private void validatePayeOwnership(ResolvedClient paye) {
         String ours = properties.getCodeMembre();
@@ -526,76 +442,31 @@ public class TransactionService {
         String childTxId = resolveIdentifiantTransaction(
                 parent.getCanalCommunication(), null, childEndToEndId);
 
-        PiTransfer child = PiTransfer.builder()
+        PiTransfer.PiTransferBuilder childBuilder = PiTransfer.builder()
                 .msgId(childMsgId)
                 .endToEndId(childEndToEndId)
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(parent.getTypeTransaction())
                 .canalCommunication(parent.getCanalCommunication())
                 .montant(parent.getMontant())
-                .devise(parent.getDevise())
-                // Payeur snapshot (copied from parent)
-                .codeMembrePayeur(parent.getCodeMembrePayeur())
-                .numeroComptePayeur(parent.getNumeroComptePayeur())
-                .typeComptePayeur(parent.getTypeComptePayeur())
-                .nomClientPayeur(parent.getNomClientPayeur())
-                .prenomClientPayeur(parent.getPrenomClientPayeur())
-                .typeClientPayeur(parent.getTypeClientPayeur())
-                .telephonePayeur(parent.getTelephonePayeur())
-                .paysClientPayeur(parent.getPaysClientPayeur())
-                .identifiantClientPayeur(parent.getIdentifiantClientPayeur())
-                .typeIdentifiantClientPayeur(parent.getTypeIdentifiantClientPayeur())
-                .aliasPayeur(parent.getAliasPayeur())
-                .ibanClientPayeur(parent.getIbanClientPayeur())
-                .identificationFiscaleCommercantPayeur(parent.getIdentificationFiscaleCommercantPayeur())
-                .identificationRccmClientPayeur(parent.getIdentificationRccmClientPayeur())
-                .villeClientPayeur(parent.getVilleClientPayeur())
-                .adresseClientPayeur(parent.getAdresseClientPayeur())
-                .racSearchRefPayeur(parent.getRacSearchRefPayeur())
-                // Payé snapshot (copied from parent)
-                .codeMembrePaye(parent.getCodeMembrePaye())
-                .numeroComptePaye(parent.getNumeroComptePaye())
-                .typeComptePaye(parent.getTypeComptePaye())
-                .nomClientPaye(parent.getNomClientPaye())
-                .prenomClientPaye(parent.getPrenomClientPaye())
-                .typeClientPaye(parent.getTypeClientPaye())
-                .telephonePaye(parent.getTelephonePaye())
-                .paysClientPaye(parent.getPaysClientPaye())
-                .identifiantClientPaye(parent.getIdentifiantClientPaye())
-                .typeIdentifiantClientPaye(parent.getTypeIdentifiantClientPaye())
-                .aliasPaye(parent.getAliasPaye())
-                .ibanClientPaye(parent.getIbanClientPaye())
-                .identificationFiscaleCommercantPaye(parent.getIdentificationFiscaleCommercantPaye())
-                .identificationRccmClientPaye(parent.getIdentificationRccmClientPaye())
-                .villeClientPaye(parent.getVilleClientPaye())
-                .adresseClientPaye(parent.getAdresseClientPaye())
-                .racSearchRefPaye(parent.getRacSearchRefPaye())
-                // Operational metadata
+                .devise(parent.getDevise());
+        copyPayeurFromParent(childBuilder, parent);
+        copyPayeFromParent(childBuilder, parent);
+        PiTransfer child = childBuilder
                 .motif(parent.getMotif())
                 .identifiantTransaction(childTxId)
                 .latitudeClientPayeur(parent.getLatitudeClientPayeur())
                 .longitudeClientPayeur(parent.getLongitudeClientPayeur())
                 .dateHeureExecution(LocalDateTime.now())
-                // Child-specific: executed autonomously → PEND (awaiting AIP pacs.002)
                 .statut(TransferStatus.PEND)
                 .action(TransactionAction.SEND_NOW)
                 .parentScheduleId(parent.getId())
                 .subscriptionId(parent.getSubscriptionId())
-                // No confirmation — this was auto-triggered
                 .confirmationDate(LocalDateTime.now())
                 .build();
         transferRepository.save(child);
 
-        // Build + emit PACS.008 from the child's own snapshot
-        Map<String, Object> pacs008 = buildPacs008FromSnapshot(child);
-        messageLogService.log(child.getMsgId(), child.getEndToEndId(),
-                IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        try {
-            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        };
-        aipClient.post("/transferts", pacs008);
+        emitPacs008(child);
 
         log.info("Schedule execution emitted [parentEndToEndId={}, childEndToEndId={}, "
                         + "subscriptionId={}]",
@@ -682,15 +553,7 @@ public class TransactionService {
                             + "au montant initié (" + t.getMontant() + ")");
         }
 
-        Map<String, Object> pacs008 = buildPacs008FromSnapshot(t);
-        messageLogService.log(t.getMsgId(), t.getEndToEndId(),
-                IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        try {
-            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        };
-        aipClient.post("/transferts", pacs008);
+        emitPacs008(t);
 
         t.setStatut(TransferStatus.PEND);
         t.setConfirmationDate(cmd.getConfirmationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime());
@@ -776,15 +639,7 @@ public class TransactionService {
                 .build();
         transferRepository.save(transfer);
 
-        Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
-        messageLogService.log(newMsgId, rtp.getEndToEndId(),
-                IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
-        try {
-            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-        aipClient.post("/transferts", pacs008);
+        emitPacs008(transfer);
 
         rtp.setStatut(RtpStatus.ACCEPTED);
         rtp.setTransferEndToEndId(rtp.getEndToEndId());
@@ -1003,6 +858,108 @@ public class TransactionService {
         // per transaction, 22 chars total, stays inside the 35-char cap.
         String tail = endToEndId.substring(Math.max(0, endToEndId.length() - 20));
         return "TX" + tail;
+    }
+
+    // ------------------------------------------------------------------------
+    // Snapshot builder helpers
+    // ------------------------------------------------------------------------
+
+    /**
+     * Apply payer fields from a resolved client onto the builder.
+     * Account number comes from RAC_SEARCH (authoritative PI-RAC view), not from
+     * the mobile's self-declared compte — mixing sources triggers BE01 InconsistenWithEndCustomer.
+     */
+    private static void applyPayeurSnapshot(PiTransfer.PiTransferBuilder b,
+                                             String codeMembre, ResolvedClient payeur,
+                                             String racSearchRef) {
+        b.codeMembrePayeur(codeMembre)
+                .numeroComptePayeur(payeur.other())
+                .typeComptePayeur(payeur.typeCompte())
+                .nomClientPayeur(payeur.clientInfo().getNom())
+                .prenomClientPayeur(payeur.clientInfo().getPrenom())
+                .typeClientPayeur(payeur.clientInfo().getTypeClient())
+                .telephonePayeur(payeur.clientInfo().getTelephone())
+                .paysClientPayeur(payeur.clientInfo().getPays())
+                .identifiantClientPayeur(payeur.clientInfo().getIdentifiant())
+                .typeIdentifiantClientPayeur(payeur.clientInfo().getTypeIdentifiant())
+                .aliasPayeur(payeur.aliasValue())
+                .ibanClientPayeur(payeur.iban())
+                .identificationFiscaleCommercantPayeur(payeur.identificationFiscaleCommercant())
+                .identificationRccmClientPayeur(payeur.identificationRccm())
+                .villeClientPayeur(payeur.clientInfo().getVille())
+                .adresseClientPayeur(payeur.clientInfo().getAdresse())
+                .racSearchRefPayeur(racSearchRef);
+    }
+
+    private static void applyPayeSnapshot(PiTransfer.PiTransferBuilder b, ResolvedClient paye) {
+        b.codeMembrePaye(paye.codeMembre())
+                .numeroComptePaye(paye.other())
+                .typeComptePaye(paye.typeCompte())
+                .nomClientPaye(paye.clientInfo().getNom())
+                .prenomClientPaye(paye.clientInfo().getPrenom())
+                .typeClientPaye(paye.clientInfo().getTypeClient())
+                .telephonePaye(paye.clientInfo().getTelephone())
+                .paysClientPaye(paye.clientInfo().getPays())
+                .identifiantClientPaye(paye.clientInfo().getIdentifiant())
+                .typeIdentifiantClientPaye(paye.clientInfo().getTypeIdentifiant())
+                .aliasPaye(paye.aliasValue())
+                .ibanClientPaye(paye.iban())
+                .identificationFiscaleCommercantPaye(paye.identificationFiscaleCommercant())
+                .identificationRccmClientPaye(paye.identificationRccm())
+                .villeClientPaye(paye.clientInfo().getVille())
+                .adresseClientPaye(paye.clientInfo().getAdresse());
+    }
+
+    private static void copyPayeurFromParent(PiTransfer.PiTransferBuilder b, PiTransfer parent) {
+        b.codeMembrePayeur(parent.getCodeMembrePayeur())
+                .numeroComptePayeur(parent.getNumeroComptePayeur())
+                .typeComptePayeur(parent.getTypeComptePayeur())
+                .nomClientPayeur(parent.getNomClientPayeur())
+                .prenomClientPayeur(parent.getPrenomClientPayeur())
+                .typeClientPayeur(parent.getTypeClientPayeur())
+                .telephonePayeur(parent.getTelephonePayeur())
+                .paysClientPayeur(parent.getPaysClientPayeur())
+                .identifiantClientPayeur(parent.getIdentifiantClientPayeur())
+                .typeIdentifiantClientPayeur(parent.getTypeIdentifiantClientPayeur())
+                .aliasPayeur(parent.getAliasPayeur())
+                .ibanClientPayeur(parent.getIbanClientPayeur())
+                .identificationFiscaleCommercantPayeur(parent.getIdentificationFiscaleCommercantPayeur())
+                .identificationRccmClientPayeur(parent.getIdentificationRccmClientPayeur())
+                .villeClientPayeur(parent.getVilleClientPayeur())
+                .adresseClientPayeur(parent.getAdresseClientPayeur())
+                .racSearchRefPayeur(parent.getRacSearchRefPayeur());
+    }
+
+    private static void copyPayeFromParent(PiTransfer.PiTransferBuilder b, PiTransfer parent) {
+        b.codeMembrePaye(parent.getCodeMembrePaye())
+                .numeroComptePaye(parent.getNumeroComptePaye())
+                .typeComptePaye(parent.getTypeComptePaye())
+                .nomClientPaye(parent.getNomClientPaye())
+                .prenomClientPaye(parent.getPrenomClientPaye())
+                .typeClientPaye(parent.getTypeClientPaye())
+                .telephonePaye(parent.getTelephonePaye())
+                .paysClientPaye(parent.getPaysClientPaye())
+                .identifiantClientPaye(parent.getIdentifiantClientPaye())
+                .typeIdentifiantClientPaye(parent.getTypeIdentifiantClientPaye())
+                .aliasPaye(parent.getAliasPaye())
+                .ibanClientPaye(parent.getIbanClientPaye())
+                .identificationFiscaleCommercantPaye(parent.getIdentificationFiscaleCommercantPaye())
+                .identificationRccmClientPaye(parent.getIdentificationRccmClientPaye())
+                .villeClientPaye(parent.getVilleClientPaye())
+                .adresseClientPaye(parent.getAdresseClientPaye())
+                .racSearchRefPaye(parent.getRacSearchRefPaye());
+    }
+
+    private void emitPacs008(PiTransfer transfer) {
+        Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
+        messageLogService.log(transfer.getMsgId(), transfer.getEndToEndId(),
+                IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
+        try {
+            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        aipClient.post("/transferts", pacs008);
     }
 
     // ------------------------------------------------------------------------
