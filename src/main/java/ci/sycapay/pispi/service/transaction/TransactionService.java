@@ -576,6 +576,17 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
+        // PACS.008 montant = PAIN.013 montant − montantRemisePaiementImmediat (NET settlement).
+        // montantAchat stays at the GROSS value from the PAIN.013 so the AIP can match
+        // the PACS.008 to the original request; the sum montantAchat + montantRetrait equals
+        // the PAIN.013 montant (gross), which is the BCEAO line-sum validation rule.
+        BigDecimal remise = rtp.getMontantRemisePaiementImmediat();
+        BigDecimal effectiveMontant = (rtp.getMontant() != null)
+                ? (remise != null && remise.signum() > 0
+                        ? rtp.getMontant().subtract(remise)
+                        : rtp.getMontant())
+                : cmd.getMontant();
+
         if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
             throw new InvalidStateException(
                     "Le montant de confirmation (" + cmd.getMontant() + ") ne correspond pas "
@@ -595,7 +606,7 @@ public class TransactionService {
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
-                .montant(rtp.getMontant() != null ? rtp.getMontant() : cmd.getMontant())
+                .montant(effectiveMontant)
                 .devise("XOF")
                 // Payeur (this PI — the debtor)
                 .codeMembrePayeur(rtp.getCodeMembrePayeur() != null ? rtp.getCodeMembrePayeur() : codeMembre)
