@@ -201,6 +201,9 @@ public class PiRequestToPay {
     @Column(name = "frais_retrait", precision = 18, scale = 2)
     private BigDecimal fraisRetrait;
 
+    @Column(name = "montant_remise_paiement_immediat", precision = 18, scale = 2)
+    private BigDecimal montantRemisePaiementImmediat;
+
     // -----------------------------------------------------------------------
     // Status tracking
     // -----------------------------------------------------------------------

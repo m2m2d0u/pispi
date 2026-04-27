@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -575,6 +576,16 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
+        // Compute the effective transfer amount. The AIP validates:
+        //   PACS.008 montant = PAIN.013 montant − montantRemisePaiementImmediat
+        // Omitting the remise subtraction causes AM09 (wrong amount).
+        BigDecimal remise = rtp.getMontantRemisePaiementImmediat();
+        BigDecimal effectiveMontant = (rtp.getMontant() != null)
+                ? (remise != null && remise.signum() > 0
+                        ? rtp.getMontant().subtract(remise)
+                        : rtp.getMontant())
+                : cmd.getMontant();
+
         if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
             throw new InvalidStateException(
                     "Le montant de confirmation (" + cmd.getMontant() + ") ne correspond pas "
@@ -594,7 +605,7 @@ public class TransactionService {
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
-                .montant(rtp.getMontant() != null ? rtp.getMontant() : cmd.getMontant())
+                .montant(effectiveMontant)
                 .devise("XOF")
                 // Payeur (this PI — the debtor)
                 .codeMembrePayeur(rtp.getCodeMembrePayeur() != null ? rtp.getCodeMembrePayeur() : codeMembre)
