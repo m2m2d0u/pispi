@@ -576,12 +576,11 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
-        // PACS.008 montant = PAIN.013 montant − montantRemisePaiementImmediat (NET settlement).
-        // montantAchat stays at the GROSS value from the PAIN.013 so the AIP can match
-        // the PACS.008 to the original request; the sum montantAchat + montantRetrait equals
-        // the PAIN.013 montant (gross), which is the BCEAO line-sum validation rule.
+        // BCEAO rule (explicit AIP message): PACS.008 montant = PAIN.013 montant − remise.
+        // The AIP reads the remise from its stored PAIN.013 and validates the net amount.
+        // montantAchat stays GROSS so line-sum montantAchat + montantRetrait = PAIN.013 montant.
         BigDecimal remise = rtp.getMontantRemisePaiementImmediat();
-        BigDecimal effectiveMontant = (rtp.getMontant() != null)
+        BigDecimal effectiveMontant = rtp.getMontant() != null
                 ? (remise != null && remise.signum() > 0
                         ? rtp.getMontant().subtract(remise)
                         : rtp.getMontant())
@@ -894,9 +893,6 @@ public class TransactionService {
             extra.put("montantRetrait", rtp.getMontantRetrait().toBigInteger().toString());
         if (rtp.getFraisRetrait() != null)
             extra.put("fraisRetrait", rtp.getFraisRetrait().toBigInteger().toString());
-        if (rtp.getMontantRemisePaiementImmediat() != null)
-            extra.put("montantRemisePaiementImmediat",
-                    rtp.getMontantRemisePaiementImmediat().toBigInteger().toString());
         if (rtp.getDateNaissancePayeur() != null)
             extra.put("dateNaissanceClientPayeur", rtp.getDateNaissancePayeur());
         if (rtp.getVilleNaissancePayeur() != null)
@@ -1019,7 +1015,6 @@ public class TransactionService {
         p.put("msgId", t.getMsgId());
         p.put("endToEndId", t.getEndToEndId());
         p.put("canalCommunication", t.getCanalCommunication().getCode());
-        p.put("codeMembreParticipantPayeur", t.getCodeMembrePayeur());
         p.put("codeMembreParticipantPaye", t.getCodeMembrePaye());
         p.put("montant", t.getMontant().toBigInteger().toString());
         p.put("dateHeureAcceptation", nowIso());
