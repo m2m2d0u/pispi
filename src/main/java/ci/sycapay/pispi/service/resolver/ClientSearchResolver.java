@@ -71,12 +71,23 @@ public class ClientSearchResolver {
                 .getEndToEndId();
     }
 
+    public String resolveName(String nom, String denominationSociale, TypeClient typeClient){
+        if (typeClient == TypeClient.B) {
+            return denominationSociale;
+        }
+        return nom;
+    }
+
     public ResolvedClient resolve(String endToEndIdSearch, String side) {
         PiMessageLog entry = messageLogRepository
                 .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
                         endToEndIdSearch, MessageDirection.INBOUND, IsoMessageType.RAC_SEARCH)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Résultat de recherche d'alias introuvable pour endToEndId", endToEndIdSearch));
+
+        if (side.equals("paye")) {
+            log.info("Entry RAC_SEARCH for paye: {}", entry.getPayload());
+        }
 
         Map<String, Object> data;
         try {
@@ -86,12 +97,14 @@ public class ClientSearchResolver {
                     + endToEndIdSearch + "]", e);
         }
 
-        String nom = str(data, "nom");
+        String nomExtract = str(data, "nom");
         String telephone = str(data, "telephone");
         String paysResidence = str(data, "paysResidence");
         String categorie = str(data, "categorie");
         String other = str(data, "other");
         String typeCompteStr = str(data, "typeCompte");
+        String denominationSociale = str(data, "denominationSociale");
+        String nom = resolveName(nomExtract, denominationSociale, TypeClient.valueOf(categorie));
 
         if (nom == null || telephone == null || paysResidence == null || categorie == null
                 || other == null || typeCompteStr == null) {

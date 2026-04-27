@@ -249,6 +249,40 @@
           "response": []
         },
         {
+          "name": "Créer alias SHID — Personne physique (P) avec IBAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdIbanClient}}\",\n  \"client\": {\n    \"nom\": \"Konaté\",\n    \"genre\": \"1\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI345678901\",\n    \"dateNaissance\": \"1985-07-18\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Abidjan\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Marcory Zone 4, Rue des Fleurs\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250701020304\",\n    \"email\": \"ibrahim.konate@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0080000098765432100200\",\n  \"typeCompte\": \"CACC\",\n  \"dateOuvertureCompte\": \"2019-11-05\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/aliases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "aliases"
+              ]
+            },
+            "description": "Crée un alias SHID pour une personne physique (P) avec un **compte bancaire IBAN** (CACC — compte courant).\n\n**typeClient** : P\n**typeIdentifiant** : NIDN → champ AIP `identificationNationaleClient`\n**typeCompte** : CACC → le PI-SPI envoie `ibanClient` dans le bloc AIP (AccountIdentification4Choice)\n**numeroCompte** : IBAN UEMOA (ex. CI21CI0080000098765432100200)\n\n**typeCompte acceptant un IBAN** : `CACC` (courant), `SVGS` (épargne), `LLSV`, `VACC` (tontine), `TAXE`\n\n⚠️ Contrairement à `TRAN`/`TRAL` qui utilisent `otherClient` (numéro de téléphone ou autre identifiant), ces types exigent un vrai IBAN — le PI-SPI détecte automatiquement le bon champ (`ibanClient` vs `otherClient`) via le `typeCompte`."
+          },
+          "response": []
+        },
+        {
           "name": "Créer alias SHID — Personne avec passeport (CCPT)",
           "request": {
             "method": "POST",
@@ -1075,6 +1109,16 @@
       "key": "backOfficeClientIdTralClient",
       "value": "BO-CI-TRAL-0001",
       "description": "Back-office client id pour un client TRAL (sans identification)"
+    },
+    {
+      "key": "backOfficeClientIdIbanClient",
+      "value": "BO-CI-IBAN-0001",
+      "description": "Back-office client id pour un client P avec compte bancaire IBAN (CACC)"
+    },
+    {
+      "key": "aliasShidPPIban",
+      "value": "",
+      "description": "SHID UUID renvoyé après création d'un alias P avec IBAN — à remplir après le POST"
     }
   ]
 }
