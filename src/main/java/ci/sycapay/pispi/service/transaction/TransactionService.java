@@ -639,7 +639,7 @@ public class TransactionService {
                 .build();
         transferRepository.save(transfer);
 
-        emitPacs008(transfer);
+        emitPacs008(transfer, buildRtpExtra(rtp));
 
         rtp.setStatut(RtpStatus.ACCEPTED);
         rtp.setTransferEndToEndId(rtp.getEndToEndId());
@@ -869,6 +869,36 @@ public class TransactionService {
      * Account number comes from RAC_SEARCH (authoritative PI-RAC view), not from
      * the mobile's self-declared compte — mixing sources triggers BE01 InconsistenWithEndCustomer.
      */
+    /**
+     * Extra PACS.008 fields that are present in an inbound PAIN.013 (RTP) but have
+     * no equivalent column on {@link PiTransfer}: monetary breakdown and birth data.
+     * The AIP validates that the accepting PACS.008 carries the same monetary
+     * breakdown as the original PAIN.013 — omitting montantAchat / montantRetrait
+     * causes codeRaisonRejet=TransactionNotFound.
+     */
+    private static Map<String, Object> buildRtpExtra(PiRequestToPay rtp) {
+        Map<String, Object> extra = new HashMap<>();
+        if (rtp.getMontantAchat() != null)
+            extra.put("montantAchat", rtp.getMontantAchat().toBigInteger().toString());
+        if (rtp.getMontantRetrait() != null)
+            extra.put("montantRetrait", rtp.getMontantRetrait().toBigInteger().toString());
+        if (rtp.getFraisRetrait() != null)
+            extra.put("fraisRetrait", rtp.getFraisRetrait().toBigInteger().toString());
+        if (rtp.getDateNaissancePayeur() != null)
+            extra.put("dateNaissanceClientPayeur", rtp.getDateNaissancePayeur());
+        if (rtp.getVilleNaissancePayeur() != null)
+            extra.put("villeNaissanceClientPayeur", rtp.getVilleNaissancePayeur());
+        if (rtp.getPaysNaissancePayeur() != null)
+            extra.put("paysNaissanceClientPayeur", rtp.getPaysNaissancePayeur());
+        if (rtp.getDateNaissancePaye() != null)
+            extra.put("dateNaissanceClientPaye", rtp.getDateNaissancePaye());
+        if (rtp.getVilleNaissancePaye() != null)
+            extra.put("villeNaissanceClientPaye", rtp.getVilleNaissancePaye());
+        if (rtp.getPaysNaissancePaye() != null)
+            extra.put("paysNaissanceClientPaye", rtp.getPaysNaissancePaye());
+        return extra;
+    }
+
     private static void applyPayeurSnapshot(PiTransfer.PiTransferBuilder b,
                                              String codeMembre, ResolvedClient payeur,
                                              String racSearchRef) {
@@ -951,7 +981,12 @@ public class TransactionService {
     }
 
     private void emitPacs008(PiTransfer transfer) {
+        emitPacs008(transfer, null);
+    }
+
+    private void emitPacs008(PiTransfer transfer, Map<String, Object> extra) {
         Map<String, Object> pacs008 = buildPacs008FromSnapshot(transfer);
+        if (extra != null) pacs008.putAll(extra);
         messageLogService.log(transfer.getMsgId(), transfer.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
         try {

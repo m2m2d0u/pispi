@@ -98,20 +98,6 @@ public class RequestToPayService {
     }
 
     /**
-     * Acknowledge acceptance of an inbound RTP locally. Per BCEAO spec,
-     * {@code ReponseDemandePaiement} (PAIN.014) only supports {@code statut: "RJCT"}
-     * — there is no acceptance message. Acceptance is signalled implicitly by
-     * initiating the PACS.008 credit transfer via POST /api/v1/transferts.
-     */
-    @Transactional
-    public void acceptRtp(String endToEndId) {
-        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
-                .orElseThrow(() -> new ResourceNotFoundException("RTP", endToEndId));
-        rtp.setStatut(RtpStatus.ACCEPTED);
-        rtpRepository.save(rtp);
-    }
-
-    /**
      * Emit a PAIN.014 rejection (BCEAO {@code ReponseDemandePaiement}) for an
      * inbound RTP received on this PI. The spec mandates {@code statut: "RJCT"}
      * and a {@code codeRaison} matching {@code [A-Z]{2}\d{2}}.

@@ -192,6 +192,15 @@ public class PiRequestToPay {
     @Column(name = "autorisation_modification_montant")
     private Boolean autorisationModificationMontant;
 
+    @Column(name = "montant_achat", precision = 18, scale = 2)
+    private BigDecimal montantAchat;
+
+    @Column(name = "montant_retrait", precision = 18, scale = 2)
+    private BigDecimal montantRetrait;
+
+    @Column(name = "frais_retrait", precision = 18, scale = 2)
+    private BigDecimal fraisRetrait;
+
     // -----------------------------------------------------------------------
     // Status tracking
     // -----------------------------------------------------------------------

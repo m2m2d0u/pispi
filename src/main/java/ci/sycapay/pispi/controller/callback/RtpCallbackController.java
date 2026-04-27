@@ -112,6 +112,9 @@ public class RtpCallbackController {
                 .typeDocumentReference(parseEnum(str(payload, "typeDocumentReference"),
                         CodeTypeDocument.class))
                 .numeroDocumentReference(str(payload, "numeroDocumentReference"))
+                .montantAchat(parseBigDecimal(payload.get("montantAchat")))
+                .montantRetrait(parseBigDecimal(payload.get("montantRetrait")))
+                .fraisRetrait(parseBigDecimal(payload.get("fraisRetrait")))
                 .statut(RtpStatus.PENDING)
                 .build();
         rtpRepository.save(rtp);
