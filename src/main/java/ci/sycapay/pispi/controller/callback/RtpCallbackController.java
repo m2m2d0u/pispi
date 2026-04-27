@@ -67,6 +67,7 @@ public class RtpCallbackController {
                 .montant(parseBigDecimal(payload.get("montant")))
                 .devise("XOF")
                 .canalCommunication(parseCanal(str(payload, "canalCommunication")))
+                .dateHeureExecution(parseDateTime(payload.get("dateHeureExecution")))
                 .dateHeureLimiteAction(parseDateTime(payload.get("dateHeureLimiteAction")))
                 .autorisationModificationMontant(parseBooleanLoose(payload.get("autorisationModificationMontant")))
                 // Payeur
