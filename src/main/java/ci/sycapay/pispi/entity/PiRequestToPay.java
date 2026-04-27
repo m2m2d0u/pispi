@@ -195,6 +195,12 @@ public class PiRequestToPay {
     @Column(name = "autorisation_modification_montant")
     private Boolean autorisationModificationMontant;
 
+    @Column(name = "identifiant_mandat", length = 140)
+    private String identifiantMandat;
+
+    @Column(name = "signature_numerique_mandat", columnDefinition = "TEXT")
+    private String signatureNumeriqueMandat;
+
     @Column(name = "montant_achat", precision = 18, scale = 2)
     private BigDecimal montantAchat;
 

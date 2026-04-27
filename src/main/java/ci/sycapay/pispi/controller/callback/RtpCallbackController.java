@@ -113,6 +113,8 @@ public class RtpCallbackController {
                 .typeDocumentReference(parseEnum(str(payload, "typeDocumentReference"),
                         CodeTypeDocument.class))
                 .numeroDocumentReference(str(payload, "numeroDocumentReference"))
+                .identifiantMandat(str(payload, "identifiantMandat"))
+                .signatureNumeriqueMandat(str(payload, "signatureNumeriqueMandat"))
                 .montantAchat(parseBigDecimal(payload.get("montantAchat")))
                 .montantRetrait(parseBigDecimal(payload.get("montantRetrait")))
                 .fraisRetrait(parseBigDecimal(payload.get("fraisRetrait")))
