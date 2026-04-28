@@ -859,9 +859,7 @@ public class TransactionService {
                 .orElseThrow(() -> new ResourceNotFoundException("RTP entrant", endToEndId));
         if (rtp.getStatut().isTerminal()) {
             log.info("La demande de paiement a atteint une phase terminal.");
-            return transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
-                    .map(this::toResponse)
-                    .orElse(null);
+            throw new InvalidStateException("La demande de paiement a atteint une phase terminal.");
         }
         return confirmRtpAcceptance(rtp, cmd);
     }
