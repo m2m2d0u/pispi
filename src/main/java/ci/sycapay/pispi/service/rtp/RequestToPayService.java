@@ -346,6 +346,26 @@ public class RequestToPayService {
         // Cas 1 : aucune des trois → achat simple, OK (Strd vide, Ustrd seul)
         if (!hasAchat && !hasRetrait && !hasFrais) return;
 
+        // Garde canal-aware : PICO / PICASH (signalés par la présence de
+        // montantRetrait ou fraisRetrait — montantAchat seul est traité plus
+        // bas comme combinaison invalide indépendamment du canal) ne sont
+        // autorisés que sur le canal 500 (MARCHAND_SUR_SITE). L'AIP rejette
+        // autrement avec "Le local instrument doit être 500 lorsqu'il s'agit
+        // de PICO ou PICASH" (ADMI.002 sur les canaux 631 / 521 / 520 / 401).
+        if ((hasRetrait || hasFrais)
+                && req.getCanalCommunication() != CanalCommunicationRtp.MARCHAND_SUR_SITE) {
+            throw new IllegalArgumentException(
+                    "PICO / PICASH ('montantRetrait' ou 'fraisRetrait' présent) ne sont "
+                            + "supportés que sur le canal MARCHAND_SUR_SITE (500). Canal "
+                            + "actuel : " + req.getCanalCommunication().name() + " ("
+                            + req.getCanalCommunication().getCode() + "). "
+                            + "L'AIP rejette autrement avec 'Le local instrument doit être "
+                            + "500 lorsqu'il s'agit de PICO ou PICASH'. Pour un transfert "
+                            + "P2P (canal 631) ou e-commerce (520/521), retirer "
+                            + "'montantRetrait' et 'fraisRetrait' — la description passe par "
+                            + "'motif' (Ustrd).");
+        }
+
         // Cas 2 : PICASH (retrait seul) — montantRetrait obligatoire, montantAchat absent
         if (!hasAchat && hasRetrait) {
             // BCEAO rule: montant must equal montantRetrait (les frais sont

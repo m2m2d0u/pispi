@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "dc3920aa-cb9e-456c-9f9a-345e637e9c40",
+    "_postman_id": "36c1a3d7-5f02-43bb-9d3d-9411befb444f",
     "name": "PI-SPI — Request to Pay",
     "description": "Collection de tests pour les opérations Request-to-Pay (PAIN.013 / PAIN.014 — schéma BCEAO `DemandePaiement` / `ReponseDemandePaiement`).\n\n**Résolution des parties** (sur le modèle `TransferRequest`) — `endToEndIdSearchPayeur` et `endToEndIdSearchPaye` référencent des `endToEndId` de recherches d'alias RAC_SEARCH inbound déjà journalisées dans `pi_message_log`. PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `aliasClient*`, `otherClient*` et `codeMembreParticipant*`.\n\n**canalCommunication (RTP BCEAO)** : `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `E_COMMERCE_LIVRAISON` (520) | `E_COMMERCE_IMMEDIAT` (521) | `PARTICULIER` (631)\n\n**Règle BCEAO `typeCompteClientPaye`** : `CACC|SVGS|TRAN|LLSV|VACC|TAXE` — **pas `TRAL`**. Le service émet un 400 si l'alias résolu pour le payé porte `TRAL`.\n\n**Sérialisation BCEAO** : PI-SPI convertit les montants et le booléen `autorisationModificationMontant` en chaînes avant envoi à l'AIP (patterns `\\d+` / `true|false`).\n\n**`identifiantDemandePaiement`** : auto-généré par le script pre-request de la collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -396,7 +396,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceBulk\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"montantRetrait\": 1,\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceBulk\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -430,7 +430,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceBulk\": \"PRET-20260315-DIALLO-DIABATE\",\n  \"montantRetrait\": 1,\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Remboursement prêt amical\",\n  \"referenceBulk\": \"PRET-20260315-DIALLO-DIABATE\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
