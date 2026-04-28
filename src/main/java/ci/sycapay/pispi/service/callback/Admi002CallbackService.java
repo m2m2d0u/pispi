@@ -168,10 +168,7 @@ public class Admi002CallbackService {
         return hit.map(t -> {
             t.setStatut(TransferStatus.ECHEC);
             t.setCodeRaison(codeRaison != null ? codeRaison : "AIP_ERR");
-            // The structured rejection detail is already persisted on
-            // pi_message_log.error_message (see step 2 above) and surfaced
-            // through the MESSAGE_REJECTED webhook — no need to duplicate it
-            // on the transfer row (detail_echec was dropped by V26).
+            t.setDetailEchec(detail);
             transferRepository.save(t);
             return true;
         }).orElseGet(() -> {
