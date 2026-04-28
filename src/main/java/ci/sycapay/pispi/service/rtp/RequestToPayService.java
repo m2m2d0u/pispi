@@ -70,6 +70,7 @@ public class RequestToPayService {
         validateCanalDateRules(request);
         validateRmtInfStrdConsistency(request);
         validateAutorisationModificationCompatibility(request);
+        validatePayeLocationForMerchantCanals(request, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -298,6 +299,45 @@ public class RequestToPayService {
         }
     }
 
+    /**
+     * Sur les canaux {@code 500} (MARCHAND_SUR_SITE) et {@code 631}
+     * (PARTICULIER), l'AIP exige {@code latitudeClientPaye} et
+     * {@code longitudeClientPaye} <em>lorsque le payé est un commerçant</em>
+     * (typeClient B / G / C). Sinon il rejette avec :
+     *   "La localisation du client payé est obligatoire pour le canal '631'
+     *    et le canal '500' lorsque le payé est un commerçant".
+     *
+     * <p>On rattrape ça en amont pour donner un 400 clair au lieu d'un
+     * round-trip AIP cryptique.
+     */
+    private static void validatePayeLocationForMerchantCanals(
+            RequestToPayRequest req, ResolvedClient paye) {
+        CanalCommunicationRtp canal = req.getCanalCommunication();
+        if (canal != CanalCommunicationRtp.MARCHAND_SUR_SITE
+                && canal != CanalCommunicationRtp.PARTICULIER) return;
+
+        TypeClient payeType = paye.clientInfo().getTypeClient();
+        boolean isMerchant = payeType == TypeClient.B
+                          || payeType == TypeClient.G
+                          || payeType == TypeClient.C;
+        if (!isMerchant) return;
+
+        boolean hasLat = req.getLatitudeClientPaye() != null
+                && !req.getLatitudeClientPaye().isBlank();
+        boolean hasLon = req.getLongitudeClientPaye() != null
+                && !req.getLongitudeClientPaye().isBlank();
+        if (!hasLat || !hasLon) {
+            throw new IllegalArgumentException(
+                    "Localisation du payé obligatoire : canal " + canal.getCode()
+                            + " (" + canal.name() + ") + payé de type " + payeType
+                            + " (commerçant) ⟹ 'latitudeClientPaye' ET "
+                            + "'longitudeClientPaye' requis dans le corps de la requête. "
+                            + "BCEAO rejette autrement avec 'La localisation du client payé "
+                            + "est obligatoire pour le canal 631 et le canal 500 lorsque "
+                            + "le payé est un commerçant'.");
+        }
+    }
+
     private static void validateRmtInfStrdConsistency(RequestToPayRequest req) {
         boolean hasAchat   = req.getMontantAchat() != null;
         boolean hasRetrait = req.getMontantRetrait() != null;
@@ -307,10 +347,37 @@ public class RequestToPayService {
         if (!hasAchat && !hasRetrait && !hasFrais) return;
 
         // Cas 2 : PICASH (retrait seul) — montantRetrait obligatoire, montantAchat absent
-        if (!hasAchat && hasRetrait) return;
+        if (!hasAchat && hasRetrait) {
+            // BCEAO rule: montant must equal montantRetrait (les frais sont
+            // débités séparément via fraisRetrait, mais ne sont PAS inclus
+            // dans le champ 'montant' du PAIN.013).
+            if (req.getMontant() != null
+                    && req.getMontant().compareTo(req.getMontantRetrait()) != 0) {
+                throw new IllegalArgumentException(
+                        "PICASH : 'montant' (" + req.getMontant() + ") doit être égal à "
+                                + "'montantRetrait' (" + req.getMontantRetrait() + "). "
+                                + "Les frais ('fraisRetrait') sont débités séparément du compte "
+                                + "client, ils ne sont PAS inclus dans 'montant'. "
+                                + "BCEAO rejette autrement avec 'Quand c'est PICASH, le montant "
+                                + "du retrait doit etre egale au montant de la demande de paiement'.");
+            }
+            return;
+        }
 
         // Cas 3 : PICO (achat + cashback) — les DEUX présents
-        if (hasAchat && hasRetrait) return;
+        if (hasAchat && hasRetrait) {
+            // BCEAO rule (par symétrie avec PICASH): montant = montantAchat + montantRetrait
+            // (les frais éventuels sont débités séparément).
+            java.math.BigDecimal expected = req.getMontantAchat().add(req.getMontantRetrait());
+            if (req.getMontant() != null
+                    && req.getMontant().compareTo(expected) != 0) {
+                throw new IllegalArgumentException(
+                        "PICO : 'montant' (" + req.getMontant() + ") doit être égal à "
+                                + "'montantAchat' + 'montantRetrait' (" + expected + "). "
+                                + "Les frais ('fraisRetrait') sont débités séparément.");
+            }
+            return;
+        }
 
         // Tout le reste est invalide.
         if (hasAchat && !hasRetrait) {

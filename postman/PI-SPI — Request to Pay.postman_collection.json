@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "c4e7d8a9-2f1b-4d5e-9c3a-7e6b8f9a1d2c",
+    "_postman_id": "0bc79bc8-3dc3-4595-ba5a-a087382e7757",
     "name": "PI-SPI — Request to Pay",
     "description": "Collection de tests pour les opérations Request-to-Pay (PAIN.013 / PAIN.014 — schéma BCEAO `DemandePaiement` / `ReponseDemandePaiement`).\n\n**Résolution des parties** (sur le modèle `TransferRequest`) — `endToEndIdSearchPayeur` et `endToEndIdSearchPaye` référencent des `endToEndId` de recherches d'alias RAC_SEARCH inbound déjà journalisées dans `pi_message_log`. PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `aliasClient*`, `otherClient*` et `codeMembreParticipant*`.\n\n**canalCommunication (RTP BCEAO)** : `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `E_COMMERCE_LIVRAISON` (520) | `E_COMMERCE_IMMEDIAT` (521) | `PARTICULIER` (631)\n\n**Règle BCEAO `typeCompteClientPaye`** : `CACC|SVGS|TRAN|LLSV|VACC|TAXE` — **pas `TRAL`**. Le service émet un 400 si l'alias résolu pour le payé porte `TRAL`.\n\n**Sérialisation BCEAO** : PI-SPI convertit les montants et le booléen `autorisationModificationMontant` en chaînes avant envoi à l'AIP (patterns `\\d+` / `true|false`).\n\n**`identifiantDemandePaiement`** : auto-généré par le script pre-request de la collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -9,10 +9,26 @@
   "item": [
     {
       "name": "Demandes sortantes",
-      "description": "Initiation de demandes de paiement (PAIN.013) avec résolution des parties via `endToEndIdSearch*` (modèle `TransferRequest`).",
       "item": [
         {
           "name": "Envoyer une demande de paiement de facture avec remittance B2B",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Canal 401 (FACTURE): l'AIP rejette toute dateHeureExecution future avec",
+                  "// 'Le débit différé n'est pas supporté lorsque le canal c'est 401'.",
+                  "// Sémantique BCEAO de 401 = paiement immédiat de facture — on force",
+                  "// dateHeureExecution = maintenant ; dateHeureLimiteAction garde la date",
+                  "// d'échéance comme expiration de la demande.",
+                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
+                  "pm.variables.set('dateHeureExecutionNow', now);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -43,7 +59,10 @@
             },
             "description": "Demande B2B adossée à une facture commerciale (canal `FACTURE` → `401`).\n\n**endToEndIdSearchPayeur** / **endToEndIdSearchPaye** : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `alias*`, `otherClient*` et `codeMembreParticipant*` depuis `pi_message_log`.\n\n**typeDocumentReference** : `CINV` (Commercial Invoice)."
           },
-          "response": [],
+          "response": []
+        },
+        {
+          "name": "Envoyer une demande de paiement de facture avec remise",
           "event": [
             {
               "listen": "prerequest",
@@ -60,10 +79,7 @@
                 ]
               }
             }
-          ]
-        },
-        {
-          "name": "Envoyer une demande de paiement de facture avec remise",
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -94,24 +110,7 @@
             },
             "description": "Demande de paiement de facture avec **remise pour paiement immédiat** (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de remise — mutuellement exclusif avec `tauxRemisePaiementImmediat`. Sérialisé en chaîne côté AIP.\n**autorisationModificationMontant** : sérialisé en chaîne `\"false\"` côté AIP."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "// Canal 401 (FACTURE): l'AIP rejette toute dateHeureExecution future avec",
-                  "// 'Le débit différé n'est pas supporté lorsque le canal c'est 401'.",
-                  "// Sémantique BCEAO de 401 = paiement immédiat de facture — on force",
-                  "// dateHeureExecution = maintenant ; dateHeureLimiteAction garde la date",
-                  "// d'échéance comme expiration de la demande.",
-                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
-                  "pm.variables.set('dateHeureExecutionNow', now);"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
           "name": "Envoyer une demande de paiement marchand sur site (immédiat)",
@@ -227,7 +226,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash chez un agent PICASH\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash chez un agent PICASH\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantRetrait\": 1000,\n  \"fraisRetrait\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -261,7 +260,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 2,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1,\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1800,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 800,\n  \"montantRetrait\": 1000,\n  \"fraisRetrait\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -295,7 +294,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Commande e-commerce — livraison sous 3j\",\n  \"referenceBulk\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"montantAchat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Commande e-commerce — livraison sous 3j\",\n  \"referenceBulk\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false,\n  \"montantAchat\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -329,7 +328,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"montantAchat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\",\n  \"montantAchat\": 1000\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -453,11 +452,11 @@
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Initiation de demandes de paiement (PAIN.013) avec résolution des parties via `endToEndIdSearch*` (modèle `TransferRequest`)."
     },
     {
       "name": "Consultation",
-      "description": "Lecture de l'état local des demandes de paiement (PAIN.013 / PAIN.014).",
       "item": [
         {
           "name": "Récupérer une demande de paiement par endToEndId",
@@ -517,11 +516,11 @@
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Lecture de l'état local des demandes de paiement (PAIN.013 / PAIN.014)."
     },
     {
       "name": "Demandes entrantes",
-      "description": "Traitement des demandes de paiement reçues via callback `/demandes-paiements` (PAIN.013 inbound) — rejet (PAIN.014) ou acceptation.",
       "item": [
         {
           "name": "Rejeter une demande de paiement entrante",
@@ -632,7 +631,8 @@
           },
           "response": []
         }
-      ]
+      ],
+      "description": "Traitement des demandes de paiement reçues via callback `/demandes-paiements` (PAIN.013 inbound) — rejet (PAIN.014) ou acceptation."
     }
   ],
   "event": [
@@ -640,6 +640,7 @@
       "listen": "prerequest",
       "script": {
         "type": "text/javascript",
+        "requests": {},
         "exec": [
           "// Auto-generate a unique identifiantDemandePaiement for every request.",
           "// Format: RTP-YYYYMMDDHHmmss-XXXXXX (UTC timestamp + 6-char random suffix).",
@@ -659,13 +660,23 @@
           "pm.collectionVariables.set('identifiantDemandePaiement', `RTP-${ts}-${rand}`);"
         ]
       }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080",
-      "description": ""
+      "value": "http://localhost:8080"
     },
     {
       "key": "identifiantDemandePaiement",
