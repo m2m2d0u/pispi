@@ -30,6 +30,15 @@ public class IdentityVerificationRespondRequest {
     @NotNull
     private Boolean resultatVerification;
 
+    /**
+     * endToEndId of the last inbound RAC_SEARCH for the client being verified.
+     * When supplied, the service resolves all identity fields automatically —
+     * same pattern as {@code endToEndIdSearchPayeur} in POST /api/v1/transferts.
+     * All explicit identity fields below are ignored when this is present.
+     */
+    @Size(max = 35)
+    private String endToEndSearch;
+
     /** Code ISO de rejet — obligatoire si {@code resultatVerification = false}. BCEAO pattern: {@code AC01}. */
     @Pattern(regexp = "^AC01$", message = "codeRaison must be AC01 per BCEAO IdentiteReponse schema")
     private String codeRaison;

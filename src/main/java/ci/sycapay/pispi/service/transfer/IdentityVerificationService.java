@@ -2,6 +2,7 @@ package ci.sycapay.pispi.service.transfer;
 
 import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
+import ci.sycapay.pispi.dto.common.ClientInfo;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationRespondRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationResponse;
@@ -12,6 +13,8 @@ import ci.sycapay.pispi.enums.VerificationStatus;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
+import ci.sycapay.pispi.service.resolver.ClientSearchResolver;
+import ci.sycapay.pispi.service.resolver.ResolvedClient;
 import ci.sycapay.pispi.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,7 @@ public class IdentityVerificationService {
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
+    private final ClientSearchResolver clientSearchResolver;
     private final ObjectMapper objectMapper;
 
     /**
@@ -107,6 +111,15 @@ public class IdentityVerificationService {
         PiIdentityVerification v = repository.findByEndToEndId(endToEndId)
                 .orElseThrow(() -> new ResourceNotFoundException("Verification", endToEndId));
 
+        // When the caller supplies an endToEndSearch, resolve the client identity
+        // from the last inbound RAC_SEARCH and reconstruct the full DTO automatically
+        // — same pattern as endToEndIdSearchPayeur in POST /api/v1/transferts.
+        if (notBlank(request.getEndToEndSearch())) {
+            ResolvedClient resolved = clientSearchResolver.resolve(
+                    request.getEndToEndSearch(), "client");
+            request = buildFromSearch(resolved, request);
+        }
+
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
 
@@ -174,6 +187,31 @@ public class IdentityVerificationService {
         repository.save(v);
 
         return toResponse(v);
+    }
+
+    private static IdentityVerificationRespondRequest buildFromSearch(
+            ResolvedClient c, IdentityVerificationRespondRequest original) {
+        ClientInfo info = c.clientInfo();
+        return IdentityVerificationRespondRequest.builder()
+                .resultatVerification(original.getResultatVerification())
+                .codeRaison(original.getCodeRaison())
+                .ibanClient(c.iban())
+                .otherClient(c.other())
+                .typeCompte(c.typeCompte())
+                .typeClient(info.getTypeClient())
+                .nomClient(info.getNom())
+                .villeClient(info.getVille())
+                .adresseComplete(info.getAdresse())
+                .numeroIdentification(info.getIdentifiant())
+                .systemeIdentification(info.getTypeIdentifiant())
+                .numeroRCCMClient(c.identificationRccm())
+                .identificationFiscaleCommercant(c.identificationFiscaleCommercant())
+                .dateNaissance(info.getDateNaissance())
+                .villeNaissance(info.getLieuNaissance())
+                .paysNaissance(info.getPaysNaissance())
+                .paysResidence(info.getPays())
+                .devise("XOF")
+                .build();
     }
 
     private static boolean notBlank(String s) {
