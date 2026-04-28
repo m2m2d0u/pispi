@@ -23,7 +23,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Règlement facture fournisseur cacao Q2 2026\",\n  \"referenceBulk\": \"BULK-FP-2026-0042\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-FP-2026-0042\",\n  \"identificationFiscaleCommercantPayeur\": \"CI-FISC-AGRO-001\",\n  \"identificationFiscaleCommercantPaye\": \"CI-FISC-FINPLUS-042\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Règlement facture fournisseur cacao Q2 2026\",\n  \"referenceBulk\": \"BULK-FP-2026-0042\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-FP-2026-0042\",\n  \"identificationFiscaleCommercantPayeur\": \"CI-FISC-AGRO-001\",\n  \"identificationFiscaleCommercantPaye\": \"CI-FISC-FINPLUS-042\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -43,7 +43,24 @@
             },
             "description": "Demande B2B adossée à une facture commerciale (canal `FACTURE` → `401`).\n\n**endToEndIdSearchPayeur** / **endToEndIdSearchPaye** : `endToEndId` d'une recherche d'alias RAC_SEARCH inbound déjà effectuée — PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `alias*`, `otherClient*` et `codeMembreParticipant*` depuis `pi_message_log`.\n\n**typeDocumentReference** : `CINV` (Commercial Invoice)."
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Canal 401 (FACTURE): l'AIP rejette toute dateHeureExecution future avec",
+                  "// 'Le débit différé n'est pas supporté lorsque le canal c'est 401'.",
+                  "// Sémantique BCEAO de 401 = paiement immédiat de facture — on force",
+                  "// dateHeureExecution = maintenant ; dateHeureLimiteAction garde la date",
+                  "// d'échéance comme expiration de la demande.",
+                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
+                  "pm.variables.set('dateHeureExecutionNow', now);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Envoyer une demande de paiement de facture avec remise",
@@ -57,7 +74,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -77,7 +94,24 @@
             },
             "description": "Demande de paiement de facture avec **remise pour paiement immédiat** (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de remise — mutuellement exclusif avec `tauxRemisePaiementImmediat`. Sérialisé en chaîne côté AIP.\n**autorisationModificationMontant** : sérialisé en chaîne `\"false\"` côté AIP."
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Canal 401 (FACTURE): l'AIP rejette toute dateHeureExecution future avec",
+                  "// 'Le débit différé n'est pas supporté lorsque le canal c'est 401'.",
+                  "// Sémantique BCEAO de 401 = paiement immédiat de facture — on force",
+                  "// dateHeureExecution = maintenant ; dateHeureLimiteAction garde la date",
+                  "// d'échéance comme expiration de la demande.",
+                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
+                  "pm.variables.set('dateHeureExecutionNow', now);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "Envoyer une demande de paiement sur site avec débit différé",

@@ -30,6 +30,21 @@ public final class DateTimeUtil {
         return ISO_INSTANT_MILLIS.format(Instant.now().truncatedTo(ChronoUnit.MILLIS));
     }
 
+    /**
+     * Like {@link #nowIso()} but with a small forward offset. Useful for fields
+     * the AIP validates with a strict {@code >= CreDtTm} check (e.g. PAIN.013
+     * {@code dateHeureExecution} on canal 401) — by the time the message
+     * reaches the AIP, our nowIso() value would already be slightly in the past
+     * relative to the {@code CreDtTm} the AIP/transformer inserts, triggering
+     * "ReqdExctnDt doit être supérieure ou égale à GrpHdr.CreDtTm". Adding a
+     * few seconds keeps us safely ahead without crossing into the "débit
+     * différé" territory the AIP refuses on those same canals.
+     */
+    public static String nowIsoPlusSeconds(long seconds) {
+        return ISO_INSTANT_MILLIS.format(
+                Instant.now().plusSeconds(seconds).truncatedTo(ChronoUnit.MILLIS));
+    }
+
     public static String nowCompact() {
         return LocalDateTime.now().format(COMPACT_DATETIME);
     }

@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.normaliseIsoInstantMillis;
+import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
+import static ci.sycapay.pispi.util.DateTimeUtil.nowIsoPlusSeconds;
 import static ci.sycapay.pispi.util.DateTimeUtil.parseDateTime;
 
 @Slf4j
@@ -260,8 +262,33 @@ public class RequestToPayService {
         p.put("clientDemandeur", resolveClientDemandeur(request.getClientDemandeur()));
         // BCEAO pain.013 XSD enforces pattern \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z
         // on DtTm elements — millisecond precision is mandatory. Normalise input.
-        putIfNotBlank(p, "dateHeureExecution",
-                normaliseIsoInstantMillis(request.getDateHeureExecution()));
+        //
+        // Canal 401 (FACTURE) special-case: spec §4.7.1.1 declares dateHeureExecution
+        // mandatory, but the AIP enforces TWO contradictory rules:
+        //   1. "Le débit différé n'est pas supporté lorsque le canal c'est '401'"
+        //      → no significantly-future value
+        //   2. "ReqdExctnDt doit être supérieure ou égale à GrpHdr.CreDtTm"
+        //      → must be >= the message creation timestamp the AIP inserts on
+        //      its end (which is later than our nowIso() by network latency)
+        // The reconciliation: send {@code now + small offset (30s)}. It's late
+        // enough to stay >= CreDtTm even with clock skew & RTT, early enough
+        // to still read as "immediate" (not "deferred"). Caller-supplied
+        // values (likely future invoice due dates) are logged and overridden.
+        if (request.getCanalCommunication() == CanalCommunicationRtp.FACTURE) {
+            String supplied = request.getDateHeureExecution();
+            String forced = nowIsoPlusSeconds(30);
+            p.put("dateHeureExecution", forced);
+            if (notBlank(supplied) && !forced.equals(supplied)) {
+                log.info("Canal 401: dateHeureExecution overridden to now+30s ({} → {}) "
+                                + "— AIP refuses both 'débit différé' (future date) and "
+                                + "'ReqdExctnDt < CreDtTm' (now), so we use a small forward "
+                                + "offset that satisfies both",
+                        supplied, forced);
+            }
+        } else {
+            putIfNotBlank(p, "dateHeureExecution",
+                    normaliseIsoInstantMillis(request.getDateHeureExecution()));
+        }
         putIfNotBlank(p, "dateHeureLimiteAction",
                 normaliseIsoInstantMillis(request.getDateHeureLimiteAction()));
         // referenceBulk OMITTED from outbound: BCEAO AIP maps it into
