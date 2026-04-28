@@ -158,7 +158,8 @@ public class IdentityVerificationService {
             putIfNotBlank(acmt024, "paysResidence", request.getPaysResidence());
             putIfNotBlank(acmt024, "devise", notBlank(request.getDevise()) ? request.getDevise() : "XOF");
         } else {
-            putIfNotBlank(acmt024, "codeRaison", request.getCodeRaison());
+            // BCEAO XSD fixes Cd to 'AC01' — always send it, defaulting when absent.
+            acmt024.put("codeRaison", notBlank(request.getCodeRaison()) ? request.getCodeRaison() : "AC01");
         }
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024,
