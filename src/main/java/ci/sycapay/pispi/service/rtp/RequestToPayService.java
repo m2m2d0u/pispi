@@ -477,9 +477,16 @@ public class RequestToPayService {
         // Canal & monetary (BCEAO encodes numbers/booleans as strings).
         p.put("canalCommunication", request.getCanalCommunication().getCode());
         p.put("montant", request.getMontant().toBigInteger().toString());
-        if (request.getAutorisationModificationMontant() != null) {
-            p.put("autorisationModificationMontant",
-                    Boolean.toString(request.getAutorisationModificationMontant()));
+        // N'émettre 'autorisationModificationMontant' que lorsqu'il vaut TRUE.
+        // Le transformeur BCEAO mappe ce champ sur <GrntedPmtReqd>, et le XSD
+        // restreint pain.013 exige que <ImdtPmtRbt> précède <GrntedPmtReqd>.
+        // Émettre <GrntedPmtReqd>false</GrntedPmtReqd> seul (sans ImdtPmtRbt)
+        // déclenche : "Element 'GrntedPmtReqd': This element is not expected.
+        // Expected is ImdtPmtRbt". L'absence du champ équivaut à false (pas
+        // d'autorisation de modification du montant) — on ne sérialise donc
+        // que lorsque l'appelant a explicitement opté pour true.
+        if (Boolean.TRUE.equals(request.getAutorisationModificationMontant())) {
+            p.put("autorisationModificationMontant", "true");
         }
         if (request.getMontantRemisePaiementImmediat() != null) {
             p.put("montantRemisePaiementImmediat",
