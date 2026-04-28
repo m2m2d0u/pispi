@@ -65,7 +65,7 @@ public class PiIdentityVerification {
     @Column(name = "resultat_verification")
     private Boolean resultatVerification;
 
-    @Column(name = "code_raison", length = 10)
+    @Column(name = "code_raison", length = 4)
     private String codeRaison;
 
     @Column(name = "detail_echec", length = 500)
@@ -88,7 +88,7 @@ public class PiIdentityVerification {
     @Column(name = "ville_client", length = 140)
     private String villeClient;
 
-    @Column(name = "adresse_complete", length = 350)
+    @Column(name = "adresse_complete", length = 490)
     private String adresseComplete;
 
     @Column(name = "numero_identification", length = 35)
@@ -107,7 +107,7 @@ public class PiIdentityVerification {
     @Column(name = "date_naissance")
     private LocalDate dateNaissance;
 
-    @Column(name = "ville_naissance", length = 140)
+    @Column(name = "ville_naissance", length = 35)
     private String villeNaissance;
 
     @Column(name = "pays_naissance", length = 2)

@@ -70,7 +70,7 @@ public class IdentityVerificationRespondRequest {
     @Size(max = 140)
     private String villeClient;
 
-    @Size(max = 350)
+    @Size(max = 490)
     private String adresseComplete;
 
     @Size(max = 35)
