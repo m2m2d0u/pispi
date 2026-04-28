@@ -1,0 +1,265 @@
+{
+  "info": {
+    "_postman_id": "8a7c3e10-ee4d-4f02-9a3d-1e2b0c5e8a91",
+    "name": "PI-SPI — Vérification d'identité (ACMT.023 / ACMT.024)",
+    "description": "Demandes de vérification d'identité émises vers l'AIP (ACMT.023) et réponses aux demandes reçues (ACMT.024). Endpoint réservé aux participants directs (banques, caisses) — les EME (type E) doivent passer par la RAC_SEARCH d'alias. Si votre code-membre n'est pas un type direct (B/C/D/F), le service rejette avec un 400.\n\nFlow :\n1. Émettre l'ACMT.023 via POST /api/v1/verifications (canal IBAN ou Othr)\n2. L'AIP route vers le PSP cible qui répond en async (ACMT.024)\n3. Le retour est persisté côté pi_message_log + webhook IDENTITY_VERIFIED\n\nVariables à renseigner :\n- codeMembreParticipantBank : code 6-char d'une banque cible (ex: SNB000)\n- ibanClientCible : IBAN du compte à vérifier\n- codeMembreParticipantEME : code d'un EME cible (ex: CIE002)\n- otherClientCible : numéro de téléphone du compte EME\n- incomingVerificationEndToEndId : à renseigner avec l'endToEndId d'une demande inbound reçue depuis l'AIP (visible dans pi_message_log côté direction=INBOUND)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Émission de demandes (ACMT.023)",
+      "item": [
+        {
+          "name": "Envoyer une demande de vérification d'identité IBAN",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeMembreParticipant\": \"{{codeMembreParticipantBank}}\",\n  \"ibanClient\": \"{{ibanClientCible}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastVerificationEndToEndId', id);",
+                  "        console.log('Captured lastVerificationEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Envoyer une demande de vérification d'identité Othr",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeMembreParticipant\": \"{{codeMembreParticipantEME}}\",\n  \"otherClient\": \"{{otherClientCible}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastVerificationEndToEndId', id);",
+                  "        console.log('Captured lastVerificationEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Suivi (GET)",
+      "item": [
+        {
+          "name": "Récupérer la dernière vérification émise",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/{{lastVerificationEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "{{lastVerificationEndToEndId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Réponses aux demandes reçues (ACMT.024)",
+      "item": [
+        {
+          "name": "Répondre — succès, client B (banque, IBAN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": true,\n  \"ibanClient\": \"CI21CI0070000012345678900100\",\n  \"typeCompte\": \"CACC\",\n  \"typeClient\": \"B\",\n  \"nomClient\": \"FINANCE PLUS SA\",\n  \"villeClient\": \"Abidjan\",\n  \"adresseComplete\": \"Tour B, Plateau Business Center, BP 1234\",\n  \"numeroIdentification\": \"TXNBUS98765\",\n  \"systemeIdentification\": \"TXID\",\n  \"identificationFiscaleCommercant\": \"TXNBUS98765\",\n  \"paysResidence\": \"CI\",\n  \"devise\": \"XOF\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Répondre — succès, client P (EME, other)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": true,\n  \"otherClient\": \"+2250707070707\",\n  \"typeCompte\": \"TRAN\",\n  \"typeClient\": \"P\",\n  \"nomClient\": \"Ouattara\",\n  \"villeClient\": \"Abidjan\",\n  \"adresseComplete\": \"Cocody Riviera Palmeraie, Cité 12\",\n  \"numeroIdentification\": \"CMI789654123\",\n  \"systemeIdentification\": \"NIDN\",\n  \"dateNaissance\": \"1993-02-24\",\n  \"villeNaissance\": \"Bouake\",\n  \"paysNaissance\": \"CI\",\n  \"paysResidence\": \"CI\",\n  \"devise\": \"XOF\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Répondre — rejet AC01 (compte invalide)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": false,\n  \"codeRaison\": \"AC01\"\n}"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "codeMembreParticipantBank",
+      "value": "SNB000"
+    },
+    {
+      "key": "ibanClientCible",
+      "value": "SN22SN2680838561632140368236"
+    },
+    {
+      "key": "codeMembreParticipantEME",
+      "value": "CIE002"
+    },
+    {
+      "key": "otherClientCible",
+      "value": "+2250707077777"
+    },
+    {
+      "key": "lastVerificationEndToEndId",
+      "value": ""
+    },
+    {
+      "key": "incomingVerificationEndToEndId",
+      "value": "ESNB000202604231347ABCDEFGHIJ12345"
+    }
+  ]
+}

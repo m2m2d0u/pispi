@@ -23,6 +23,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,6 +41,7 @@ public class RequestToPayService {
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
     private final ClientSearchResolver clientSearchResolver;
+    private final ObjectMapper objectMapper;
 
     /**
      * Emit an outbound PAIN.013 Request-to-Pay toward the AIP, using the flat
@@ -80,7 +82,7 @@ public class RequestToPayService {
 
         log.info("RTP PAIN.013 emitted: endToEndId={} payeur={} paye={}",
                 endToEndId, payeur.codeMembre(), codeMembre);
-        log.info("RTP PAIN.013 payload: {}", pain013);
+        log.info("RTP PAIN.013 payload: {}", objectMapper.writeValueAsString(pain013));
         aipClient.post("/demandes-paiements", pain013);
 
         return toResponse(rtp);

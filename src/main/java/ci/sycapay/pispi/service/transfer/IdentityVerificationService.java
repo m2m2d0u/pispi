@@ -14,8 +14,10 @@ import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.util.IdGenerator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -23,12 +25,14 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class IdentityVerificationService {
 
     private final PiIdentityVerificationRepository repository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Initiate an ACMT.023 identity verification request against another participant.
@@ -77,6 +81,9 @@ public class IdentityVerificationService {
                 .statut(VerificationStatus.PENDING)
                 .build();
         repository.save(verification);
+
+        log.info("Verification initiated [endToEndId={}, codeMembre={}, ibanClient={}, otherClient={}]",endToEndId, codeMembre, request.getIbanClient(), request.getOtherClient() );
+        log.info("ACMT.023 payload: {}", objectMapper.writeValueAsString(acmt023));
 
         aipClient.post("/verifications-identites", acmt023);
 
