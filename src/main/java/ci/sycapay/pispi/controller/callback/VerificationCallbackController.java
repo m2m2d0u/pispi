@@ -54,7 +54,7 @@ public class VerificationCallbackController {
     @PostMapping("/verifications-identites")
     public ResponseEntity<Void> receiveVerification(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("ACMT.023 received: {}", payload);
+        log.debug("ACMT.023 received raw payload: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 
@@ -89,7 +89,7 @@ public class VerificationCallbackController {
     @PostMapping("/verifications-identites/reponses")
     public ResponseEntity<Void> receiveVerificationResult(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("ACMT.024 received: {}", payload);
+        log.debug("ACMT.024 received raw payload: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 

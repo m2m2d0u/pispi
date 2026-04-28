@@ -45,7 +45,7 @@ public class TransferCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementCallbackPayload.class)))
     @PostMapping("/transferts")
     public ResponseEntity<Void> receiveTransfer(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("PACS.008 received: {}", payload);
+        log.debug("PACS.008 received raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
@@ -79,18 +79,18 @@ public class TransferCallbackController {
                 .devise("XOF")
                 .codeMembrePayeur((String) payload.get("codeMembreParticipantPayeur"))
                 .codeMembrePaye(payload.getOrDefault("codeMembreParticipantPaye", properties.getCodeMembre()).toString())
-                .typeTransaction(typeTransactionStr != null ? TypeTransaction.valueOf(typeTransactionStr) : null)
-                .canalCommunication(canalCommunicationStr != null ? CanalCommunication.fromCode(canalCommunicationStr) : null)
+                .typeTransaction(parseEnumLoose(typeTransactionStr, TypeTransaction.class, "typeTransaction"))
+                .canalCommunication(parseCanalLoose(canalCommunicationStr))
                 .nomClientPayeur((String) payload.get("nomClientPayeur"))
                 .prenomClientPayeur((String) payload.get("prenomClientPayeur"))
-                .typeClientPayeur(typeClientPayeurStr != null ? TypeClient.valueOf(typeClientPayeurStr) : null)
+                .typeClientPayeur(parseEnumLoose(typeClientPayeurStr, TypeClient.class, "typeClientPayeur"))
                 .numeroComptePayeur((String) payload.get("otherClientPayeur"))
-                .typeComptePayeur(typeComptePayeurStr != null ? TypeCompte.valueOf(typeComptePayeurStr) : null)
+                .typeComptePayeur(parseEnumLoose(typeComptePayeurStr, TypeCompte.class, "typeComptePayeur"))
                 .nomClientPaye((String) payload.get("nomClientPaye"))
                 .prenomClientPaye((String) payload.get("prenomClientPaye"))
-                .typeClientPaye(typeClientPayeStr != null ? TypeClient.valueOf(typeClientPayeStr) : null)
+                .typeClientPaye(parseEnumLoose(typeClientPayeStr, TypeClient.class, "typeClientPaye"))
                 .numeroComptePaye((String) payload.get("otherClientPaye"))
-                .typeComptePaye(typeComptePayeStr != null ? TypeCompte.valueOf(typeComptePayeStr) : null)
+                .typeComptePaye(parseEnumLoose(typeComptePayeStr, TypeCompte.class, "typeComptePaye"))
                 .motif((String) payload.get("motif"))
                 .dateHeureExecution(parseDateTime(payload.get("dateHeureAcceptation")) != null
                         ? parseDateTime(payload.get("dateHeureAcceptation"))
@@ -107,7 +107,7 @@ public class TransferCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementResultatCallbackPayload.class)))
     @PostMapping("/transferts/reponses")
     public ResponseEntity<Void> receiveTransferResult(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("PACS.002 received: {}", payload);
+        log.debug("PACS.002 received raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
 
@@ -115,40 +115,106 @@ public class TransferCallbackController {
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 202, null);
 
         transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(transfer -> {
-            String statut = (String) payload.get("statutTransaction");
-            TransferStatus ts = TransferStatus.valueOf(statut);
+            // Garde terminale : un PACS.002 retardataire ne doit pas écraser
+            // un statut déjà finalisé. On logue et on sort proprement.
+            if (transfer.getStatut() != null && transfer.getStatut().isTerminal()) {
+                log.warn("PACS.002 ignoré sur transfer en statut terminal [endToEndId={}, "
+                        + "statut={}, payload msgId={}]",
+                        endToEndId, transfer.getStatut(), msgId);
+                return;
+            }
+
+            // Parse défensif : un statutTransaction inconnu (typo, valeur future,
+            // null) doit produire un log + 202 Accepted plutôt qu'une 500 qui
+            // pousse l'AIP à re-déliverer indéfiniment.
+            String statutRaw = (String) payload.get("statutTransaction");
+            TransferStatus ts = parseEnumLoose(statutRaw, TransferStatus.class, "statutTransaction");
+            if (ts == null) {
+                log.error("PACS.002 avec statutTransaction inconnu [endToEndId={}, "
+                        + "raw='{}'] — ligne locale laissée intacte", endToEndId, statutRaw);
+                return;
+            }
+
             transfer.setStatut(ts);
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);
             transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
 
-            // If this PACS.002 finalises an RTP acceptance, advance the RTP out of PREVALIDATION.
-            // Direction-agnostic best-effort — works in single-tenant (only one
-            // leg exists locally) and in multi-tenant / self-loop where both
-            // legs share the endToEndId; the PREVALIDATION filter ensures we
-            // only touch the one currently mid-flight.
-            rtpRepository.findFirstByEndToEndIdOrderByIdDesc(endToEndId)
-                    .filter(rtp -> rtp.getStatut() == RtpStatus.PREVALIDATION)
-                    .ifPresent(rtp -> {
-                        boolean accepted = ts == TransferStatus.ACCC || ts == TransferStatus.ACSC;
-                        rtp.setStatut(accepted ? RtpStatus.ACCEPTED : RtpStatus.RJCT);
-                        if (!accepted) rtp.setCodeRaison((String) payload.get("codeRaison"));
-                        rtpRepository.save(rtp);
-                        log.info("RTP {} → {} via PACS.002 [transferStatut={}]",
-                                endToEndId, rtp.getStatut(), ts);
-                    });
+            // Si ce PACS.002 finalise une acceptation RTP, faire avancer le RTP.
+            // V44 : on utilise le lien explicite {@code transfer.rtpEndToEndId}
+            // posé par {@code confirmRtpAcceptance}. Si l'absence de lien (cas
+            // d'un transfer non-issu d'un RTP), on saute proprement — plus
+            // d'heuristique findFirst + filtre PREVALIDATION.
+            String rtpE2e = transfer.getRtpEndToEndId();
+            if (rtpE2e != null) {
+                rtpRepository.findByEndToEndIdAndDirection(rtpE2e, MessageDirection.INBOUND)
+                        .or(() -> rtpRepository.findByEndToEndIdAndDirection(
+                                rtpE2e, MessageDirection.OUTBOUND))
+                        .ifPresent(rtp -> {
+                            // Garde terminale aussi côté RTP.
+                            if (rtp.getStatut() != null && rtp.getStatut().isTerminal()) {
+                                log.warn("PACS.002 → RTP ignoré, RTP en statut terminal "
+                                        + "[rtpEndToEndId={}, statut={}]",
+                                        rtpE2e, rtp.getStatut());
+                                return;
+                            }
+                            boolean accepted = ts == TransferStatus.ACCC
+                                    || ts == TransferStatus.ACSC
+                                    || ts == TransferStatus.ACSP;
+                            rtp.setStatut(accepted ? RtpStatus.ACCEPTED : RtpStatus.RJCT);
+                            if (!accepted) rtp.setCodeRaison((String) payload.get("codeRaison"));
+                            rtpRepository.save(rtp);
+                            log.info("RTP {} → {} via PACS.002 [transferStatut={}]",
+                                    rtpE2e, rtp.getStatut(), ts);
+                        });
+            }
         });
 
         webhookService.notify(WebhookEventType.TRANSFER_RESULT, endToEndId, msgId, payload);
         return ResponseEntity.accepted().build();
     }
 
+    // =======================================================================
+    // Helpers — defensive parsing
+    // =======================================================================
+
+    /**
+     * Convertit une string en enum sans jeter d'exception. Si la valeur est
+     * null/blank, retourne null. Si la valeur est non-vide mais inconnue de
+     * l'enum (typo, valeur future BCEAO), logue et retourne null — le caller
+     * décide quoi faire (le PACS.002 handler abandonne, le PACS.008 inbound
+     * accepte des champs nullable côté entité).
+     */
+    private static <E extends Enum<E>> E parseEnumLoose(String value, Class<E> cls, String fieldHint) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Enum.valueOf(cls, value);
+        } catch (IllegalArgumentException e) {
+            org.slf4j.LoggerFactory.getLogger(TransferCallbackController.class)
+                    .warn("Valeur enum inconnue pour {} : '{}' (enum={}). Champ ignoré.",
+                            fieldHint, value, cls.getSimpleName());
+            return null;
+        }
+    }
+
+    /** Variante pour {@link CanalCommunication} qui utilise {@code fromCode} (codes 3-digit) plutôt que {@code valueOf}. */
+    private static CanalCommunication parseCanalLoose(String code) {
+        if (code == null || code.isBlank()) return null;
+        try {
+            return CanalCommunication.fromCode(code);
+        } catch (IllegalArgumentException e) {
+            org.slf4j.LoggerFactory.getLogger(TransferCallbackController.class)
+                    .warn("Canal inconnu reçu en callback : '{}' — champ ignoré.", code);
+            return null;
+        }
+    }
+
     @Operation(summary = "Receive message rejection (ADMI.002)", description = "Called by the AIP when a previously submitted message is structurally rejected. Logs the rejection and fires a MESSAGE_REJECTED webhook event.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RejetCallbackPayload.class)))
     @PostMapping("/transferts/echecs")
     public ResponseEntity<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("ADMI.002 received: {}", payload);
+        log.debug("ADMI.002 received raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
         if (msgId == null) msgId = (String) payload.get("reference");
 

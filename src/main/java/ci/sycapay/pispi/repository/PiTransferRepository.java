@@ -19,6 +19,14 @@ public interface PiTransferRepository extends JpaRepository<PiTransfer, Long> {
 
     Optional<PiTransfer> findByMsgId(String msgId);
 
+    /**
+     * Lookup direction-aware d'un transfer par le lien explicite vers son
+     * RTP parent (V44). Utilisé par le callback PACS.002 pour remonter au
+     * RTP que ce transfer finalise sans dépendre du timing implicite
+     * {@code findFirstByEndToEndIdOrderByIdDesc} + filtre PREVALIDATION.
+     */
+    Optional<PiTransfer> findByRtpEndToEndIdAndDirection(String rtpEndToEndId, MessageDirection direction);
+
     Page<PiTransfer> findByDirection(MessageDirection direction, Pageable pageable);
 
     Page<PiTransfer> findByDirectionAndStatut(MessageDirection direction, TransferStatus statut, Pageable pageable);

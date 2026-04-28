@@ -113,3 +113,7 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
+logging:
+  level:
+    ci.sycapay.pispi: ${LOG_LEVEL:DEBUG}

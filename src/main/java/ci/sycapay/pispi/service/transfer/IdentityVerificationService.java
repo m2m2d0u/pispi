@@ -87,7 +87,7 @@ public class IdentityVerificationService {
         repository.save(verification);
 
         log.info("Verification initiated [endToEndId={}, codeMembre={}, ibanClient={}, otherClient={}]",endToEndId, codeMembre, request.getIbanClient(), request.getOtherClient() );
-        log.info("ACMT.023 payload: {}", objectMapper.writeValueAsString(acmt023));
+        log.debug("ACMT.023 payload: {}", objectMapper.writeValueAsString(acmt023));
 
         aipClient.post("/verifications-identites", acmt023);
 

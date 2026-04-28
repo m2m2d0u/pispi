@@ -218,7 +218,7 @@ public class AliasService {
 
     private void sendCreationToAip(PiAlias alias, Map<String, Object> payload) {
         String endToEndId = alias.getEndToEndId();
-        log.info("Sending alias creation payload (type={}, e2e={}): {}",
+        log.debug("Sending alias creation payload (type={}, e2e={}): {}",
                 alias.getTypeAlias(), endToEndId, payload);
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_CREATE,
                 MessageDirection.OUTBOUND, payload, null, null);
@@ -264,7 +264,8 @@ public class AliasService {
         List<PiAlias> affected = loadClientAliases(alias);
 
         Map<String, Object> payload = buildModificationPayload(alias, request);
-        log.info("Sending alias modification payload (type={}, e2e={}): {}",request.getTypeAlias(), alias.getEndToEndId(), payload);
+        log.debug("Sending alias modification payload (type={}, e2e={}): {}",
+                request.getTypeAlias(), alias.getEndToEndId(), payload);
         String endToEndId = alias.getEndToEndId();
         messageLogService.log(null, endToEndId, IsoMessageType.RAC_MODIFY,
                 MessageDirection.OUTBOUND, payload, null, null);

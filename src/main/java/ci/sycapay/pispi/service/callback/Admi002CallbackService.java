@@ -166,6 +166,14 @@ public class Admi002CallbackService {
                     endToEndId, MessageDirection.OUTBOUND);
         }
         return hit.map(t -> {
+            // Garde terminale : un ADMI.002 retardataire ne doit pas écraser un
+            // statut déjà finalisé (transfert déjà ACCC ou RJCT).
+            if (t.getStatut() != null && t.getStatut().isTerminal()) {
+                log.warn("ADMI.002 ignoré sur transfer en statut terminal "
+                        + "[endToEndId={}, statut={}, msgId rejeté={}]",
+                        t.getEndToEndId(), t.getStatut(), msgId);
+                return false;
+            }
             t.setStatut(TransferStatus.ECHEC);
             t.setCodeRaison(codeRaison != null ? codeRaison : "AIP_ERR");
             t.setDetailEchec(detail);
@@ -183,6 +191,14 @@ public class Admi002CallbackService {
         // ADMI.002 = AIP rejection of a message we originated → OUTBOUND row.
         return rtpRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .map(rtp -> {
+                    // Garde terminale : un ADMI.002 retardataire ne doit pas
+                    // écraser un RTP déjà ACCEPTED ou RJCT.
+                    if (rtp.getStatut() != null && rtp.getStatut().isTerminal()) {
+                        log.warn("ADMI.002 ignoré sur RTP en statut terminal "
+                                + "[endToEndId={}, statut={}]",
+                                endToEndId, rtp.getStatut());
+                        return false;
+                    }
                     rtp.setStatut(RtpStatus.RJCT);
                     rtp.setCodeRaison(codeRaison != null ? codeRaison : "AIP_ERR");
                     // Free-text rejection detail (V43) — kept alongside the
@@ -202,6 +218,15 @@ public class Admi002CallbackService {
         // ADMI.002 rejects a verification we initiated → OUTBOUND row.
         return verificationRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .map(v -> {
+                    // Garde terminale aussi côté vérification (FAILED / VERIFIED
+                    // sont terminaux selon le contexte).
+                    if (v.getStatut() == VerificationStatus.VERIFIED
+                            || v.getStatut() == VerificationStatus.FAILED) {
+                        log.warn("ADMI.002 ignoré sur verification en statut terminal "
+                                + "[endToEndId={}, statut={}]",
+                                endToEndId, v.getStatut());
+                        return false;
+                    }
                     v.setStatut(VerificationStatus.FAILED);
                     v.setCodeRaison(codeRaison);
                     v.setDetailEchec(detail);

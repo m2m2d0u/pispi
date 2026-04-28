@@ -108,6 +108,17 @@ public class PiTransfer {
     @Column(name = "identifiant_transaction", length = 35)
     private String identifiantTransaction;
 
+    /**
+     * Lien explicite vers le PAIN.013 (PiRequestToPay) que ce PACS.008 finalise
+     * (V44). Renseigné uniquement quand le transfer est issu d'une acceptation
+     * RTP via {@code confirmRtpAcceptance}. Permet au callback PACS.002 de
+     * remonter sans ambiguïté à la ligne RTP correspondante (avant V44 : via
+     * {@code findFirstByEndToEndIdOrderByIdDesc} + filtre PREVALIDATION,
+     * fragile en multi-tenant).
+     */
+    @Column(name = "rtp_end_to_end_id", length = 35)
+    private String rtpEndToEndId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
     private TransferStatus statut;

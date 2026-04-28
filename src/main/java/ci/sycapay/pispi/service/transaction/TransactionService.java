@@ -616,6 +616,10 @@ public class TransactionService {
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(newMsgId)
                 .endToEndId(rtp.getEndToEndId())
+                // Lien explicite Transfer→RTP (V44) pour que le callback PACS.002
+                // retrouve le RTP parent via findByRtpEndToEndIdAndDirection
+                // sans dépendre d'un timing implicite (findFirst + filtre PREVALIDATION).
+                .rtpEndToEndId(rtp.getEndToEndId())
                 .direction(MessageDirection.OUTBOUND)
                 .typeTransaction(TypeTransaction.PRMG)
                 .canalCommunication(canal)
@@ -738,7 +742,7 @@ public class TransactionService {
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056,
                 MessageDirection.OUTBOUND, camt056, null, null);
-        log.info("Transfert payload: {}", camt056);
+        log.debug("CAMT.056 payload: {}", camt056);
         aipClient.post("/transferts/annulations", camt056);
 
         log.info("Demande d'annulation émise [endToEndId={}, raison={}]",
@@ -1160,7 +1164,7 @@ public class TransactionService {
         messageLogService.log(transfer.getMsgId(), transfer.getEndToEndId(),
                 IsoMessageType.PACS_008, MessageDirection.OUTBOUND, pacs008, null, null);
         try {
-            log.info("Transfert payload: {}", objectMapper.writeValueAsString(pacs008));
+            log.debug("PACS.008 payload: {}", objectMapper.writeValueAsString(pacs008));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }

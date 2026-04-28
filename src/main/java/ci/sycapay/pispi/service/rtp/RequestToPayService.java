@@ -91,7 +91,7 @@ public class RequestToPayService {
 
         log.info("RTP PAIN.013 emitted: endToEndId={} payeur={} paye={}",
                 endToEndId, payeur.codeMembre(), codeMembre);
-        log.info("RTP PAIN.013 payload: {}", objectMapper.writeValueAsString(pain013));
+        log.debug("RTP PAIN.013 payload: {}", objectMapper.writeValueAsString(pain013));
         aipClient.post("/demandes-paiements", pain013);
 
         return toResponse(rtp);

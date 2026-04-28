@@ -50,7 +50,7 @@ public class RtpCallbackController {
     @PostMapping("/demandes-paiements")
     public ResponseEntity<Void> receiveRtp(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("PAIN.013 received: {}", payload);
+        log.debug("PAIN.013 received raw payload: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 
@@ -137,7 +137,7 @@ public class RtpCallbackController {
     @PostMapping("/demandes-paiements/reponses")
     public ResponseEntity<Void> receiveRtpResult(
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
-        log.info("PAIN.014 received: {}", payload);
+        log.debug("PAIN.014 received raw payload: {}", payload);
         String msgId = str(payload, "msgId");
         String endToEndId = str(payload, "endToEndId");
 
@@ -156,8 +156,28 @@ public class RtpCallbackController {
         // self-loop or multi-tenant deployment has both legs persisted under
         // the same endToEndId.
         rtpRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(rtp -> {
-            if ("RJCT".equalsIgnoreCase(finalStatut)) {
+            // Garde terminale : un PAIN.014 retardataire ne doit pas écraser
+            // un statut déjà finalisé (ex: ACCEPTED via PACS.002 plus tôt).
+            if (rtp.getStatut() != null && rtp.getStatut().isTerminal()) {
+                log.warn("PAIN.014 ignoré sur RTP en statut terminal "
+                        + "[endToEndId={}, statut={}, msgId={}]",
+                        endToEndId, rtp.getStatut(), msgId);
+                return;
+            }
+
+            // Mapping défensif des statuts BCEAO ReponseDemandePaiement.
+            // RJCT est attendu sur PAIN.014 ; les autres valeurs sont rares
+            // mais on les logue pour ne pas garder un RTP orphelin en PENDING.
+            if (finalStatut == null) {
+                log.warn("PAIN.014 sans champ 'statut' / 'statutDemandePaiement' "
+                        + "[endToEndId={}, payload={}] — RTP laissé en l'état",
+                        endToEndId, payload);
+            } else if ("RJCT".equalsIgnoreCase(finalStatut)) {
                 rtp.setStatut(RtpStatus.RJCT);
+            } else {
+                log.warn("PAIN.014 avec statut inattendu '{}' [endToEndId={}] — "
+                        + "RTP laissé en l'état (RJCT attendu pour un rejet)",
+                        finalStatut, endToEndId);
             }
             rtp.setCodeRaison(str(payload, "codeRaison"));
             rtp.setMsgIdReponse(msgId);

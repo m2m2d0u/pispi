@@ -22,59 +22,103 @@ public class AipClient {
     @CircuitBreaker(name = "aip", fallbackMethod = "fallback")
     @Retry(name = "aip")
     public Map<String, Object> post(String path, Object body) {
-        String version = properties.getApiVersion();
-        String fullPath = path.replace("{version}", version);
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = aipRestClient.post()
-                .uri(fullPath)
-                .body(body)
-                .retrieve()
-                .body(Map.class);
-        return response;
+        String fullPath = resolvePath(path);
+        long t0 = System.currentTimeMillis();
+        String e2e = extractEndToEndId(body);
+        log.info("[AIP →] POST {} e2e={}", fullPath, e2e);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = aipRestClient.post()
+                    .uri(fullPath)
+                    .body(body)
+                    .retrieve()
+                    .body(Map.class);
+            log.info("[AIP ←] POST {} e2e={} → 2xx in {}ms", fullPath, e2e, System.currentTimeMillis() - t0);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("[AIP ←] POST {} e2e={} → FAILED in {}ms : {}",
+                    fullPath, e2e, System.currentTimeMillis() - t0, e.getMessage());
+            throw e;
+        }
     }
 
     @CircuitBreaker(name = "aip", fallbackMethod = "fallbackGet")
     @Retry(name = "aip")
     public Map<String, Object> get(String path) {
-        String version = properties.getApiVersion();
-        String fullPath = path.replace("{version}", version);
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = aipRestClient.get()
-                .uri(fullPath)
-                .retrieve()
-                .body(Map.class);
-        return response;
+        String fullPath = resolvePath(path);
+        long t0 = System.currentTimeMillis();
+        log.info("[AIP →] GET {}", fullPath);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = aipRestClient.get()
+                    .uri(fullPath)
+                    .retrieve()
+                    .body(Map.class);
+            log.info("[AIP ←] GET {} → 2xx in {}ms", fullPath, System.currentTimeMillis() - t0);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("[AIP ←] GET {} → FAILED in {}ms : {}",
+                    fullPath, System.currentTimeMillis() - t0, e.getMessage());
+            throw e;
+        }
     }
 
     @CircuitBreaker(name = "aip", fallbackMethod = "fallback")
     @Retry(name = "aip")
     public Map<String, Object> put(String path, Object body) {
-        String version = properties.getApiVersion();
-        String fullPath = path.replace("{version}", version);
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = aipRestClient.put()
-                .uri(fullPath)
-                .body(body)
-                .retrieve()
-                .body(Map.class);
-        return response;
+        String fullPath = resolvePath(path);
+        long t0 = System.currentTimeMillis();
+        String e2e = extractEndToEndId(body);
+        log.info("[AIP →] PUT {} e2e={}", fullPath, e2e);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = aipRestClient.put()
+                    .uri(fullPath)
+                    .body(body)
+                    .retrieve()
+                    .body(Map.class);
+            log.info("[AIP ←] PUT {} e2e={} → 2xx in {}ms", fullPath, e2e, System.currentTimeMillis() - t0);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("[AIP ←] PUT {} e2e={} → FAILED in {}ms : {}",
+                    fullPath, e2e, System.currentTimeMillis() - t0, e.getMessage());
+            throw e;
+        }
     }
 
     @CircuitBreaker(name = "aip", fallbackMethod = "fallbackDelete")
     @Retry(name = "aip")
     public Map<String, Object> delete(String path, Object body) {
-        String version = properties.getApiVersion();
-        String fullPath = path.replace("{version}", version);
+        String fullPath = resolvePath(path);
+        long t0 = System.currentTimeMillis();
+        log.info("[AIP →] DELETE {}", fullPath);
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = aipRestClient.delete()
+                    .uri(fullPath)
+                    .retrieve()
+                    .body(Map.class);
+            log.info("[AIP ←] DELETE {} → 2xx in {}ms", fullPath, System.currentTimeMillis() - t0);
+            return response;
+        } catch (RuntimeException e) {
+            log.warn("[AIP ←] DELETE {} → FAILED in {}ms : {}",
+                    fullPath, System.currentTimeMillis() - t0, e.getMessage());
+            throw e;
+        }
+    }
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> response = aipRestClient.delete()
-                .uri(fullPath)
-                .retrieve()
-                .body(Map.class);
-        return response;
+    private String resolvePath(String path) {
+        return path.replace("{version}", properties.getApiVersion());
+    }
+
+    /** Best-effort extraction of {@code endToEndId} from common BCEAO payload shapes for log correlation. */
+    @SuppressWarnings("unchecked")
+    private static String extractEndToEndId(Object body) {
+        if (body instanceof Map<?, ?> m) {
+            Object v = ((Map<String, Object>) m).get("endToEndId");
+            if (v != null) return v.toString();
+        }
+        return null;
     }
 
     @SuppressWarnings("unused")

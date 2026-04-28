@@ -37,7 +37,30 @@ public class MessageLogService {
                 .httpStatus(httpStatus)
                 .errorMessage(errorMessage)
                 .build();
-        return repository.save(entry);
+        PiMessageLog saved = repository.save(entry);
+
+        // Structured one-line summary at INFO. Full payload stays at DEBUG to
+        // keep production INFO logs greppable. errorMessage when present is
+        // promoted to WARN so failures jump out without scanning.
+        emitStructuredLog(direction, messageType, endToEndId, msgId, httpStatus, errorMessage, payloadJson);
+        return saved;
+    }
+
+    private void emitStructuredLog(MessageDirection direction, IsoMessageType messageType,
+                                   String endToEndId, String msgId, Integer httpStatus,
+                                   String errorMessage, String payloadJson) {
+        String tag = direction == MessageDirection.INBOUND ? "INBOUND" : "OUTBOUND";
+        if (errorMessage != null && !errorMessage.isBlank()) {
+            log.warn("[{}] {} e2e={} msgId={} status={} error=\"{}\"",
+                    tag, messageType, endToEndId, msgId, httpStatus, errorMessage);
+        } else {
+            log.info("[{}] {} e2e={} msgId={}{}",
+                    tag, messageType, endToEndId, msgId,
+                    httpStatus != null ? " status=" + httpStatus : "");
+        }
+        if (log.isDebugEnabled() && payloadJson != null) {
+            log.debug("[{}] {} payload e2e={}: {}", tag, messageType, endToEndId, payloadJson);
+        }
     }
 
     /** Saves the log entry in a new independent transaction so it commits even if the caller rolls back. */
