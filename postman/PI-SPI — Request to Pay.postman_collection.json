@@ -114,7 +114,7 @@
           ]
         },
         {
-          "name": "Envoyer une demande de paiement sur site avec débit différé",
+          "name": "Envoyer une demande de paiement marchand sur site (immédiat)",
           "request": {
             "method": "POST",
             "header": [
@@ -125,7 +125,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement différé courses mensuelles\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement courses immédiat sur site\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -261,7 +261,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 2,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 1,\n  \"montantRetrait\": 1,\n  \"fraisRetrait\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -363,7 +363,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-06-05T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu au lancement\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"montantAchat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-06-05T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu au lancement\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"

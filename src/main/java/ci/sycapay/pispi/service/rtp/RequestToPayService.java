@@ -68,6 +68,8 @@ public class RequestToPayService {
         validateTypeComptePaye(paye);
         validatePayeRequiredFields(paye);
         validateCanalDateRules(request);
+        validateRmtInfStrdConsistency(request);
+        validateAutorisationModificationCompatibility(request);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -222,6 +224,115 @@ public class RequestToPayService {
      * letting the AIP reject with
      * {@code "numeroIdentificationClientPaye doit être renseigné"}.
      */
+    /**
+     * Reject up-front any inconsistent combination of the three Strd
+     * "amount lines" — {@code montantAchat}, {@code montantRetrait},
+     * {@code fraisRetrait} — before forwarding to the AIP. BCEAO accepts
+     * exactly three valid shapes:
+     *
+     * <ul>
+     *   <li><b>Achat simple</b> : aucune des trois lignes Strd. La description
+     *       libre passe par {@code motif} (RmtInf/Ustrd).</li>
+     *   <li><b>PICASH</b> (retrait seul, sans achat) : {@code montantRetrait}
+     *       obligatoire, {@code fraisRetrait} optionnel,
+     *       {@code montantAchat} <em>absent</em>.</li>
+     *   <li><b>PICO</b> (achat avec cashback) : {@code montantAchat} ET
+     *       {@code montantRetrait} obligatoires ensemble,
+     *       {@code fraisRetrait} optionnel.</li>
+     * </ul>
+     *
+     * <p>Toute autre combinaison déclenche le rejet AIP <em>"Soit nous avons
+     * un retrait dans le cadre d'un achat avec les deux lignes PICO et PI,
+     * soit un retrait uniquement avec une ligne PICASH"</em>. On le rattrape
+     * ici avec un 400 explicite et un message d'aide pour orienter
+     * l'utilisateur vers le bon mode.
+     */
+    /**
+     * Refuse {@code autorisationModificationMontant=true} on canals that
+     * don't support deferred / variable-amount semantics. The BCEAO restricted
+     * pain.013 XSD has a strict sequence inside {@code <CdtTrfTxInf>} where
+     * {@code <ImdtPmtRbt>} (immediate-payment rebate) must precede
+     * {@code <GrntedPmtReqd>} (autorisationModificationMontant). Sending the
+     * latter alone on canal 500 (MARCHAND_SUR_SITE) — which is by definition
+     * an immediate on-site payment — triggers
+     *   "Element 'GrntedPmtReqd': This element is not expected. Expected is ImdtPmtRbt".
+     *
+     * <p>Allowed combinations (empirical) :
+     * <ul>
+     *   <li>{@code 401} (FACTURE) + {@code autorisationModificationMontant} +
+     *       {@code montantRemise/tauxRemise} — confirmed working.</li>
+     *   <li>{@code 520} (E_COMMERCE_LIVRAISON) — possibly OK with the same
+     *       co-occurrence rule (à vérifier).</li>
+     *   <li>{@code 500} (MARCHAND_SUR_SITE) — refuse: incompatible avec
+     *       paiement immédiat sur site.</li>
+     *   <li>{@code 631} (PARTICULIER), {@code 521} (E_COMMERCE_IMMEDIAT) —
+     *       à confirmer ; bloqué pour le moment par sécurité.</li>
+     * </ul>
+     */
+    private static void validateAutorisationModificationCompatibility(RequestToPayRequest req) {
+        if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
+        CanalCommunicationRtp canal = req.getCanalCommunication();
+        // Only canals that allow deferred semantics may carry GrntedPmtReqd
+        boolean allowed = canal == CanalCommunicationRtp.FACTURE
+                       || canal == CanalCommunicationRtp.E_COMMERCE_LIVRAISON;
+        if (!allowed) {
+            throw new IllegalArgumentException(
+                    "'autorisationModificationMontant=true' n'est pas supporté sur le canal "
+                            + canal.name() + " (" + canal.getCode() + "). "
+                            + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
+                            + "Expected is ImdtPmtRbt'. Ce flag suppose un paiement différé "
+                            + "ou à montant variable, qui n'est compatible qu'avec les canaux "
+                            + "401 (FACTURE) ou 520 (E_COMMERCE_LIVRAISON). "
+                            + "Pour un paiement immédiat (500/521/631), retirer le flag.");
+        }
+        // When set, GrntedPmtReqd must be preceded by ImdtPmtRbt in the XSD.
+        // Require that the caller also provides a remise (rate or amount).
+        boolean hasRemise = req.getMontantRemisePaiementImmediat() != null
+                         || req.getTauxRemisePaiementImmediat() != null;
+        if (!hasRemise) {
+            throw new IllegalArgumentException(
+                    "'autorisationModificationMontant=true' nécessite aussi une "
+                            + "'montantRemisePaiementImmediat' OU 'tauxRemisePaiementImmediat' "
+                            + "(non-null) pour respecter la séquence XSD <ImdtPmtRbt> AVANT "
+                            + "<GrntedPmtReqd>. Sans remise, l'AIP rejette le PAIN.013.");
+        }
+    }
+
+    private static void validateRmtInfStrdConsistency(RequestToPayRequest req) {
+        boolean hasAchat   = req.getMontantAchat() != null;
+        boolean hasRetrait = req.getMontantRetrait() != null;
+        boolean hasFrais   = req.getFraisRetrait() != null;
+
+        // Cas 1 : aucune des trois → achat simple, OK (Strd vide, Ustrd seul)
+        if (!hasAchat && !hasRetrait && !hasFrais) return;
+
+        // Cas 2 : PICASH (retrait seul) — montantRetrait obligatoire, montantAchat absent
+        if (!hasAchat && hasRetrait) return;
+
+        // Cas 3 : PICO (achat + cashback) — les DEUX présents
+        if (hasAchat && hasRetrait) return;
+
+        // Tout le reste est invalide.
+        if (hasAchat && !hasRetrait) {
+            throw new IllegalArgumentException(
+                    "Combinaison Strd invalide : 'montantAchat' seul n'est pas accepté par "
+                            + "BCEAO (le validateur AIP rejette avec 'Soit nous avons un retrait "
+                            + "dans le cadre d'un achat avec les deux lignes PICO et PI, soit un "
+                            + "retrait uniquement avec une ligne PICASH'). "
+                            + "Trois options : (a) retirer 'montantAchat' pour un achat simple "
+                            + "(la description passe par 'motif') ; (b) ajouter 'montantRetrait' "
+                            + "pour un PICO (achat + cashback) ; (c) si vous voulez juste signaler "
+                            + "un débit différé, utiliser 'autorisationModificationMontant: true' "
+                            + "à la place.");
+        }
+        if (hasFrais && !hasRetrait) {
+            throw new IllegalArgumentException(
+                    "Combinaison Strd invalide : 'fraisRetrait' suppose un retrait — "
+                            + "'montantRetrait' est obligatoire pour PICASH ou PICO. "
+                            + "Ajouter 'montantRetrait' ou retirer 'fraisRetrait'.");
+        }
+    }
+
     private static void validatePayeRequiredFields(ResolvedClient paye) {
         ClientInfo info = paye.clientInfo();
         if (info.getIdentifiant() == null || info.getIdentifiant().isBlank()
