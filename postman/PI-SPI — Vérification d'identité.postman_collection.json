@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "8a7c3e10-ee4d-4f02-9a3d-1e2b0c5e8a91",
     "name": "PI-SPI — Vérification d'identité (ACMT.023 / ACMT.024)",
-    "description": "Demandes de vérification d'identité émises vers l'AIP (ACMT.023) et réponses aux demandes reçues (ACMT.024). Endpoint réservé aux participants directs (banques, caisses) — les EME (type E) doivent passer par la RAC_SEARCH d'alias. Si votre code-membre n'est pas un type direct (B/C/D/F), le service rejette avec un 400.\n\nFlow :\n1. Émettre l'ACMT.023 via POST /api/v1/verifications (canal IBAN ou Othr)\n2. L'AIP route vers le PSP cible qui répond en async (ACMT.024)\n3. Le retour est persisté côté pi_message_log + webhook IDENTITY_VERIFIED\n\nRéponse à une demande entrante (ACMT.024) :\n- Fournir uniquement resultatVerification + endToEndSearch (endToEndId d'une RAC_SEARCH préalable sur le client à vérifier) — le service reconstruit automatiquement tous les champs d'identité depuis le log de recherche (même pattern que endToEndIdSearchPayeur dans POST /api/v1/transferts).\n- En cas de rejet, fournir resultatVerification=false + codeRaison=AC01 (endToEndSearch ignoré).\n\nVariables à renseigner :\n- codeMembreParticipantBank : code 6-char d'une banque cible (ex: SNB000)\n- ibanClientCible : IBAN du compte à vérifier\n- codeMembreParticipantEME : code d'un EME cible (ex: CIE002)\n- otherClientCible : numéro de téléphone du compte EME\n- incomingVerificationEndToEndId : endToEndId d'une demande inbound reçue depuis l'AIP (visible dans pi_message_log côté direction=INBOUND)\n- lastRacSearchEndToEndId : endToEndId du résultat RAC_SEARCH sur le client à vérifier (capturé automatiquement si la recherche passe par cette collection)",
+    "description": "Demandes de vérification d'identité émises vers l'AIP (ACMT.023) et réponses aux demandes reçues (ACMT.024). Endpoint réservé aux participants directs (banques, caisses) — les EME (type E) doivent passer par la RAC_SEARCH d'alias. Si votre code-membre n'est pas un type direct (B/C/D/F), le service rejette avec un 400.\n\nFlow :\n1. Émettre l'ACMT.023 via POST /api/v1/verifications (canal IBAN ou Othr)\n2. L'AIP route vers le PSP cible qui répond en async (ACMT.024)\n3. Le retour est persisté côté pi_message_log + webhook IDENTITY_VERIFIED\n\nRéponse à une demande entrante (ACMT.024) — trois modes :\n1. Minimal (recommandé pour ACMT.023 entrant standard) : { resultatVerification: true } — le service renvoie l'ibanClient/otherClient stocké depuis l'ACMT.023 entrant, sans champs supplémentaires.\n2. Via RAC_SEARCH : ajouter endToEndSearch — le service reconstruit automatiquement tous les champs d'identité depuis le dernier résultat RAC_SEARCH (même pattern que endToEndIdSearchPayeur dans POST /api/v1/transferts).\n3. Rejet : { resultatVerification: false, codeRaison: AC01 }.\n\nVariables à renseigner :\n- codeMembreParticipantBank : code 6-char d'une banque cible (ex: SNB000)\n- ibanClientCible : IBAN du compte à vérifier\n- codeMembreParticipantEME : code d'un EME cible (ex: CIE002)\n- otherClientCible : numéro de téléphone du compte EME\n- incomingVerificationEndToEndId : endToEndId d'une demande inbound reçue depuis l'AIP (visible dans pi_message_log côté direction=INBOUND)\n- lastRacSearchEndToEndId : endToEndId du résultat RAC_SEARCH sur le client à vérifier (optionnel — uniquement si réponse enrichie souhaitée)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -140,7 +140,57 @@
       "name": "Réponses aux demandes reçues (ACMT.024)",
       "item": [
         {
-          "name": "Répondre — succès via RAC_SEARCH (recommandé)",
+          "name": "Répondre — succès minimal (recommandé)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "verifications",
+                "incoming",
+                "{{incomingVerificationEndToEndId}}",
+                "respond"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resultatVerification\": true\n}"
+            },
+            "description": "Répondre positivement à une demande ACMT.023 entrante standard (ex: { msgId, otherClient, codeMembreParticipant, endToEndId }). Le service renvoie en ACMT.024 l'ibanClient/otherClient déjà stocké depuis la demande reçue — aucun champ supplémentaire requis."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    pm.test('Statut VERIFIED', function () {",
+                  "        pm.expect(body.data.statut).to.equal('VERIFIED');",
+                  "    });",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Répondre — succès via RAC_SEARCH (réponse enrichie)",
           "request": {
             "method": "POST",
             "header": [
@@ -167,7 +217,7 @@
               "mode": "raw",
               "raw": "{\n  \"resultatVerification\": true,\n  \"endToEndSearch\": \"{{lastRacSearchEndToEndId}}\"\n}"
             },
-            "description": "Répondre positivement à une demande ACMT.023 entrante en fournissant uniquement l'endToEndId du dernier résultat RAC_SEARCH sur le client à vérifier. Le service reconstruit automatiquement tous les champs d'identité (ibanClient/otherClient, typeCompte, typeClient, nomClient, identification, etc.) depuis le log pi_message_log — même pattern que endToEndIdSearchPayeur dans POST /api/v1/transferts.\n\nPré-requis : avoir effectué une RAC_SEARCH sur le client concerné et noter son endToEndId dans lastRacSearchEndToEndId."
+            "description": "Répondre positivement en fournissant l'endToEndId du dernier résultat RAC_SEARCH sur le client à vérifier. Le service reconstruit automatiquement tous les champs d'identité (typeCompte, typeClient, nomClient, identification, etc.) depuis le log pi_message_log.\n\nPré-requis : avoir effectué une RAC_SEARCH sur le client concerné et renseigner son endToEndId dans lastRacSearchEndToEndId."
           },
           "event": [
             {

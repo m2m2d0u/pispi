@@ -131,8 +131,13 @@ public class IdentityVerificationService {
         acmt024.put("resultatVerification", Boolean.toString(Boolean.TRUE.equals(request.getResultatVerification())));
 
         if (Boolean.TRUE.equals(request.getResultatVerification())) {
-            putIfNotBlank(acmt024, "ibanClient", request.getIbanClient());
-            putIfNotBlank(acmt024, "otherClient", request.getOtherClient());
+            // Account identifier: prefer request value (from endToEndSearch or explicit),
+            // fall back to what was stored from the inbound ACMT.023.
+            putIfNotBlank(acmt024, "ibanClient",
+                    notBlank(request.getIbanClient()) ? request.getIbanClient() : v.getIbanClient());
+            putIfNotBlank(acmt024, "otherClient",
+                    notBlank(request.getOtherClient()) ? request.getOtherClient() : v.getOtherClient());
+            // Rich identity fields — only present when endToEndSearch was used or provided explicitly.
             if (request.getTypeCompte() != null) acmt024.put("typeCompte", request.getTypeCompte().name());
             if (request.getTypeClient() != null) acmt024.put("typeClient", request.getTypeClient().name());
             putIfNotBlank(acmt024, "nomClient", request.getNomClient());
@@ -148,7 +153,7 @@ public class IdentityVerificationService {
             putIfNotBlank(acmt024, "villeNaissance", request.getVilleNaissance());
             putIfNotBlank(acmt024, "paysNaissance", request.getPaysNaissance());
             putIfNotBlank(acmt024, "paysResidence", request.getPaysResidence());
-            putIfNotBlank(acmt024, "devise", request.getDevise() != null ? request.getDevise() : "XOF");
+            putIfNotBlank(acmt024, "devise", notBlank(request.getDevise()) ? request.getDevise() : "XOF");
         } else {
             putIfNotBlank(acmt024, "codeRaison", request.getCodeRaison());
         }
@@ -157,29 +162,28 @@ public class IdentityVerificationService {
                 MessageDirection.OUTBOUND, acmt024, null, null);
         aipClient.post("/verifications-identites/reponses", acmt024);
 
-        // Persist result and all rich client info locally
+        // Persist only the fields that were actually provided — never overwrite
+        // existing data (e.g. ibanClient/otherClient from the inbound ACMT.023) with null.
         v.setResultatVerification(request.getResultatVerification());
         v.setCodeRaison(request.getCodeRaison());
         v.setMsgIdReponse(msgId);
         if (Boolean.TRUE.equals(request.getResultatVerification())) {
-            if (notBlank(request.getIbanClient())) v.setIbanClient(request.getIbanClient());
+            if (notBlank(request.getIbanClient()))  v.setIbanClient(request.getIbanClient());
             if (notBlank(request.getOtherClient())) v.setOtherClient(request.getOtherClient());
-            v.setTypeCompte(request.getTypeCompte());
-            v.setTypeClient(request.getTypeClient());
-            v.setNomClient(request.getNomClient());
-            v.setVilleClient(request.getVilleClient());
-            v.setAdresseComplete(request.getAdresseComplete());
-            v.setNumeroIdentification(request.getNumeroIdentification());
-            v.setSystemeIdentification(request.getSystemeIdentification());
-            v.setNumeroRCCMClient(request.getNumeroRCCMClient());
-            v.setIdentificationFiscaleCommercant(request.getIdentificationFiscaleCommercant());
-            if (notBlank(request.getDateNaissance())) {
-                v.setDateNaissance(LocalDate.parse(request.getDateNaissance()));
-            }
-            v.setVilleNaissance(request.getVilleNaissance());
-            v.setPaysNaissance(request.getPaysNaissance());
-            v.setPaysResidence(request.getPaysResidence());
-            v.setDevise(request.getDevise() != null ? request.getDevise() : "XOF");
+            if (request.getTypeCompte() != null)    v.setTypeCompte(request.getTypeCompte());
+            if (request.getTypeClient() != null)    v.setTypeClient(request.getTypeClient());
+            if (notBlank(request.getNomClient()))   v.setNomClient(request.getNomClient());
+            if (notBlank(request.getVilleClient())) v.setVilleClient(request.getVilleClient());
+            if (notBlank(request.getAdresseComplete()))           v.setAdresseComplete(request.getAdresseComplete());
+            if (notBlank(request.getNumeroIdentification()))      v.setNumeroIdentification(request.getNumeroIdentification());
+            if (request.getSystemeIdentification() != null)       v.setSystemeIdentification(request.getSystemeIdentification());
+            if (notBlank(request.getNumeroRCCMClient()))          v.setNumeroRCCMClient(request.getNumeroRCCMClient());
+            if (notBlank(request.getIdentificationFiscaleCommercant())) v.setIdentificationFiscaleCommercant(request.getIdentificationFiscaleCommercant());
+            if (notBlank(request.getDateNaissance()))  v.setDateNaissance(LocalDate.parse(request.getDateNaissance()));
+            if (notBlank(request.getVilleNaissance())) v.setVilleNaissance(request.getVilleNaissance());
+            if (notBlank(request.getPaysNaissance()))  v.setPaysNaissance(request.getPaysNaissance());
+            if (notBlank(request.getPaysResidence()))  v.setPaysResidence(request.getPaysResidence());
+            if (notBlank(request.getDevise()))         v.setDevise(request.getDevise());
         }
         v.setStatut(Boolean.TRUE.equals(request.getResultatVerification())
                 ? VerificationStatus.VERIFIED
