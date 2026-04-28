@@ -198,6 +198,7 @@ public class Admi002CallbackService {
                 .map(v -> {
                     v.setStatut(VerificationStatus.FAILED);
                     v.setCodeRaison(codeRaison);
+                    v.setDetailEchec(detail);
                     verificationRepository.save(v);
                     return true;
                 }).orElseGet(() -> {

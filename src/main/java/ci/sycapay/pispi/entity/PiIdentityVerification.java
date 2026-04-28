@@ -68,6 +68,9 @@ public class PiIdentityVerification {
     @Column(name = "code_raison", length = 10)
     private String codeRaison;
 
+    @Column(name = "detail_echec", length = 500)
+    private String detailEchec;
+
     @Column(name = "msg_id_reponse", length = 35)
     private String msgIdReponse;
 

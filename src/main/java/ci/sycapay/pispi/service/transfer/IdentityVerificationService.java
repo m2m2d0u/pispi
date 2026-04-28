@@ -186,7 +186,7 @@ public class IdentityVerificationService {
             if (notBlank(request.getDevise()))         v.setDevise(request.getDevise());
         }
         v.setStatut(Boolean.TRUE.equals(request.getResultatVerification())
-                ? VerificationStatus.VERIFIED
+                ? VerificationStatus.RESPOND_SEND
                 : VerificationStatus.FAILED);
         repository.save(v);
 
