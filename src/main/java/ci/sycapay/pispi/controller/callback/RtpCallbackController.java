@@ -151,7 +151,11 @@ public class RtpCallbackController {
         if (statut == null) statut = str(payload, "statutDemandePaiement");
         final String finalStatut = statut;
 
-        rtpRepository.findByEndToEndId(endToEndId).ifPresent(rtp -> {
+        // PAIN.014 is the response to a PAIN.013 we initiated → OUTBOUND row.
+        // Direction-scoped lookup avoids NonUniqueResultException when a
+        // self-loop or multi-tenant deployment has both legs persisted under
+        // the same endToEndId.
+        rtpRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(rtp -> {
             if ("RJCT".equalsIgnoreCase(finalStatut)) {
                 rtp.setStatut(RtpStatus.RJCT);
             }

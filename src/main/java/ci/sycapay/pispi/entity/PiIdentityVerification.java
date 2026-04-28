@@ -12,7 +12,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pi_identity_verification")
+@Table(
+        name = "pi_identity_verification",
+        // Composite unique on (end_to_end_id, direction) — see V42 migration.
+        // Allows OUTBOUND/INBOUND coexistence for ACMT.023 self-loop sandbox
+        // et déploiements multi-tenant (deux PI gérés par cette plateforme).
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_verif_e2e",
+                columnNames = {"end_to_end_id", "direction"}
+        )
+)
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -25,7 +34,7 @@ public class PiIdentityVerification {
     @Column(name = "msg_id", nullable = false, length = 35)
     private String msgId;
 
-    @Column(name = "end_to_end_id", unique = true, nullable = false, length = 35)
+    @Column(name = "end_to_end_id", nullable = false, length = 35)
     private String endToEndId;
 
     @Enumerated(EnumType.STRING)

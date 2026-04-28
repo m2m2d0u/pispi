@@ -538,7 +538,11 @@ public class TransactionService {
         // "Confirmer transfert", "Accepter RTP entrant" AND "Accepter RTP sortant
         // sens crédit": when we initiated the PAIN.013 as creditor (direction=OUTBOUND)
         // the debtor confirms acceptance here, triggering the PACS.008 payment to us).
-        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
+        // Direction-agnostic lookup — covers both branches (INBOUND for "accept
+        // an inbound RTP" and OUTBOUND for "accept the credit-side of an RTP we
+        // initiated"). The composite unique (V42) means both legs may exist
+        // when the deux participants sont sur cette plateforme.
+        PiRequestToPay rtp = rtpRepository.findFirstByEndToEndIdOrderByIdDesc(endToEndId)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", endToEndId));
         return confirmRtpAcceptance(rtp, cmd);
     }

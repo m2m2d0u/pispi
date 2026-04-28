@@ -95,7 +95,11 @@ public class RequestToPayService {
     }
 
     public RequestToPayResponse getRtp(String endToEndId) {
-        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
+        // Direction-agnostic public lookup. With the composite unique on
+        // (end_to_end_id, direction) (V42), both legs may legitimately exist
+        // locally — return the most recent one. Callers needing direction
+        // precision should use the targeted endpoints (/incoming/{id}/...).
+        PiRequestToPay rtp = rtpRepository.findFirstByEndToEndIdOrderByIdDesc(endToEndId)
                 .orElseThrow(() -> new ResourceNotFoundException("RTP", endToEndId));
         return toResponse(rtp);
     }
@@ -112,7 +116,10 @@ public class RequestToPayService {
      */
     @Transactional
     public RequestToPayResponse rejectRtp(String endToEndId, String codeRaison) {
-        PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
+        // Rejection of an inbound RTP — we are the débiteur (payeur), the
+        // matching local row was created by the PAIN.013 callback (INBOUND).
+        PiRequestToPay rtp = rtpRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("RTP", endToEndId));
 
         String codeMembre = properties.getCodeMembre();
@@ -751,6 +758,7 @@ public class RequestToPayService {
                 .statut(rtp.getStatut())
                 .messageDirection(rtp.getDirection())
                 .codeRaison(rtp.getCodeRaison())
+                .detailEchec(rtp.getDetailEchec())
                 .montant(rtp.getMontant())
                 .codeMembreParticipantPayeur(rtp.getCodeMembrePayeur())
                 .codeMembreParticipantPaye(rtp.getCodeMembrePaye())

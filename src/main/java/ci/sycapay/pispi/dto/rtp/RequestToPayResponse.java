@@ -20,6 +20,8 @@ public class RequestToPayResponse {
     private String identifiantDemandePaiement;
     private RtpStatus statut;
     private String codeRaison;
+    /** Free-text rejection detail surfaced by the AIP (V43, complements codeRaison). */
+    private String detailEchec;
     private BigDecimal montant;
     private String codeMembreParticipantPayeur;
     private String codeMembreParticipantPaye;

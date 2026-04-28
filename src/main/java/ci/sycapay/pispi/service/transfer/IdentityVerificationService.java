@@ -95,7 +95,10 @@ public class IdentityVerificationService {
     }
 
     public IdentityVerificationResponse getVerification(String endToEndId) {
-        PiIdentityVerification v = repository.findByEndToEndId(endToEndId)
+        // Direction-agnostic public lookup. Composite unique on
+        // (end_to_end_id, direction) (V42) means both legs may exist locally —
+        // return the most recent.
+        PiIdentityVerification v = repository.findFirstByEndToEndIdOrderByIdDesc(endToEndId)
                 .orElseThrow(() -> new ResourceNotFoundException("Verification", endToEndId));
         return toResponse(v);
     }
@@ -108,7 +111,9 @@ public class IdentityVerificationService {
     @Transactional
     public IdentityVerificationResponse respond(String endToEndId,
                                                 IdentityVerificationRespondRequest request) {
-        PiIdentityVerification v = repository.findByEndToEndId(endToEndId)
+        // Responding to an inbound ACMT.023 — the local row is INBOUND.
+        PiIdentityVerification v = repository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Verification", endToEndId));
 
         // When the caller supplies an endToEndSearch, resolve the client identity

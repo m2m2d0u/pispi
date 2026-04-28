@@ -97,7 +97,8 @@ public class VerificationCallbackController {
         messageLogService.log(msgId, endToEndId, IsoMessageType.ACMT_024,
                 MessageDirection.INBOUND, payload, 202, null);
 
-        repository.findByEndToEndId(endToEndId).ifPresent(v -> {
+        // ACMT.024 is the response to a verification we initiated → OUTBOUND row.
+        repository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(v -> {
             Boolean result = parseBoolean(payload.get("resultatVerification"));
             v.setResultatVerification(result);
             v.setCodeRaison(str(payload, "codeRaison"));

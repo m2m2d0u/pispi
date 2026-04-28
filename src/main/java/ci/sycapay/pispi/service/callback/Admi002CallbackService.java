@@ -180,21 +180,27 @@ public class Admi002CallbackService {
 
     private boolean applyToRtp(String endToEndId, String codeRaison, String detail) {
         if (endToEndId == null) return false;
-        return rtpRepository.findByEndToEndId(endToEndId)
+        // ADMI.002 = AIP rejection of a message we originated → OUTBOUND row.
+        return rtpRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .map(rtp -> {
                     rtp.setStatut(RtpStatus.RJCT);
                     rtp.setCodeRaison(codeRaison != null ? codeRaison : "AIP_ERR");
+                    // Free-text rejection detail (V43) — kept alongside the
+                    // strict codeRaison so the backend can surface what the
+                    // AIP actually said.
+                    rtp.setDetailEchec(detail);
                     rtpRepository.save(rtp);
                     return true;
                 }).orElseGet(() -> {
-                    log.warn("ADMI.002 for RTP: no local row found (endToEndId={})", endToEndId);
+                    log.warn("ADMI.002 for RTP: no local OUTBOUND row found (endToEndId={})", endToEndId);
                     return false;
                 });
     }
 
     private boolean applyToVerification(String endToEndId, String codeRaison, String detail) {
         if (endToEndId == null) return false;
-        return verificationRepository.findByEndToEndId(endToEndId)
+        // ADMI.002 rejects a verification we initiated → OUTBOUND row.
+        return verificationRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .map(v -> {
                     v.setStatut(VerificationStatus.FAILED);
                     v.setCodeRaison(codeRaison);
@@ -202,7 +208,7 @@ public class Admi002CallbackService {
                     verificationRepository.save(v);
                     return true;
                 }).orElseGet(() -> {
-                    log.warn("ADMI.002 for verification: no local row found (endToEndId={})",
+                    log.warn("ADMI.002 for verification: no local OUTBOUND row found (endToEndId={})",
                             endToEndId);
                     return false;
                 });

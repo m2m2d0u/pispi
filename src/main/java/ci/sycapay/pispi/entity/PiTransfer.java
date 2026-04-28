@@ -8,7 +8,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pi_transfer")
+@Table(
+        name = "pi_transfer",
+        // Composite unique on (end_to_end_id, direction) — see V42 migration.
+        // Allows OUTBOUND/INBOUND coexistence (self-loop sandbox + multi-tenant
+        // entre deux participants gérés par cette plateforme).
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_transfer_e2e",
+                columnNames = {"end_to_end_id", "direction"}
+        )
+)
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -22,7 +31,7 @@ public class PiTransfer {
     @Column(name = "msg_id", nullable = false, length = 35)
     private String msgId;
 
-    @Column(name = "end_to_end_id", unique = true, nullable = false, length = 35)
+    @Column(name = "end_to_end_id", nullable = false, length = 35)
     private String endToEndId;
 
     @Enumerated(EnumType.STRING)

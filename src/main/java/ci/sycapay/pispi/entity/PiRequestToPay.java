@@ -8,7 +8,17 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pi_request_to_pay")
+@Table(
+        name = "pi_request_to_pay",
+        // Composite unique on (end_to_end_id, direction) — see V42 migration.
+        // Keeps idempotence within a direction while letting the OUTBOUND row
+        // (PI émetteur) and INBOUND row (PI récepteur, ou self-loop sandbox)
+        // coexister avec le même endToEndId.
+        uniqueConstraints = @UniqueConstraint(
+                name = "idx_rtp_e2e",
+                columnNames = {"end_to_end_id", "direction"}
+        )
+)
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
@@ -21,7 +31,7 @@ public class PiRequestToPay {
     @Column(name = "msg_id", nullable = false, length = 35)
     private String msgId;
 
-    @Column(name = "end_to_end_id", unique = true, nullable = false, length = 35)
+    @Column(name = "end_to_end_id", nullable = false, length = 35)
     private String endToEndId;
 
     @Column(name = "identifiant_demande_paiement", length = 35)
@@ -227,6 +237,16 @@ public class PiRequestToPay {
 
     @Column(name = "code_raison", length = 10)
     private String codeRaison;
+
+    /**
+     * Free-text rejection detail (V43). The strict {@code codeRaison} column
+     * carries a 4-char BCEAO code ({@code [A-Z]{2}\d{2}}) which is too narrow
+     * for AIP error messages — we keep the human-readable detail here for
+     * diagnostics. Mirrors {@code pi_transfer.detail_echec} (V39) and
+     * {@code pi_identity_verification.detail_echec} (V40).
+     */
+    @Column(name = "detail_echec", length = 500)
+    private String detailEchec;
 
     @Column(name = "msg_id_reponse", length = 35)
     private String msgIdReponse;

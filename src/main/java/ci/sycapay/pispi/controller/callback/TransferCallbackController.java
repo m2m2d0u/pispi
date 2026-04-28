@@ -124,7 +124,11 @@ public class TransferCallbackController {
             transferRepository.save(transfer);
 
             // If this PACS.002 finalises an RTP acceptance, advance the RTP out of PREVALIDATION.
-            rtpRepository.findByEndToEndId(endToEndId)
+            // Direction-agnostic best-effort — works in single-tenant (only one
+            // leg exists locally) and in multi-tenant / self-loop where both
+            // legs share the endToEndId; the PREVALIDATION filter ensures we
+            // only touch the one currently mid-flight.
+            rtpRepository.findFirstByEndToEndIdOrderByIdDesc(endToEndId)
                     .filter(rtp -> rtp.getStatut() == RtpStatus.PREVALIDATION)
                     .ifPresent(rtp -> {
                         boolean accepted = ts == TransferStatus.ACCC || ts == TransferStatus.ACSC;
