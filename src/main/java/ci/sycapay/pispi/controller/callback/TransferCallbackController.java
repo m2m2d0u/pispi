@@ -8,6 +8,7 @@ import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
+import ci.sycapay.pispi.service.callback.Admi002CallbackService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,7 @@ public class TransferCallbackController {
     private final PiRequestToPayRepository rtpRepository;
     private final WebhookService webhookService;
     private final PiSpiProperties properties;
+    private final Admi002CallbackService admi002CallbackService;
 
     @Operation(summary = "Receive inbound transfer (PACS.008)", description = "Called by the AIP when another participant sends a credit transfer to this PI. Saves the transfer locally and forwards a webhook event to the backend.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = VirementCallbackPayload.class)))
@@ -210,19 +212,19 @@ public class TransferCallbackController {
         }
     }
 
-    @Operation(summary = "Receive message rejection (ADMI.002)", description = "Called by the AIP when a previously submitted message is structurally rejected. Logs the rejection and fires a MESSAGE_REJECTED webhook event.")
+    @Operation(summary = "Receive message rejection (ADMI.002)",
+            description = "Called by the AIP when a previously submitted PACS.008 / PACS.002 / "
+                    + "PACS.028 is structurally rejected. Delegates to Admi002CallbackService "
+                    + "which marks the originating transfer as ECHEC, reverts any linked RTP "
+                    + "from PREVALIDATION to PENDING (so the débiteur peut retenter avec des "
+                    + "données corrigées), and fires a MESSAGE_REJECTED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RejetCallbackPayload.class)))
     @PostMapping("/transferts/echecs")
     public ResponseEntity<Void> receiveRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         log.debug("ADMI.002 received raw payload: {}", payload);
-        String msgId = (String) payload.get("msgId");
-        if (msgId == null) msgId = (String) payload.get("reference");
-
-        log.warn("ADMI.002 rejection received [msgId={}]", msgId);
-        if (msgId != null && messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
-        if (msgId != null) messageLogService.log(msgId, null, IsoMessageType.ADMI_002, MessageDirection.INBOUND, payload, 202, null);
-
-        webhookService.notify(WebhookEventType.MESSAGE_REJECTED, null, msgId, payload);
+        // PACS_008 hint pour que le service route directement vers
+        // {@code applyToTransfer} sans détour par {@code pi_message_log}.
+        admi002CallbackService.handleRejection(payload, IsoMessageType.PACS_008);
         return ResponseEntity.accepted().build();
     }
 }

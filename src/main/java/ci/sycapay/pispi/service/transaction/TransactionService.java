@@ -613,6 +613,24 @@ public class TransactionService {
                 ? CanalCommunication.fromCode(rtp.getCanalCommunication().getCode())
                 : null;
 
+        // BCEAO : « La localisation du client payeur est obligatoire pour les
+        // canaux '731', '633', '000', '400', '500', '521', '520', '631' et
+        // '401'. » Le payeur (= nous, le débiteur qui accepte le RTP) doit
+        // donc fournir lat/lon dans le {@code TransactionConfirmCommand} —
+        // typiquement la GPS capturée au moment du PIN/biométrie côté mobile.
+        // On rejette en local plutôt que d'attendre l'ADMI.002 (le retry
+        // depuis PREVALIDATION coûte un round-trip AIP inutile).
+        if (canal != null && CANALS_REQUIRING_LOCALISATION.contains(canal)
+                && (cmd.getLatitude() == null || cmd.getLongitude() == null)) {
+            throw new IllegalArgumentException(
+                    "Localisation du payeur obligatoire pour le canal " + canal.name()
+                            + " (" + canal.getCode() + "). Renseigner 'latitude' et "
+                            + "'longitude' dans le corps de l'acceptation (capture GPS "
+                            + "au moment du PIN/biométrie côté mobile). Sans cela, "
+                            + "l'AIP rejette le PACS.008 avec ADMI.002 \"La localisation "
+                            + "du client payeur est obligatoire pour les canaux ...\".");
+        }
+
         PiTransfer transfer = PiTransfer.builder()
                 .msgId(newMsgId)
                 .endToEndId(rtp.getEndToEndId())

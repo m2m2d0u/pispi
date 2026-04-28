@@ -571,7 +571,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1\n}",
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.3600,\n  \"longitude\": -4.0083\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -608,7 +608,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1\n}",
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.3600,\n  \"longitude\": -4.0083\n}",
               "options": {
                 "raw": {
                   "language": "json"

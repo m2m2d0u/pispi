@@ -123,7 +123,7 @@ public class PiTransfer {
     @Column(name = "statut", nullable = false)
     private TransferStatus statut;
 
-    @Column(name = "code_raison", length = 10)
+    @Column(name = "code_raison", length = 50)
     private String codeRaison;
 
     @Column(name = "detail_echec", length = 500)

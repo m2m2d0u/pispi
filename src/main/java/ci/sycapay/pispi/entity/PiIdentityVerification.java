@@ -74,7 +74,7 @@ public class PiIdentityVerification {
     @Column(name = "resultat_verification")
     private Boolean resultatVerification;
 
-    @Column(name = "code_raison", length = 4)
+    @Column(name = "code_raison", length = 50)
     private String codeRaison;
 
     @Column(name = "detail_echec", length = 500)

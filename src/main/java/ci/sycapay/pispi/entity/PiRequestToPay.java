@@ -235,7 +235,7 @@ public class PiRequestToPay {
     @Column(name = "statut", nullable = false)
     private RtpStatus statut;
 
-    @Column(name = "code_raison", length = 10)
+    @Column(name = "code_raison", length = 50)
     private String codeRaison;
 
     /**

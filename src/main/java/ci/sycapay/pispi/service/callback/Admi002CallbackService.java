@@ -83,12 +83,25 @@ public class Admi002CallbackService {
             return;
         }
 
-        String msgId = str(payload, "msgId");
+        // BCEAO ADMI.002 carries the rejected message id under several names
+        // depending on the endpoint variant : {@code msgId} on the strict
+        // schema, {@code reference} on certains payloads pacs.008/echecs, and
+        // {@code msgIdDemande} when the rejection echoes a question/réponse
+        // coupling. We try them in order so the lookup against
+        // {@code pi_message_log} finds the original outbound row.
+        String msgId = firstNonNull(
+                str(payload, "msgId"),
+                str(payload, "reference"),
+                str(payload, "msgIdDemande"));
 
         String endToEndId = str(payload, "endToEndId");
         String codeRaison = firstNonNull(str(payload, "codeRaisonRejet"),
                                          str(payload, "codeRaison"));
+        // {@code descriptionRaisonRejet} (avec « Raison ») est la forme retournée
+        // par certains chemins ADMI.002 BCEAO ; on garde aussi
+        // {@code descriptionRejet} et {@code detailEchec} pour les variantes.
         String detail = firstNonNull(str(payload, "detailEchec"),
+                                     str(payload, "descriptionRaisonRejet"),
                                      str(payload, "descriptionRejet"));
         String fullDetail = codeRaison != null && detail != null
                 ? codeRaison + " — " + detail
@@ -178,6 +191,35 @@ public class Admi002CallbackService {
             t.setCodeRaison(codeRaison != null ? codeRaison : "AIP_ERR");
             t.setDetailEchec(detail);
             transferRepository.save(t);
+
+            // Si ce transfer était l'acceptation d'un RTP (V32 link
+            // {@code rtp_end_to_end_id}), on revert le RTP de PREVALIDATION
+            // vers PENDING — le RTP lui-même n'est pas mort, seul le PACS.008
+            // d'acceptation a été rejeté pour une raison correctable (ex:
+            // localisation manquante). Le débiteur peut retenter l'acceptation
+            // avec les données corrigées.
+            String rtpE2e = t.getRtpEndToEndId();
+            if (rtpE2e != null) {
+                rtpRepository.findByEndToEndIdAndDirection(rtpE2e, MessageDirection.INBOUND)
+                        .or(() -> rtpRepository.findByEndToEndIdAndDirection(
+                                rtpE2e, MessageDirection.OUTBOUND))
+                        .ifPresent(rtp -> {
+                            if (rtp.getStatut() != null && rtp.getStatut().isTerminal()) {
+                                log.warn("ADMI.002 → RTP en statut terminal, pas de revert "
+                                        + "[rtpEndToEndId={}, statut={}]",
+                                        rtpE2e, rtp.getStatut());
+                                return;
+                            }
+                            if (rtp.getStatut() == RtpStatus.PREVALIDATION) {
+                                rtp.setStatut(RtpStatus.PENDING);
+                                rtp.setDetailEchec(detail);
+                                rtpRepository.save(rtp);
+                                log.info("RTP {} reverted PREVALIDATION → PENDING "
+                                        + "(PACS.008 d'acceptation échoué, retry possible) "
+                                        + "[detailEchec={}]", rtpE2e, detail);
+                            }
+                        });
+            }
             return true;
         }).orElseGet(() -> {
             log.warn("ADMI.002 for transfer: no local row found (msgId={}, endToEndId={})",
@@ -328,7 +370,11 @@ public class Admi002CallbackService {
         return s.isBlank() ? null : s;
     }
 
-    private static String firstNonNull(String a, String b) {
-        return a != null ? a : b;
+    private static String firstNonNull(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (v != null) return v;
+        }
+        return null;
     }
 }
