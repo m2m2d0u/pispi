@@ -10,6 +10,7 @@ import ci.sycapay.pispi.enums.CanalCommunicationRtp;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.RtpStatus;
+import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.TypeCompte;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
@@ -312,13 +313,28 @@ public class RequestToPayService {
         p.put("deviseCompteClientPayeur", "XOF");
         putIfNotBlank(p, "aliasClientPayeur", payeur.aliasValue());
         putIfNotBlank(p, "codeMembreParticipantPayeur", payeur.codeMembre());
-        // Type C commercial IDs: prefer resolved from RAC_SEARCH, fall back to caller override
-        String idFiscCommPayeur = payeur.identificationFiscaleCommercant() != null
-                ? payeur.identificationFiscaleCommercant()
-                : request.getIdentificationFiscaleCommercantPayeur();
-        if (idFiscCommPayeur != null) {
-            p.put("identificationFiscaleCommercantPayeur", idFiscCommPayeur);
-        } else if (payeur.identificationRccm() != null) {
+        // identificationFiscaleCommercant maps to <Dbtr>/<Id>/<OrgId>/<Othr> —
+        // the SAME XSD path as numeroIdentificationClientPayeur. BCEAO restricted
+        // schema caps Othr at maxOccurs=1 inside OrgId, so emitting both for a
+        // type B/G client triggers "Element 'Othr': not expected" (we hit this
+        // on PACS.008 and fixed it in ClientSearchResolver — same rule applies
+        // to PAIN.013). For B/G the fiscal IS the primary numeroIdentification
+        // (TXID), so skip the duplicate; only type C carries a distinct
+        // commercial fiscal ID alongside its NIDN primary.
+        TypeClient payeurTypeClient = payeurInfo.getTypeClient();
+        boolean payeurIsBG = payeurTypeClient == TypeClient.B || payeurTypeClient == TypeClient.G;
+        if (!payeurIsBG) {
+            String idFiscCommPayeur = payeur.identificationFiscaleCommercant() != null
+                    ? payeur.identificationFiscaleCommercant()
+                    : request.getIdentificationFiscaleCommercantPayeur();
+            if (idFiscCommPayeur != null) {
+                p.put("identificationFiscaleCommercantPayeur", idFiscCommPayeur);
+            } else if (payeur.identificationRccm() != null) {
+                p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
+            }
+        } else if (payeur.identificationRccm() != null
+                && payeurInfo.getIdentifiant() == null) {
+            // B/G with RCCM only (no fiscal) — RCCM becomes the sole identifier
             p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
         }
 
@@ -346,12 +362,21 @@ public class RequestToPayService {
         p.put("typeCompteClientPaye", paye.typeCompte().name());
         p.put("deviseCompteClientPaye", "XOF");
         putIfNotBlank(p, "aliasClientPaye", paye.aliasValue());
-        String idFiscCommPaye = paye.identificationFiscaleCommercant() != null
-                ? paye.identificationFiscaleCommercant()
-                : request.getIdentificationFiscaleCommercantPaye();
-        if (idFiscCommPaye != null) {
-            p.put("identificationFiscaleCommercantPaye", idFiscCommPaye);
-        } else if (paye.identificationRccm() != null) {
+        // Same dedup as payeur: skip identificationFiscaleCommercant for B/G
+        // (numeroIdentification already carries it) — see header comment above.
+        TypeClient payeTypeClient = payeInfo.getTypeClient();
+        boolean payeIsBG = payeTypeClient == TypeClient.B || payeTypeClient == TypeClient.G;
+        if (!payeIsBG) {
+            String idFiscCommPaye = paye.identificationFiscaleCommercant() != null
+                    ? paye.identificationFiscaleCommercant()
+                    : request.getIdentificationFiscaleCommercantPaye();
+            if (idFiscCommPaye != null) {
+                p.put("identificationFiscaleCommercantPaye", idFiscCommPaye);
+            } else if (paye.identificationRccm() != null) {
+                p.put("numeroRCCMClientPaye", paye.identificationRccm());
+            }
+        } else if (paye.identificationRccm() != null
+                && payeInfo.getIdentifiant() == null) {
             p.put("numeroRCCMClientPaye", paye.identificationRccm());
         }
 
