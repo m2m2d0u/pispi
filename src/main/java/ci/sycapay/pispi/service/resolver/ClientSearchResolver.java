@@ -263,8 +263,13 @@ public class ClientSearchResolver {
         }
 
         log.info("Client {} résolu depuis le log de recherche [endToEndId={}]", side, endToEndIdSearch);
+        // {@code endToEndIdSearch} is propagated to the caller so it can reuse
+        // it as the {@code endToEndId} of the downstream PAIN.013 / PACS.008,
+        // per BCEAO spec : "Le EndToEndId généré au moment de la recherche
+        // d'alias est utilisé dans le pain.013 [/ pacs.008]".
         return new ResolvedClient(builder.build(), other, iban, typeCompte, valeurAlias,
-                codeMembreParticipant, identificationFiscaleCommercant, identificationRccm);
+                codeMembreParticipant, endToEndIdSearch,
+                identificationFiscaleCommercant, identificationRccm);
     }
 
     private static String str(Map<String, Object> map, String key) {

@@ -1712,6 +1712,69 @@
           }
         },
         {
+          "name": "Accepter un PACS.008 entrant (POST /transferts/incoming/{id}/accept)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/incoming/{{incomingEndToEndId}}/accept",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "accept"
+              ]
+            },
+            "description": "Émet un **PACS.002** avec `statutTransaction=ACCC` vers l'AIP en réponse à un PACS.008 reçu (nous sommes le payé). La ligne `pi_transfer` INBOUND passe de PEND à ACCC et porte la `dateHeureIrrevocabilite` du moment.\n\nBCEAO §4.3 : *« Un participant payé reçoit un ordre de transfert de fonds (pacs.008) et doit retourner un pacs.002 qui précisera à PI le traitement à faire. »*\n\nPré-requis : ligne PACS.008 entrante en statut PEND. Le backend doit avoir crédité (ou réservé) le compte du payé avant d'appeler cet endpoint."
+          }
+        },
+        {
+          "name": "Rejeter un PACS.008 entrant (POST /transferts/incoming/{id}/reject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/incoming/{{incomingEndToEndId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "incoming",
+                "{{incomingEndToEndId}}",
+                "reject"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codeRaison\": \"AC01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Émet un **PACS.002** avec `statutTransaction=RJCT` + `codeRaison` (pattern BCEAO `[A-Z]{2}\\d{2}`) vers l'AIP. La ligne `pi_transfer` INBOUND passe en RJCT.\n\nCodes typiques :\n- `AC01` — Compte du créditeur introuvable\n- `AC04` — Compte du créditeur clôturé\n- `AM04` — Provision insuffisante côté payeur\n- `BE01` — Identité du bénéficiaire incohérente\n- `FR01` — Suspicion de fraude\n- `MS03` — Raison non spécifiée"
+          }
+        },
+        {
           "name": "Retourner les fonds d'un transfert reçu (PUT /transferts/{id}/retours)",
           "request": {
             "method": "PUT",
@@ -1733,7 +1796,8 @@
                 "{{incomingEndToEndId}}",
                 "retours"
               ]
-            }
+            },
+            "description": "Émet un **PACS.004** (retour de fonds) pour un transfert qui nous a été crédité par erreur. À utiliser **après** acceptation initiale via `POST /transferts/incoming/{id}/accept` — pas en remplacement du PACS.002 de rejet."
           }
         },
         {

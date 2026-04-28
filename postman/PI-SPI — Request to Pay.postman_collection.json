@@ -592,7 +592,7 @@
                 "accept"
               ]
             },
-            "description": "Accepte une demande de paiement entrante (PAIN.013 reçu en INBOUND) — nous sommes le **débiteur (payeur)**. Émet immédiatement un PACS.008 vers l'AIP et passe le RTP en PREVALIDATION.\n\n**montant** doit correspondre exactement au montant de la demande (ou montant net après remise)."
+            "description": "Accepte une demande de paiement entrante (PAIN.013 reçu en INBOUND) — nous sommes le **débiteur (payeur)**. Émet immédiatement un PACS.008 vers l'AIP et passe le RTP en PREVALIDATION.\n\n**Direction-aware** : cet endpoint épingle explicitement la ligne RTP `direction=INBOUND`. Avec la contrainte composite `(end_to_end_id, direction)` (V42), un même `endToEndId` peut désigner deux lignes (OUTBOUND chez le créditeur + INBOUND chez le débiteur, en cas de multi-tenant ou self-loop) — ce route force le bon côté.\n\nContraste avec `PUT /api/v1/transferts/{id}` qui reste direction-agnostic (compatible avec le flow mobile-remote BCEAO universel).\n\n**montant** doit correspondre exactement au montant de la demande (ou montant net après remise)."
           },
           "response": []
         },

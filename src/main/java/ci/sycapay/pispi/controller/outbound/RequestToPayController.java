@@ -62,13 +62,16 @@ public class RequestToPayController {
 
     @Operation(summary = "Accepter une demande de paiement entrante",
                description = "Confirme l'acceptation d'un RTP reçu (biométrie ou PIN). "
-                       + "Émet immédiatement un PACS.008 vers l'AIP et fait passer le RTP en statut ACCEPTED. "
-                       + "Identique au flux PUT /api/v1/transferts/{id} pour les RTP entrants.")
+                       + "Émet immédiatement un PACS.008 vers l'AIP et fait passer le RTP en "
+                       + "statut PREVALIDATION (puis ACCEPTED après PACS.002 ACSC). "
+                       + "Direction-aware : épingle la ligne INBOUND (contraste avec "
+                       + "PUT /api/v1/transferts/{id} qui est direction-agnostic et utilisé "
+                       + "pour la confirmation d'un transfer initié OU l'acceptation d'un RTP).")
     @PostMapping("/incoming/{endToEndId}/accept")
     public ApiResponse<TransactionResponse> acceptRtp(
             @Parameter(description = "endToEndId de la demande de paiement entrante")
             @PathVariable String endToEndId,
             @Valid @RequestBody TransactionConfirmCommand cmd) {
-        return ApiResponse.ok(transactionService.confirm(endToEndId, cmd));
+        return ApiResponse.ok(transactionService.acceptInboundRtp(endToEndId, cmd));
     }
 }

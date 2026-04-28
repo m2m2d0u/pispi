@@ -124,7 +124,12 @@ public class TransactionService {
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        // BCEAO spec : "Le EndToEndId envoyée lors de la recherche d'alias ou
+        // de la vérification d'identité (Id de la vérification) est le même
+        // que celui du transfert." Nous sommes le payeur (OUTBOUND PACS.008) ;
+        // la RAC_SEARCH que nous avons faite sur le payé porte l'e2e exposé
+        // par le resolver — on le réutilise plutôt que d'en générer un neuf.
+        String endToEndId = paye.endToEndIdSearch();
         String identifiantTransaction = resolveIdentifiantTransaction(
                 canal, request.getTxId(), endToEndId);
 
@@ -437,6 +442,14 @@ public class TransactionService {
 
         String codeMembre = properties.getCodeMembre();
         String childMsgId = IdGenerator.generateMsgId(codeMembre);
+        // TODO(spec §4.2 + spec PACS.008 e2e=RAC_SEARCH e2e) : chaque exécution
+        // d'un planning devrait re-déclencher une RAC_SEARCH sur l'alias du
+        // payé (pas de cache autorisé) et utiliser SON e2e ici. Tant que la
+        // RAC_SEARCH n'est pas relancée par le scheduler, on génère un e2e
+        // neuf — le PACS.008 résultant n'aura pas de RAC_SEARCH parente
+        // traceable côté AIP. À corriger en intégrant un appel
+        // {@link ClientSearchResolver#resolveByAlias} ici (qui re-déclenche
+        // une RAC_SEARCH si rien de récent n'est en log).
         String childEndToEndId = IdGenerator.generateEndToEndId(codeMembre);
         // Each execution is its own transaction — generate a fresh identifiant-
         // Transaction per child (the parent recipe never had one, by design).
@@ -799,6 +812,138 @@ public class TransactionService {
     }
 
     // ------------------------------------------------------------------------
+    // Inbound RTP — accept (émet PACS.008 d'acceptation)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Accepter une demande de paiement <strong>entrante</strong> (PAIN.013
+     * reçu en INBOUND). Nous sommes le débiteur ; on émet immédiatement le
+     * PACS.008 vers l'AIP et la ligne RTP locale passe en PREVALIDATION.
+     *
+     * <p>Variante direction-aware de {@link #confirm(String, TransactionConfirmCommand)}
+     * — utilisée par {@code POST /api/v1/rtp/incoming/{e2e}/accept} pour lever
+     * l'ambiguïté en multi-tenant : avec la contrainte composite V42, deux
+     * lignes peuvent partager le même {@code endToEndId} (l'OUTBOUND du PI
+     * créditeur et l'INBOUND du PI débiteur, tous deux gérés par cette
+     * plateforme). Le {@code findFirst...OrderByIdDesc} générique de
+     * {@link #confirm} retournerait n'importe laquelle des deux ; ici on
+     * épingle explicitement la ligne INBOUND, qui est la seule sémantiquement
+     * correcte pour l'opération « accepter une demande reçue ».
+     */
+    @Transactional
+    public TransactionResponse acceptInboundRtp(String endToEndId, TransactionConfirmCommand cmd) {
+        PiRequestToPay rtp = rtpRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
+                .orElseThrow(() -> new ResourceNotFoundException("RTP entrant", endToEndId));
+        return confirmRtpAcceptance(rtp, cmd);
+    }
+
+    // ------------------------------------------------------------------------
+    // Inbound PACS.008 — accept / reject (émission PACS.002)
+    // ------------------------------------------------------------------------
+
+    /**
+     * Accepter un PACS.008 reçu (nous sommes le payé). Émet un PACS.002 avec
+     * {@code statutTransaction=ACCC} vers {@code POST /transferts/reponses} et
+     * fait avancer la ligne locale {@code pi_transfer} INBOUND de PEND à ACCC.
+     *
+     * <p>BCEAO §4.3 : « Un participant payé reçoit un ordre de transfert de
+     * fonds (pacs.008) et doit retourner un pacs.002 qui précisera à PI le
+     * traitement à faire pour ce transfert. »
+     *
+     * <p>Sémantique « réserver puis débiter » : à l'acceptation (ici), le
+     * backend réserve les fonds chez le payé / crédite le compte (selon
+     * politique). Le débit effectif côté PAYEUR n'arrivera qu'à la réception
+     * du PACS.002 d'avis de débit du côté payeur — ce n'est pas notre
+     * problème ici, on ne fait que confirmer la réception du transfert.
+     */
+    @Transactional
+    public TransactionResponse acceptIncomingTransfer(String endToEndId) {
+        PiTransfer transfer = transferRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Transfert entrant", endToEndId));
+
+        if (transfer.getStatut() != TransferStatus.PEND) {
+            throw new InvalidStateException(
+                    "Le transfert entrant " + endToEndId + " est en statut "
+                            + transfer.getStatut() + " — seules les lignes PEND "
+                            + "(en attente de réponse) peuvent être acceptées.");
+        }
+
+        String codeMembre = properties.getCodeMembre();
+        String msgId = IdGenerator.generateMsgId(codeMembre);
+        String dateHeureIrrevocabilite = nowIso();
+
+        Map<String, Object> pacs002 = new HashMap<>();
+        pacs002.put("msgId", msgId);
+        pacs002.put("msgIdDemande", transfer.getMsgId());
+        pacs002.put("endToEndId", endToEndId);
+        pacs002.put("statutTransaction", TransferStatus.ACCC.name());
+        pacs002.put("dateHeureIrrevocabilite", dateHeureIrrevocabilite);
+
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002,
+                MessageDirection.OUTBOUND, pacs002, null, null);
+        aipClient.post("/transferts/reponses", pacs002);
+
+        transfer.setStatut(TransferStatus.ACCC);
+        transfer.setMsgIdReponse(msgId);
+        transfer.setDateHeureIrrevocabilite(LocalDateTime.now(ZoneOffset.UTC));
+        transferRepository.save(transfer);
+
+        log.info("PACS.002 ACCC émis pour transfert entrant [endToEndId={}]", endToEndId);
+        return toResponse(transfer);
+    }
+
+    /**
+     * Rejeter un PACS.008 reçu (nous sommes le payé). Émet un PACS.002 avec
+     * {@code statutTransaction=RJCT} et un {@code codeRaison} conforme au
+     * pattern BCEAO. Fait passer la ligne locale {@code pi_transfer} INBOUND
+     * de PEND à RJCT.
+     *
+     * <p>Codes typiques : AC01 (compte introuvable), AC04 (compte clôturé),
+     * BE01 (identité incohérente), FR01 (fraude), MS03 (raison non spécifiée).
+     */
+    @Transactional
+    public TransactionResponse rejectIncomingTransfer(String endToEndId,
+                                                     IncomingTransferRejectCommand cmd) {
+        PiTransfer transfer = transferRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Transfert entrant", endToEndId));
+
+        if (transfer.getStatut() != TransferStatus.PEND) {
+            throw new InvalidStateException(
+                    "Le transfert entrant " + endToEndId + " est en statut "
+                            + transfer.getStatut() + " — seules les lignes PEND "
+                            + "peuvent être rejetées.");
+        }
+
+        String codeMembre = properties.getCodeMembre();
+        String msgId = IdGenerator.generateMsgId(codeMembre);
+
+        Map<String, Object> pacs002 = new HashMap<>();
+        pacs002.put("msgId", msgId);
+        pacs002.put("msgIdDemande", transfer.getMsgId());
+        pacs002.put("endToEndId", endToEndId);
+        pacs002.put("statutTransaction", TransferStatus.RJCT.name());
+        pacs002.put("codeRaison", cmd.getCodeRaison());
+
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002,
+                MessageDirection.OUTBOUND, pacs002, null, null);
+        aipClient.post("/transferts/reponses", pacs002);
+
+        transfer.setStatut(TransferStatus.RJCT);
+        transfer.setCodeRaison(cmd.getCodeRaison());
+        transfer.setMsgIdReponse(msgId);
+        transferRepository.save(transfer);
+
+        log.info("PACS.002 RJCT émis pour transfert entrant [endToEndId={}, codeRaison={}]",
+                endToEndId, cmd.getCodeRaison());
+        return toResponse(transfer);
+    }
+
+    // ------------------------------------------------------------------------
     // Helpers — canal & validation
     // ------------------------------------------------------------------------
 
@@ -830,7 +975,7 @@ public class TransactionService {
     /**
      * Canals for which the BCEAO AIP requires {@code identifiantTransaction}
      * on the PACS.008 payload. Matches the rejection message
-     * <em>"TransactionIdentification est obligatoire lorsqu'il s'agit des
+     * <em>"TransactionIdentificatiKon est obligatoire lorsqu'il s'agit des
      * canaux: '400', '733', '500', '521', '520', '631', '401'"</em>.
      */
     private static final Set<CanalCommunication> CANALS_REQUIRING_IDENTIFIANT_TRANSACTION = Set.of(

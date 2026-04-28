@@ -1,6 +1,7 @@
 package ci.sycapay.pispi.controller.outbound;
 
 import ci.sycapay.pispi.dto.common.ApiResponse;
+import ci.sycapay.pispi.dto.transaction.IncomingTransferRejectCommand;
 import ci.sycapay.pispi.dto.transaction.TransactionCancelCommand;
 import ci.sycapay.pispi.dto.transaction.TransactionConfirmCommand;
 import ci.sycapay.pispi.dto.transaction.TransactionInitiationRequest;
@@ -124,5 +125,29 @@ public class TransactionController {
             @Parameter(description = "endToEndId du planning") @PathVariable("id") String id) {
         transactionService.deactivate(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Accepter un PACS.008 entrant (émet PACS.002 ACCC)",
+            description = "BCEAO §4.3 : « Un participant payé reçoit un ordre de transfert "
+                    + "(pacs.008) et doit retourner un pacs.002 qui précisera le traitement. » "
+                    + "Cet endpoint émet le PACS.002 d'acceptation pour un transfert entrant en "
+                    + "statut PEND. La ligne locale passe à ACCC et porte la dateHeureIrrevocabilite "
+                    + "du moment de l'acceptation. À appeler par le backend après que le compte "
+                    + "du payé a été crédité.")
+    @PostMapping("/incoming/{id}/accept")
+    public ApiResponse<TransactionResponse> accepterEntrant(
+            @Parameter(description = "endToEndId du transfert entrant") @PathVariable("id") String id) {
+        return ApiResponse.ok(transactionService.acceptIncomingTransfer(id));
+    }
+
+    @Operation(summary = "Rejeter un PACS.008 entrant (émet PACS.002 RJCT)",
+            description = "Émet un PACS.002 de rejet vers l'AIP avec un codeRaison BCEAO "
+                    + "(pattern [A-Z]{2}\\d{2}, ex: AC01, AC04, BE01, FR01, MS03). La ligne "
+                    + "locale passe à RJCT.")
+    @PostMapping("/incoming/{id}/reject")
+    public ApiResponse<TransactionResponse> rejeterEntrant(
+            @Parameter(description = "endToEndId du transfert entrant") @PathVariable("id") String id,
+            @Valid @RequestBody IncomingTransferRejectCommand command) {
+        return ApiResponse.ok(transactionService.rejectIncomingTransfer(id, command));
     }
 }
