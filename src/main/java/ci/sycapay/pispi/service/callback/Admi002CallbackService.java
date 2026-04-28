@@ -210,14 +210,20 @@ public class Admi002CallbackService {
                                         rtpE2e, rtp.getStatut());
                                 return;
                             }
-                            if (rtp.getStatut() == RtpStatus.PREVALIDATION) {
-                                rtp.setStatut(RtpStatus.PENDING);
+//                            if (rtp.getStatut() == RtpStatus.PREVALIDATION) {
+//                                rtp.setStatut(RtpStatus.PENDING);
+//                                rtp.setDetailEchec(detail);
+//                                rtpRepository.save(rtp);
+//                                log.info("RTP {} reverted PREVALIDATION → PENDING "
+//                                        + "(PACS.008 d'acceptation échoué, retry possible) "
+//                                        + "[detailEchec={}]", rtpE2e, detail);
+//                            }
+                            rtp.setStatut(RtpStatus.RJCT);
                                 rtp.setDetailEchec(detail);
                                 rtpRepository.save(rtp);
-                                log.info("RTP {} reverted PREVALIDATION → PENDING "
-                                        + "(PACS.008 d'acceptation échoué, retry possible) "
+                                log.info("RTP {} reverted PREVALIDATION → RJCT "
+                                        + "(PACS.008 d'acceptation échoué) "
                                         + "[detailEchec={}]", rtpE2e, detail);
-                            }
                         });
             }
             return true;

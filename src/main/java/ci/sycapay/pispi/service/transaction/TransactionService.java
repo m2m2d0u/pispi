@@ -857,6 +857,12 @@ public class TransactionService {
         PiRequestToPay rtp = rtpRepository
                 .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("RTP entrant", endToEndId));
+        if (rtp.getStatut().isTerminal()) {
+            log.info("La demande de paiement a atteint une phase terminal.");
+            return transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
+                    .map(this::toResponse)
+                    .orElse(null);
+        }
         return confirmRtpAcceptance(rtp, cmd);
     }
 
@@ -1198,6 +1204,14 @@ public class TransactionService {
         p.put("msgId", t.getMsgId());
         p.put("endToEndId", t.getEndToEndId());
         p.put("canalCommunication", t.getCanalCommunication().getCode());
+        // Identification des deux PSP : sans {@code codeMembreParticipantPayeur}
+        // sur le PACS.008, BCEAO rejette l'acceptation d'un RTP avec
+        // "Les données de la demande de paiement et du transfert ne correspondent
+        // pas" (TransactionNotFound) — le PAIN.013 préalable porte ce champ
+        // (cf. RequestToPayService.buildPain013Payload : codeMembreParticipantPayeur),
+        // l'AIP fait un cross-check sur l'endToEndId partagé.
+        if (t.getCodeMembrePayeur() != null)
+            p.put("codeMembreParticipantPayeur", t.getCodeMembrePayeur());
         p.put("codeMembreParticipantPaye", t.getCodeMembrePaye());
         p.put("montant", t.getMontant().toBigInteger().toString());
         p.put("dateHeureAcceptation", nowIso());
