@@ -17,9 +17,10 @@ import lombok.NoArgsConstructor;
  * Payload for responding to an inbound identity verification request
  * (ACMT.024 — schéma BCEAO {@code IdentiteReponse}).
  *
- * <p>When {@code resultatVerification} is {@code true}, the participant SHOULD
- * return the full client identity (name, account info, identification, etc.).
- * When {@code false}, {@code codeRaison} is required (BCEAO pattern: {@code AC01}).
+ * <p>When {@code resultatVerification} is {@code true}, identity fields are
+ * populated automatically from the stored inbound ACMT.023 (minimal) or from
+ * a prior RAC_SEARCH via {@code endToEndSearch}.
+ * When {@code false}, {@code codeRaison} (BCEAO: {@code AC01}) may be provided.
  */
 @Data
 @Builder
@@ -108,14 +109,6 @@ public class IdentityVerificationRespondRequest {
     // -----------------------------------------------------------------------
     // Cross-field validations
     // -----------------------------------------------------------------------
-
-    @JsonIgnore
-    @AssertTrue(message = "codeRaison is required when resultatVerification is false and must be absent when true")
-    public boolean isCodeRaisonConsistentWithResult() {
-        if (resultatVerification == null) return true;
-        boolean hasCodeRaison = codeRaison != null && !codeRaison.isBlank();
-        return resultatVerification ? !hasCodeRaison : hasCodeRaison;
-    }
 
     @JsonIgnore
     @AssertTrue(message = "At most one of ibanClient / otherClient may be provided")

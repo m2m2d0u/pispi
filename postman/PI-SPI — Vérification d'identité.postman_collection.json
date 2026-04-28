@@ -181,7 +181,7 @@
                   "try {",
                   "    const body = pm.response.json();",
                   "    pm.test('Statut VERIFIED', function () {",
-                  "        pm.expect(body.data.statut).to.equal('RESPOND_SEND');",
+                  "        pm.expect(body.data.statut).to.equal('VERIFIED');",
                   "    });",
                   "} catch (e) { console.log('No JSON body'); }"
                 ]
@@ -231,7 +231,7 @@
                   "try {",
                   "    const body = pm.response.json();",
                   "    pm.test('Statut VERIFIED', function () {",
-                  "        pm.expect(body.data.statut).to.equal('RESPOND_SEND');",
+                  "        pm.expect(body.data.statut).to.equal('VERIFIED');",
                   "    });",
                   "} catch (e) { console.log('No JSON body'); }"
                 ]

@@ -127,7 +127,10 @@ public class IdentityVerificationService {
         acmt024.put("msgId", msgId);
         acmt024.put("msgIdDemande", v.getMsgId());
         acmt024.put("endToEndId", endToEndId);
-        acmt024.put("codeMembreParticipant", codeMembre);
+        // codeMembreParticipant in ACMT.024 maps to Assgne (the original requester),
+        // while the AIP derives Assgnr from our own credentials. Sending our own code
+        // here makes Assgnr == Assgne and triggers "Assgnr doit être différent de Assgne".
+        acmt024.put("codeMembreParticipant", v.getCodeMembreParticipant());
         acmt024.put("resultatVerification", Boolean.toString(Boolean.TRUE.equals(request.getResultatVerification())));
 
         if (Boolean.TRUE.equals(request.getResultatVerification())) {
@@ -186,7 +189,7 @@ public class IdentityVerificationService {
             if (notBlank(request.getDevise()))         v.setDevise(request.getDevise());
         }
         v.setStatut(Boolean.TRUE.equals(request.getResultatVerification())
-                ? VerificationStatus.RESPOND_SEND
+                ? VerificationStatus.VERIFIED
                 : VerificationStatus.FAILED);
         repository.save(v);
 
