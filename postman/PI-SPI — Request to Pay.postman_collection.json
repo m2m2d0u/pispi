@@ -527,10 +527,24 @@
           "response": []
         },
         {
-          "name": "Accepter une demande de paiement entrante",
+          "name": "Accepter une demande de paiement entrante (sens débit)",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/api/v1/rtp/incoming/{{incomingRtpEndToEndId}}/accept",
               "host": [
@@ -545,7 +559,42 @@
                 "accept"
               ]
             },
-            "description": "Marque une demande de paiement entrante comme acceptée (HTTP 202). Le virement de crédit (PACS.008) doit ensuite être initié séparément via `POST /api/v1/transferts` avec `action=send_now` en référençant cet `endToEndId`."
+            "description": "Accepte une demande de paiement entrante (PAIN.013 reçu en INBOUND) — nous sommes le **débiteur (payeur)**. Émet immédiatement un PACS.008 vers l'AIP et passe le RTP en PREVALIDATION.\n\n**montant** doit correspondre exactement au montant de la demande (ou montant net après remise)."
+          },
+          "response": []
+        },
+        {
+          "name": "Accepter un RTP sortant (sens crédit) — via transferts",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{outgoingRtpEndToEndId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{outgoingRtpEndToEndId}}"
+              ]
+            },
+            "description": "Accepte un RTP **sortant** (PAIN.013 émis en OUTBOUND — nous sommes le **créditeur/payé**) depuis la perspective du débiteur. Utilisé lorsque les deux parties sont gérées par ce PI (ex: flow `receive_now` mobile où le débiteur confirme via cette même instance).\n\nÉmet un PACS.008 dont le payeur est le débiteur et le payé est le créditeur original du PAIN.013.\n\n**outgoingRtpEndToEndId** : endToEndId du PAIN.013 sortant créé par `POST /api/v1/rtp` ou `POST /api/v1/transferts` avec `action=receive_now`."
           },
           "response": []
         }
@@ -622,7 +671,12 @@
     {
       "key": "incomingRtpEndToEndId",
       "value": "ECIE002XJWE2E0001420260422000002",
-      "description": "endToEndId d'une demande de paiement entrante"
+      "description": "endToEndId d'une demande de paiement entrante (direction=INBOUND)"
+    },
+    {
+      "key": "outgoingRtpEndToEndId",
+      "value": "ECIE002XJWE2E0001420260422000003",
+      "description": "endToEndId d'une demande de paiement sortante (direction=OUTBOUND, sens crédit — ex: créée par POST /api/v1/rtp ou receive_now)"
     }
   ]
 }

@@ -71,7 +71,7 @@ public class RequestToPayService {
         // Per BCEAO spec, the pain.013 endToEndId is the one generated at alias-search
         // time: the payé searched the payeur's alias — that search's endToEndId ties
         // the RTP back to its originating RAC_SEARCH entry in pi_message_log.
-        String endToEndId = request.getEndToEndIdSearchPayeur();
+        String endToEndId = IdGenerator.generateEndToEndId(properties.getCodeMembre());
 
         Map<String, Object> pain013 = buildPain013Payload(msgId, endToEndId, request, payeur, paye);
         messageLogService.log(msgId, endToEndId, IsoMessageType.PAIN_013,

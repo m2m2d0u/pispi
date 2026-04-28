@@ -787,7 +787,7 @@
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -1232,7 +1232,7 @@
             "example": null
           },
           "codeRaison": {
-            "pattern": "[A-Z]{2}\\d{2}",
+            "pattern": "^[a-zA-Z0-9]{4}$",
             "type": "string",
             "example": null
           },
@@ -1341,7 +1341,7 @@
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -1422,7 +1422,7 @@
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -1655,7 +1655,7 @@
             "example": null
           },
           "endToEndId": {
-            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
+            "pattern": "^E(CI|SN|ML|BF|BJ|TG|NE|GW)[BCDEF]\\d{3}\\d{14}[a-zA-Z0-9]{14}$",
             "type": "string",
             "example": null
           },
@@ -1854,7 +1854,7 @@
             "example": null
           },
           "codeRaison": {
-            "pattern": "[A-Z]{2}\\d{2}",
+            "pattern": "^[a-zA-Z0-9]{4}$",
             "type": "string",
             "example": null
           }

@@ -534,10 +534,11 @@ public class TransactionService {
         if (transferOpt.isPresent()) {
             return confirmTransfer(transferOpt.get(), cmd);
         }
-        // No outbound transfer — check for an inbound RTP (BCEAO PUT /transferts/{id}
-        // covers both "Confirmer transfert" and "Accepter RTP" on the same endpoint).
+        // No outbound transfer — check for an RTP (BCEAO PUT /transferts/{id} covers
+        // "Confirmer transfert", "Accepter RTP entrant" AND "Accepter RTP sortant
+        // sens crédit": when we initiated the PAIN.013 as creditor (direction=OUTBOUND)
+        // the debtor confirms acceptance here, triggering the PACS.008 payment to us).
         PiRequestToPay rtp = rtpRepository.findByEndToEndId(endToEndId)
-                .filter(r -> r.getDirection() == MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", endToEndId));
         return confirmRtpAcceptance(rtp, cmd);
     }
