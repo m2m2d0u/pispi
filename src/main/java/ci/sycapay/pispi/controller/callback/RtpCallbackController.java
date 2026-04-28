@@ -79,6 +79,7 @@ public class RtpCallbackController {
                 .nomClientPayeur(str(payload, "nomClientPayeur"))
                 .typeClientPayeur(parseEnum(str(payload, "typeClientPayeur"), TypeClient.class))
                 .villeClientPayeur(str(payload, "villeClientPayeur"))
+                .adresseClientPayeur(str(payload, "adresseClientPayeur"))
                 .paysClientPayeur(str(payload, "paysClientPayeur"))
                 .numeroIdentificationPayeur(str(payload, "numeroIdentificationClientPayeur"))
                 .systemeIdentificationPayeur(parseEnum(str(payload, "systemeIdentificationClientPayeur"),
@@ -97,6 +98,7 @@ public class RtpCallbackController {
                 .nomClientPaye(str(payload, "nomClientPaye"))
                 .typeClientPaye(parseEnum(str(payload, "typeClientPaye"), TypeClient.class))
                 .villeClientPaye(str(payload, "villeClientPaye"))
+                .adresseClientPaye(str(payload, "adresseClientPaye"))
                 .paysClientPaye(str(payload, "paysClientPaye"))
                 .numeroIdentificationPaye(str(payload, "numeroIdentificationClientPaye"))
                 .systemeIdentificationPaye(parseEnum(str(payload, "systemeIdentificationClientPaye"),

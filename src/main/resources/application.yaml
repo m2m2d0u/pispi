@@ -116,4 +116,4 @@ springdoc:
 
 logging:
   level:
-    ci.sycapay.pispi: ${LOG_LEVEL:DEBUG}
+    ci.sycapay.pispi: ${LOG_LEVEL:INFO}

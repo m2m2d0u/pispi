@@ -99,6 +99,15 @@ public class PiRequestToPay {
     @Column(name = "ville_client_payeur", length = 140)
     private String villeClientPayeur;
 
+    /**
+     * V46 : présent sur PAIN.013 (cf. RequestToPayService) ; nécessaire pour
+     * que le PACS.008 d'acceptation porte la même adresse côté payeur, sinon
+     * BCEAO rejette avec "Les données de la demande de paiement et du
+     * transfert ne correspondent pas".
+     */
+    @Column(name = "adresse_client_payeur", length = 140)
+    private String adresseClientPayeur;
+
     @Column(name = "pays_payeur", length = 2)
     private String paysClientPayeur;
 
@@ -156,6 +165,13 @@ public class PiRequestToPay {
 
     @Column(name = "ville_client_paye", length = 140)
     private String villeClientPaye;
+
+    /**
+     * V46 : symétrique de adresseClientPayeur — propagé du PAIN.013 reçu vers
+     * le PACS.008 d'acceptation pour préserver la cohérence des données.
+     */
+    @Column(name = "adresse_client_paye", length = 140)
+    private String adresseClientPaye;
 
     @Column(name = "pays_paye", length = 2)
     private String paysClientPaye;
