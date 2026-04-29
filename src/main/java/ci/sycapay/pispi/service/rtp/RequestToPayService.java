@@ -270,47 +270,59 @@ public class RequestToPayService {
      * l'utilisateur vers le bon mode.
      */
     /**
-     * Refuse {@code autorisationModificationMontant=true} on canals that
-     * don't support deferred / variable-amount semantics. The BCEAO restricted
-     * pain.013 XSD has a strict sequence inside {@code <CdtTrfTxInf>} where
-     * {@code <ImdtPmtRbt>} (immediate-payment rebate) must precede
-     * {@code <GrntedPmtReqd>} (autorisationModificationMontant). Sending the
-     * latter alone on canal 500 (MARCHAND_SUR_SITE) — which is by definition
-     * an immediate on-site payment — triggers
-     *   "Element 'GrntedPmtReqd': This element is not expected. Expected is ImdtPmtRbt".
+     * Validates {@code autorisationModificationMontant} per spec §4.7.1.1 (p.119).
      *
-     * <p>Allowed combinations (empirical) :
+     * <p>The field has three distinct states with different BCEAO semantics :
      * <ul>
-     *   <li>{@code 401} (FACTURE) + {@code autorisationModificationMontant} +
-     *       {@code montantRemise/tauxRemise} — confirmed working.</li>
-     *   <li>{@code 520} (E_COMMERCE_LIVRAISON) — possibly OK with the same
-     *       co-occurrence rule (à vérifier).</li>
-     *   <li>{@code 500} (MARCHAND_SUR_SITE) — refuse: incompatible avec
-     *       paiement immédiat sur site.</li>
-     *   <li>{@code 631} (PARTICULIER), {@code 521} (E_COMMERCE_IMMEDIAT) —
-     *       à confirmer ; bloqué pour le moment par sécurité.</li>
+     *   <li><b>absent (null)</b> — paiement immédiat sans débit différé.
+     *       Field not emitted on the wire.</li>
+     *   <li><b>false</b> — {@code <AmtModAllwd>false} : paiement immédiat avec
+     *       débit différé (ex: fin de mois). Valid on ALL canals.
+     *       Spec p.120 : when {@code montantRemisePaiementImmediat} is also set
+     *       with {@code false}, the AIP treats it as a deferred-debit commission.</li>
+     *   <li><b>true</b> — {@code <GrntedPmtReqd>} : facture avec date d'échéance
+     *       (guaranteed / variable-amount payment). The XSD requires
+     *       {@code <ImdtPmtRbt>} to precede it — only canal {@code 401} (FACTURE)
+     *       is confirmed working; all other canals reject with
+     *       "Element GrntedPmtReqd: not expected. Expected is ImdtPmtRbt".</li>
      * </ul>
+     *
+     * <p>This method only validates the {@code true} case. {@code false} and
+     * {@code null} pass through unconditionally.
      */
     private static void validateAutorisationModificationCompatibility(RequestToPayRequest req) {
         if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
         CanalCommunicationRtp canal = req.getCanalCommunication();
-        // Only FACTURE (401) is confirmed by the AIP sandbox to carry GrntedPmtReqd.
-        // Canal 520 also rejects with "Element GrntedPmtReqd: not expected. Expected
-        // is ImdtPmtRbt" — the "débit différé" semantics for E_COMMERCE_LIVRAISON are
-        // expressed via a future dateHeureExecution (ReqdExctnDt), not GrntedPmtReqd.
-        boolean allowed = canal == CanalCommunicationRtp.FACTURE;
-        if (!allowed) {
-            throw new IllegalArgumentException(
-                    "'autorisationModificationMontant=true' n'est pas supporté sur le canal "
-                            + canal.name() + " (" + canal.getCode() + "). "
-                            + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
-                            + "Expected is ImdtPmtRbt'. Ce flag n'est supporté que sur le "
-                            + "canal 401 (FACTURE). Pour un paiement e-commerce différé (520), "
-                            + "exprimer le délai via 'dateHeureExecution'. "
-                            + "Pour un paiement immédiat (500/521/631), retirer le flag.");
+
+        // false = "débit différé fin de mois" (AmtModAllwd) — forbidden on canal 401.
+        // AIP rejects with "Le débit différé n'est pas supporté lorsque le canal c'est '401'".
+        if (Boolean.FALSE.equals(req.getAutorisationModificationMontant())) {
+            if (canal == CanalCommunicationRtp.FACTURE) {
+                throw new IllegalArgumentException(
+                        "'autorisationModificationMontant=false' (débit différé fin de mois) "
+                                + "n'est pas supporté sur le canal 401 (FACTURE). "
+                                + "L'AIP rejette avec 'Le débit différé n'est pas supporté "
+                                + "lorsque le canal c'est 401'. "
+                                + "Pour un paiement FACTURE à montant variable/garanti, "
+                                + "utiliser 'autorisationModificationMontant=true' + remise.");
+            }
+            return;
         }
-        // When set, GrntedPmtReqd must be preceded by ImdtPmtRbt in the XSD.
-        // Require that the caller also provides a remise (rate or amount).
+
+        // true = "facture avec date d'échéance" (GrntedPmtReqd) — canal 401 only.
+        // AIP rejects other canals with "Element GrntedPmtReqd: not expected. Expected is ImdtPmtRbt".
+        if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
+
+        if (canal != CanalCommunicationRtp.FACTURE) {
+            throw new IllegalArgumentException(
+                    "'autorisationModificationMontant=true' (<GrntedPmtReqd>) n'est pas supporté "
+                            + "sur le canal " + canal.name() + " (" + canal.getCode() + "). "
+                            + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
+                            + "Expected is ImdtPmtRbt'. "
+                            + "Seul le canal 401 (FACTURE) accepte true (montant variable/garanti). "
+                            + "Pour un débit différé sur canal 520, utiliser false + montantRemisePaiementImmediat.");
+        }
+        // GrntedPmtReqd must be preceded by ImdtPmtRbt in the XSD — remise required.
         boolean hasRemise = req.getMontantRemisePaiementImmediat() != null
                          || req.getTauxRemisePaiementImmediat() != null;
         if (!hasRemise) {
@@ -593,16 +605,17 @@ public class RequestToPayService {
         // Canal & monetary (BCEAO encodes numbers/booleans as strings).
         p.put("canalCommunication", request.getCanalCommunication().getCode());
         p.put("montant", request.getMontant().toBigInteger().toString());
-        // N'émettre 'autorisationModificationMontant' que lorsqu'il vaut TRUE.
-        // Le transformeur BCEAO mappe ce champ sur <GrntedPmtReqd>, et le XSD
-        // restreint pain.013 exige que <ImdtPmtRbt> précède <GrntedPmtReqd>.
-        // Émettre <GrntedPmtReqd>false</GrntedPmtReqd> seul (sans ImdtPmtRbt)
-        // déclenche : "Element 'GrntedPmtReqd': This element is not expected.
-        // Expected is ImdtPmtRbt". L'absence du champ équivaut à false (pas
-        // d'autorisation de modification du montant) — on ne sérialise donc
-        // que lorsque l'appelant a explicitement opté pour true.
+        // Spec §4.7.1.1 (p.119) distinguishes two explicit values:
+        //   true  → <GrntedPmtReqd>  "facture avec date d'échéance" (variable/guaranteed amount)
+        //           XSD requires <ImdtPmtRbt> to precede it — only canal 401 confirmed working.
+        //   false → <AmtModAllwd>false "paiement immédiat avec débit différé" (end-of-month debit)
+        //           Different XML element, no XSD sequence dependency.
+        // Absent (null) → field omitted = pure immediate payment without deferred semantics.
+        // Both true and false must be serialised when explicitly set by the caller.
         if (Boolean.TRUE.equals(request.getAutorisationModificationMontant())) {
             p.put("autorisationModificationMontant", "true");
+        } else if (Boolean.FALSE.equals(request.getAutorisationModificationMontant())) {
+            p.put("autorisationModificationMontant", "false");
         }
         if (request.getMontantRemisePaiementImmediat() != null) {
             p.put("montantRemisePaiementImmediat",

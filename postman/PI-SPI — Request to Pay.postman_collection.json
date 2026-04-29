@@ -145,7 +145,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 50,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Réservation hôtel — montant final à confirmer au check-out\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 50,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -436,7 +436,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionJ7}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ37}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu à la livraison J+7\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"montantRemisePaiementImmediat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionJ7}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ37}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
