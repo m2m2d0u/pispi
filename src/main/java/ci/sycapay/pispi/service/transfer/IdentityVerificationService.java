@@ -108,6 +108,15 @@ public class IdentityVerificationService {
      * When {@code resultatVerification} is true, populate the full client
      * identity block; when false, include only {@code codeRaison}.
      */
+    /**
+     * Réponse à une demande de vérification d'identité entrante (ACMT.023).
+     *
+     * <p>Modèle simplifié : le caller fournit uniquement {@code resultatVerification}
+     * (et {@code codeRaison} si rejet). Quand {@code resultatVerification = true},
+     * il fournit AUSSI {@code endToEndSearch} — le service y résout TOUS les
+     * champs d'identité (compte, type, nom, adresse, identification, naissance,
+     * pays) depuis la RAC_SEARCH déjà journalisée. Pas de saisie redondante.
+     */
     @Transactional
     public IdentityVerificationResponse respond(String endToEndId,
                                                 IdentityVerificationRespondRequest request) {
@@ -116,14 +125,13 @@ public class IdentityVerificationService {
                 .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Verification", endToEndId));
 
-        // When the caller supplies an endToEndSearch, resolve the client identity
-        // from the last inbound RAC_SEARCH and reconstruct the full DTO automatically
-        // — same pattern as endToEndIdSearchPayeur in POST /api/v1/transferts.
-        if (notBlank(request.getEndToEndSearch())) {
-            ResolvedClient resolved = clientSearchResolver.resolve(
-                    request.getEndToEndSearch(), "client");
-            request = buildFromSearch(resolved, request);
-        }
+        boolean accept = Boolean.TRUE.equals(request.getResultatVerification());
+
+        // Résolution du client UNIQUEMENT en cas d'acceptation. Le DTO impose
+        // {@code endToEndSearch} non-null sur le chemin succès via @AssertTrue.
+        ResolvedClient resolved = accept
+                ? clientSearchResolver.resolve(request.getEndToEndSearch(), "client")
+                : null;
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -136,32 +144,30 @@ public class IdentityVerificationService {
         // while the AIP derives Assgnr from our own credentials. Sending our own code
         // here makes Assgnr == Assgne and triggers "Assgnr doit être différent de Assgne".
         acmt024.put("codeMembreParticipant", v.getCodeMembreParticipant());
-        acmt024.put("resultatVerification", Boolean.toString(Boolean.TRUE.equals(request.getResultatVerification())));
+        acmt024.put("resultatVerification", Boolean.toString(accept));
 
-        if (Boolean.TRUE.equals(request.getResultatVerification())) {
-            // Account identifier: prefer request value (from endToEndSearch or explicit),
-            // fall back to what was stored from the inbound ACMT.023.
-            putIfNotBlank(acmt024, "ibanClient",
-                    notBlank(request.getIbanClient()) ? request.getIbanClient() : v.getIbanClient());
-            putIfNotBlank(acmt024, "otherClient",
-                    notBlank(request.getOtherClient()) ? request.getOtherClient() : v.getOtherClient());
-            // Rich identity fields — only present when endToEndSearch was used or provided explicitly.
-            if (request.getTypeCompte() != null) acmt024.put("typeCompte", request.getTypeCompte().name());
-            if (request.getTypeClient() != null) acmt024.put("typeClient", request.getTypeClient().name());
-            putIfNotBlank(acmt024, "nomClient", request.getNomClient());
-            putIfNotBlank(acmt024, "villeClient", request.getVilleClient());
-            putIfNotBlank(acmt024, "adresseComplete", request.getAdresseComplete());
-            putIfNotBlank(acmt024, "numeroIdentification", request.getNumeroIdentification());
-            if (request.getSystemeIdentification() != null) {
-                acmt024.put("systemeIdentification", request.getSystemeIdentification().name());
+        if (accept) {
+            ClientInfo info = resolved.clientInfo();
+            // Compte : un seul de ibanClient / otherClient (le resolver garantit
+            // mutuelle exclusivité par construction).
+            putIfNotBlank(acmt024, "ibanClient", resolved.iban());
+            putIfNotBlank(acmt024, "otherClient", resolved.other());
+            if (resolved.typeCompte() != null) acmt024.put("typeCompte", resolved.typeCompte().name());
+            if (info.getTypeClient() != null) acmt024.put("typeClient", info.getTypeClient().name());
+            putIfNotBlank(acmt024, "nomClient", info.getNom());
+            putIfNotBlank(acmt024, "villeClient", info.getVille());
+            putIfNotBlank(acmt024, "adresseComplete", info.getAdresse());
+            putIfNotBlank(acmt024, "numeroIdentification", info.getIdentifiant());
+            if (info.getTypeIdentifiant() != null) {
+                acmt024.put("systemeIdentification", info.getTypeIdentifiant().name());
             }
-            putIfNotBlank(acmt024, "numeroRCCMClient", request.getNumeroRCCMClient());
-            putIfNotBlank(acmt024, "identificationFiscaleCommercant", request.getIdentificationFiscaleCommercant());
-            putIfNotBlank(acmt024, "dateNaissance", request.getDateNaissance());
-            putIfNotBlank(acmt024, "villeNaissance", request.getVilleNaissance());
-            putIfNotBlank(acmt024, "paysNaissance", request.getPaysNaissance());
-            putIfNotBlank(acmt024, "paysResidence", request.getPaysResidence());
-            putIfNotBlank(acmt024, "devise", notBlank(request.getDevise()) ? request.getDevise() : "XOF");
+            putIfNotBlank(acmt024, "numeroRCCMClient", resolved.identificationRccm());
+            putIfNotBlank(acmt024, "identificationFiscaleCommercant", resolved.identificationFiscaleCommercant());
+            putIfNotBlank(acmt024, "dateNaissance", info.getDateNaissance());
+            putIfNotBlank(acmt024, "villeNaissance", info.getLieuNaissance());
+            putIfNotBlank(acmt024, "paysNaissance", info.getPaysNaissance());
+            putIfNotBlank(acmt024, "paysResidence", info.getPays());
+            acmt024.put("devise", "XOF");
         } else {
             // BCEAO XSD fixes Cd to 'AC01' — always send it, defaulting when absent.
             acmt024.put("codeRaison", notBlank(request.getCodeRaison()) ? request.getCodeRaison() : "AC01");
@@ -171,60 +177,34 @@ public class IdentityVerificationService {
                 MessageDirection.OUTBOUND, acmt024, null, null);
         aipClient.post("/verifications-identites/reponses", acmt024);
 
-        // Persist only the fields that were actually provided — never overwrite
-        // existing data (e.g. ibanClient/otherClient from the inbound ACMT.023) with null.
-        v.setResultatVerification(request.getResultatVerification());
+        // Persistance : on ne snapshot l'identité résolue que sur succès.
+        v.setResultatVerification(accept);
         v.setCodeRaison(request.getCodeRaison());
         v.setMsgIdReponse(msgId);
-        if (Boolean.TRUE.equals(request.getResultatVerification())) {
-            if (notBlank(request.getIbanClient()))  v.setIbanClient(request.getIbanClient());
-            if (notBlank(request.getOtherClient())) v.setOtherClient(request.getOtherClient());
-            if (request.getTypeCompte() != null)    v.setTypeCompte(request.getTypeCompte());
-            if (request.getTypeClient() != null)    v.setTypeClient(request.getTypeClient());
-            if (notBlank(request.getNomClient()))   v.setNomClient(request.getNomClient());
-            if (notBlank(request.getVilleClient())) v.setVilleClient(request.getVilleClient());
-            if (notBlank(request.getAdresseComplete()))           v.setAdresseComplete(request.getAdresseComplete());
-            if (notBlank(request.getNumeroIdentification()))      v.setNumeroIdentification(request.getNumeroIdentification());
-            if (request.getSystemeIdentification() != null)       v.setSystemeIdentification(request.getSystemeIdentification());
-            if (notBlank(request.getNumeroRCCMClient()))          v.setNumeroRCCMClient(request.getNumeroRCCMClient());
-            if (notBlank(request.getIdentificationFiscaleCommercant())) v.setIdentificationFiscaleCommercant(request.getIdentificationFiscaleCommercant());
-            if (notBlank(request.getDateNaissance()))  v.setDateNaissance(LocalDate.parse(request.getDateNaissance()));
-            if (notBlank(request.getVilleNaissance())) v.setVilleNaissance(request.getVilleNaissance());
-            if (notBlank(request.getPaysNaissance()))  v.setPaysNaissance(request.getPaysNaissance());
-            if (notBlank(request.getPaysResidence()))  v.setPaysResidence(request.getPaysResidence());
-            if (notBlank(request.getDevise()))         v.setDevise(request.getDevise());
+        if (accept) {
+            ClientInfo info = resolved.clientInfo();
+            if (notBlank(resolved.iban()))  v.setIbanClient(resolved.iban());
+            if (notBlank(resolved.other())) v.setOtherClient(resolved.other());
+            if (resolved.typeCompte() != null) v.setTypeCompte(resolved.typeCompte());
+            if (info.getTypeClient() != null)  v.setTypeClient(info.getTypeClient());
+            if (notBlank(info.getNom()))       v.setNomClient(info.getNom());
+            if (notBlank(info.getVille()))     v.setVilleClient(info.getVille());
+            if (notBlank(info.getAdresse()))   v.setAdresseComplete(info.getAdresse());
+            if (notBlank(info.getIdentifiant())) v.setNumeroIdentification(info.getIdentifiant());
+            if (info.getTypeIdentifiant() != null) v.setSystemeIdentification(info.getTypeIdentifiant());
+            if (notBlank(resolved.identificationRccm())) v.setNumeroRCCMClient(resolved.identificationRccm());
+            if (notBlank(resolved.identificationFiscaleCommercant()))
+                v.setIdentificationFiscaleCommercant(resolved.identificationFiscaleCommercant());
+            if (notBlank(info.getDateNaissance()))  v.setDateNaissance(LocalDate.parse(info.getDateNaissance()));
+            if (notBlank(info.getLieuNaissance()))  v.setVilleNaissance(info.getLieuNaissance());
+            if (notBlank(info.getPaysNaissance()))  v.setPaysNaissance(info.getPaysNaissance());
+            if (notBlank(info.getPays()))           v.setPaysResidence(info.getPays());
+            v.setDevise("XOF");
         }
-        v.setStatut(Boolean.TRUE.equals(request.getResultatVerification())
-                ? VerificationStatus.VERIFIED
-                : VerificationStatus.FAILED);
+        v.setStatut(accept ? VerificationStatus.VERIFIED : VerificationStatus.FAILED);
         repository.save(v);
 
         return toResponse(v);
-    }
-
-    private static IdentityVerificationRespondRequest buildFromSearch(
-            ResolvedClient c, IdentityVerificationRespondRequest original) {
-        ClientInfo info = c.clientInfo();
-        return IdentityVerificationRespondRequest.builder()
-                .resultatVerification(original.getResultatVerification())
-                .codeRaison(original.getCodeRaison())
-                .ibanClient(c.iban())
-                .otherClient(c.other())
-                .typeCompte(c.typeCompte())
-                .typeClient(info.getTypeClient())
-                .nomClient(info.getNom())
-                .villeClient(info.getVille())
-                .adresseComplete(info.getAdresse())
-                .numeroIdentification(info.getIdentifiant())
-                .systemeIdentification(info.getTypeIdentifiant())
-                .numeroRCCMClient(c.identificationRccm())
-                .identificationFiscaleCommercant(c.identificationFiscaleCommercant())
-                .dateNaissance(info.getDateNaissance())
-                .villeNaissance(info.getLieuNaissance())
-                .paysNaissance(info.getPaysNaissance())
-                .paysResidence(info.getPays())
-                .devise("XOF")
-                .build();
     }
 
     private static boolean notBlank(String s) {

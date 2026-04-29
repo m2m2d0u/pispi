@@ -140,57 +140,7 @@
       "name": "Réponses aux demandes reçues (ACMT.024)",
       "item": [
         {
-          "name": "Répondre — succès minimal (recommandé)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/verifications/incoming/{{incomingVerificationEndToEndId}}/respond",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "verifications",
-                "incoming",
-                "{{incomingVerificationEndToEndId}}",
-                "respond"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"resultatVerification\": true\n}"
-            },
-            "description": "Répondre positivement à une demande ACMT.023 entrante standard (ex: { msgId, otherClient, codeMembreParticipant, endToEndId }). Le service renvoie en ACMT.024 l'ibanClient/otherClient déjà stocké depuis la demande reçue — aucun champ supplémentaire requis."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Statut 200', function () {",
-                  "    pm.expect(pm.response.code).to.equal(200);",
-                  "});",
-                  "try {",
-                  "    const body = pm.response.json();",
-                  "    pm.test('Statut VERIFIED', function () {",
-                  "        pm.expect(body.data.statut).to.equal('VERIFIED');",
-                  "    });",
-                  "} catch (e) { console.log('No JSON body'); }"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Répondre — succès via RAC_SEARCH (réponse enrichie)",
+          "name": "Répondre — succès via RAC_SEARCH",
           "request": {
             "method": "POST",
             "header": [
@@ -217,7 +167,7 @@
               "mode": "raw",
               "raw": "{\n  \"resultatVerification\": true,\n  \"endToEndSearch\": \"{{lastRacSearchEndToEndId}}\"\n}"
             },
-            "description": "Répondre positivement en fournissant l'endToEndId du dernier résultat RAC_SEARCH sur le client à vérifier. Le service reconstruit automatiquement tous les champs d'identité (typeCompte, typeClient, nomClient, identification, etc.) depuis le log pi_message_log.\n\nPré-requis : avoir effectué une RAC_SEARCH sur le client concerné et renseigner son endToEndId dans lastRacSearchEndToEndId."
+            "description": "Répondre positivement à une demande ACMT.023 entrante en fournissant l'`endToEndId` d'une RAC_SEARCH déjà journalisée pour le client à vérifier. **Obligatoire** : `endToEndSearch` est requis quand `resultatVerification = true` — la DTO impose la garde, et le service y résout TOUS les champs d'identité (compte, type, nom, adresse, identification, naissance, pays) depuis `pi_message_log`. Aucune saisie manuelle des champs identité n'est demandée.\n\n**Pré-requis** : effectuer une RAC_SEARCH sur le client concerné et renseigner son `endToEndId` dans `lastRacSearchEndToEndId`."
           },
           "event": [
             {
