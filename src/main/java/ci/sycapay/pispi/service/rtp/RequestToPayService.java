@@ -75,11 +75,13 @@ public class RequestToPayService {
 
         validateTypeComptePaye(paye);
         validatePayeRequiredFields(paye);
+        validatePayeNaissanceForTypeP(paye);
         validateCanalDateRules(request);
         validateRmtInfStrdConsistency(request);
         validateAutorisationModificationCompatibility(request);
         validatePayeLocationForMerchantCanals(request, paye);
         validateBeneficiaireTypeForCanal(request, paye);
+//        validateMandatRequiresVaccAccount(request, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -384,6 +386,26 @@ public class RequestToPayService {
         }
     }
 
+    /**
+     * BCEAO AIP rule: {@code MndtRltdInf} ({@code identifiantMandat} +
+     * {@code signatureNumeriqueMandat}) is only accepted when the payé holds a
+     * tontine account ({@code typeCompte = VACC}). Sending mandate fields with
+     * any other account type triggers ADMI.002 "MndtRltdInf doit être utilisé
+     * uniquement dans les demandes de paiement pour les tontines".
+     */
+    private static void validateMandatRequiresVaccAccount(
+            RequestToPayRequest req, ResolvedClient paye) {
+        if (!notBlank(req.getIdentifiantMandat())) return;
+        if (paye.typeCompte() != TypeCompte.VACC) {
+            throw new IllegalArgumentException(
+                    "'identifiantMandat' (MndtRltdInf) ne peut être utilisé que pour les "
+                            + "paiements de tontine — le compte du payé doit être de type VACC. "
+                            + "Type résolu : " + paye.typeCompte() + ". "
+                            + "L'AIP rejette autrement avec 'MndtRltdInf doit être utilisé "
+                            + "uniquement dans les demandes de paiement pour les tontines'.");
+        }
+    }
+
     private static void validateRmtInfStrdConsistency(RequestToPayRequest req) {
         boolean hasAchat   = req.getMontantAchat() != null;
         boolean hasRetrait = req.getMontantRetrait() != null;
@@ -485,6 +507,39 @@ public class RequestToPayService {
         }
     }
 
+    /**
+     * BCEAO §4.7.1.1 (p.114–115) : pour un payé de type P (personne physique),
+     * {@code dateNaissanceClientPaye}, {@code villeNaissanceClientPaye} et
+     * {@code paysNaissanceClientPaye} sont conditionnellement obligatoires
+     * ({@code <DtAndPlcOfBirth>} dans le PAIN.013). L'AIP rejette en ADMI.002
+     * si ces champs sont absents pour un type P. On rattrape en amont.
+     */
+    private static void validatePayeNaissanceForTypeP(ResolvedClient paye) {
+        if (paye.clientInfo().getTypeClient() != TypeClient.P) return;
+        ClientInfo info = paye.clientInfo();
+        if (!notBlank(info.getDateNaissance())) {
+            throw new IllegalArgumentException(
+                    "Le payé est de type P (personne physique) mais son alias ne porte pas de "
+                            + "'dateNaissance' (dateNaissanceClientPaye). BCEAO DemandePaiement "
+                            + "§4.7.1.1 exige <DtAndPlcOfBirth><BirthDt> pour les personnes physiques. "
+                            + "Compléter l'alias du bénéficiaire ou choisir un autre alias.");
+        }
+        if (!notBlank(info.getLieuNaissance())) {
+            throw new IllegalArgumentException(
+                    "Le payé est de type P (personne physique) mais son alias ne porte pas de "
+                            + "'lieuNaissance' (villeNaissanceClientPaye). BCEAO DemandePaiement "
+                            + "§4.7.1.1 exige <DtAndPlcOfBirth><CityOfBirth> pour les personnes physiques. "
+                            + "Compléter l'alias du bénéficiaire ou choisir un autre alias.");
+        }
+        if (!notBlank(info.getPaysNaissance())) {
+            throw new IllegalArgumentException(
+                    "Le payé est de type P (personne physique) mais son alias ne porte pas de "
+                            + "'paysNaissance' (paysNaissanceClientPaye). BCEAO DemandePaiement "
+                            + "§4.7.1.1 exige <DtAndPlcOfBirth><CtryOfBirth> pour les personnes physiques. "
+                            + "Compléter l'alias du bénéficiaire ou choisir un autre alias.");
+        }
+    }
+
     // =======================================================================
     // PAIN.013 payload builder (BCEAO DemandePaiement — flat schema)
     // =======================================================================
@@ -535,11 +590,6 @@ public class RequestToPayService {
         }
         putIfNotBlank(p, "dateHeureLimiteAction",
                 normaliseIsoInstantMillis(request.getDateHeureLimiteAction()));
-        // referenceBulk OMITTED from outbound: BCEAO AIP maps it into
-        // RmtInf/Strd, which conflicts with motif → RmtInf/Ustrd (error
-        // "Element 'Strd': This element is not expected"). Kept on the entity
-        // for local traceability only — not emitted on the wire.
-
         // Canal & monetary (BCEAO encodes numbers/booleans as strings).
         p.put("canalCommunication", request.getCanalCommunication().getCode());
         p.put("montant", request.getMontant().toBigInteger().toString());
@@ -664,19 +714,18 @@ public class RequestToPayService {
         //   RmtInf/Strd    (filled by montantRetrait, fraisRetrait,
         //                   montantAchat, typeDocumentReference,
         //                   numeroDocumentReference, referenceBulk)
-        // …never both. The BCEAO PICASH reference XML confirms the
-        // cash-withdrawal flow relies on Strd/RfrdDocInf/LineDtls with the
-        // <Prtry>PICASH</Prtry> marker plus DuePyblAmt (montantRetrait) and
-        // AdjstmntAmtAndRsn (fraisRetrait). If the caller supplies any Strd
-        // field we therefore DROP motif, and if only motif is present we
-        // drop the Strd-mappers. The entity keeps every field regardless.
+        // …never both. Although spec §4.7.1.1 (p.118) maps referenceBulk to
+        // <PmtId><InstrId>, the AIP transformer routes it into RmtInf/Strd,
+        // so it must follow the same Ustrd/Strd mutual exclusion rule as the
+        // other Strd fields — motif is dropped when referenceBulk is present.
         // -----------------------------------------------------------------
         boolean hasStrd =
                 request.getMontantRetrait() != null
                 || request.getFraisRetrait() != null
                 || request.getMontantAchat() != null
                 || request.getTypeDocumentReference() != null
-                || notBlank(request.getNumeroDocumentReference());
+                || notBlank(request.getNumeroDocumentReference())
+                || notBlank(request.getReferenceBulk());
 
         if (hasStrd) {
             if (request.getMontantRetrait() != null) {
@@ -692,6 +741,7 @@ public class RequestToPayService {
                 p.put("typeDocumentReference", request.getTypeDocumentReference().name());
             }
             putIfNotBlank(p, "numeroDocumentReference", request.getNumeroDocumentReference());
+            putIfNotBlank(p, "referenceBulk", request.getReferenceBulk());
             // motif intentionally OMITTED when Strd fields are present.
         } else {
             // No Strd fields → motif is free to land in Ustrd.
