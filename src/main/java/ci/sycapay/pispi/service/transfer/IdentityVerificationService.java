@@ -7,8 +7,10 @@ import ci.sycapay.pispi.dto.transfer.IdentityVerificationRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationRespondRequest;
 import ci.sycapay.pispi.dto.transfer.IdentityVerificationResponse;
 import ci.sycapay.pispi.entity.PiIdentityVerification;
+import ci.sycapay.pispi.enums.CodeSystemeIdentification;
 import ci.sycapay.pispi.enums.IsoMessageType;
 import ci.sycapay.pispi.enums.MessageDirection;
+import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.VerificationStatus;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiIdentityVerificationRepository;
@@ -157,12 +159,37 @@ public class IdentityVerificationService {
             putIfNotBlank(acmt024, "nomClient", info.getNom());
             putIfNotBlank(acmt024, "villeClient", info.getVille());
             putIfNotBlank(acmt024, "adresseComplete", info.getAdresse());
-            putIfNotBlank(acmt024, "numeroIdentification", info.getIdentifiant());
-            if (info.getTypeIdentifiant() != null) {
-                acmt024.put("systemeIdentification", info.getTypeIdentifiant().name());
+
+            // Identification primaire pour <PrvtId>/<Othr> ou <OrgId>/<Othr>.
+            // Le XSD acmt.024 EXIGE ce bloc — sinon "Element 'PrvtId': Missing
+            // child element(s). Expected is ( Othr )." côté C/P, ou pendant
+            // pour OrgId côté B/G. Le ClientSearchResolver met identifiant à
+            // null pour type C (commerçant) parce que le POID sandbox déclenche
+            // BE01 sur PACS.008. Sur ACMT.024 (validation d'identité hors flow
+            // de paiement), le BE01 ne s'applique pas — on peut donc fallback
+            // sur la TXID commerciale comme identification primaire.
+            String numeroId = info.getIdentifiant();
+            CodeSystemeIdentification systemeId = info.getTypeIdentifiant();
+            if (numeroId == null && info.getTypeClient() == TypeClient.C
+                    && notBlank(resolved.identificationFiscaleCommercant())) {
+                numeroId = resolved.identificationFiscaleCommercant();
+                systemeId = CodeSystemeIdentification.TXID;
             }
+            putIfNotBlank(acmt024, "numeroIdentification", numeroId);
+            if (systemeId != null) acmt024.put("systemeIdentification", systemeId.name());
+
             putIfNotBlank(acmt024, "numeroRCCMClient", resolved.identificationRccm());
-            putIfNotBlank(acmt024, "identificationFiscaleCommercant", resolved.identificationFiscaleCommercant());
+            // Pour type C : si identificationFiscaleCommercant a déjà servi de
+            // numeroIdentification (fallback ci-dessus), ne pas l'émettre une
+            // deuxième fois pour éviter un dual-Othr (même règle que côté
+            // PAIN.013 / PACS.008 pour B/G).
+            boolean fiscalUsedAsPrimary = info.getTypeClient() == TypeClient.C
+                    && info.getIdentifiant() == null
+                    && notBlank(resolved.identificationFiscaleCommercant());
+            if (!fiscalUsedAsPrimary) {
+                putIfNotBlank(acmt024, "identificationFiscaleCommercant",
+                        resolved.identificationFiscaleCommercant());
+            }
             putIfNotBlank(acmt024, "dateNaissance", info.getDateNaissance());
             putIfNotBlank(acmt024, "villeNaissance", info.getLieuNaissance());
             putIfNotBlank(acmt024, "paysNaissance", info.getPaysNaissance());

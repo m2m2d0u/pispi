@@ -216,16 +216,43 @@ public class ClientSearchResolver {
                 }
             }
             case C -> {
-                // Type C (commerçant individuel): the BCEAO sandbox XSD only accepts
-                // {CCPT, NIDN} for <PrvtId>/<Othr>/<Cd> (POID added in spec v4.0.0
-                // is not yet in the sandbox XSD). The RAC_SEARCH payload stores the
-                // commercial registration number (POID value) in the
-                // identificationNationale field — sending it as NIDN triggers BE01
-                // because the AIP recognises the value as a commercial ID, not a
-                // personal national identity. No other scheme is valid in the sandbox.
-                // Omit identification for type C entirely — the AIP validates
-                // the payé by alias + account number + name, same as TRAL accounts
-                // (spec example shows no <Id> block for TRAL).
+                // Type C (commerçant individuel) — XSD acmt.024 / pacs.008 :
+                // <PrvtId> doit contenir au moins un <Othr> non-vide. L'exemple
+                // BCEAO acmt.024 montre DEUX Othr pour un commerçant : un NIDN
+                // (identité personnelle) et un POID/TXID (numéro de registre
+                // commercial). Le XSD <PrvtId> autorise la pluralité d'<Othr>,
+                // contrairement à <OrgId> qui est restreint à 1 pour B/G.
+                //
+                // Stratégie :
+                //   - Identification primaire = NIDN/CCPT (identité personnelle).
+                //   - identificationFiscaleCommercant = TXID (registre
+                //     commercial), émis comme second <Othr>.
+                //
+                // Note historique : un ancien workaround (« omit identification
+                // entirely for type C ») a été retiré. Il existait parce que
+                // la sandbox stockait le POID dans identificationNationale,
+                // déclenchant BE01 sur pacs.008. Avec des données alias correctes
+                // (NIDN distinct de TXID), ce risque n'existe plus, et omettre
+                // l'identification fait échouer ACMT.024 sur le XSD.
+                if (identificationNationale != null) {
+                    builder.identifiant(identificationNationale)
+                           .typeIdentifiant(CodeSystemeIdentification.NIDN);
+                } else if (numeroPasseport != null) {
+                    builder.identifiant(numeroPasseport)
+                           .typeIdentifiant(CodeSystemeIdentification.CCPT);
+                } else if (identificationFiscale != null) {
+                    // Pas d'ID personnel : la TXID devient primaire (et on
+                    // n'émettra pas identificationFiscaleCommercant — risque
+                    // dual-Othr identique au cas B/G).
+                    builder.identifiant(identificationFiscale)
+                           .typeIdentifiant(CodeSystemeIdentification.TXID);
+                }
+                // Émission du second <Othr> via identificationFiscaleCommercant
+                // SEULEMENT quand on a un ID personnel distinct comme primaire.
+                if ((identificationNationale != null || numeroPasseport != null)
+                        && identificationFiscale != null) {
+                    identificationFiscaleCommercant = identificationFiscale;
+                }
             }
             case P -> {
                 if (identificationNationale != null) {
