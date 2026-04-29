@@ -12,6 +12,7 @@ import ci.sycapay.pispi.enums.MessageDirection;
 import ci.sycapay.pispi.enums.RtpStatus;
 import ci.sycapay.pispi.enums.TypeClient;
 import ci.sycapay.pispi.enums.TypeCompte;
+import ci.sycapay.pispi.exception.DuplicateRequestException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
 import ci.sycapay.pispi.service.MessageLogService;
@@ -28,6 +29,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static ci.sycapay.pispi.util.DateTimeUtil.normaliseIsoInstantMillis;
 import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
@@ -60,6 +62,11 @@ public class RequestToPayService {
      */
     @Transactional
     public RequestToPayResponse createRtp(RequestToPayRequest request) {
+        Optional<PiRequestToPay> requestToPayOptional = rtpRepository.findByEndToEndIdAndDirection(request.getEndToEndIdSearchPayeur(), MessageDirection.OUTBOUND);
+        if (requestToPayOptional.isPresent()) {
+            throw new DuplicateRequestException("Une demande de paiment avec le endToEndId existe deja");
+        }
+
         ResolvedClient payeur = clientSearchResolver.resolve(
                 request.getEndToEndIdSearchPayeur(), "payeur");
         ResolvedClient paye = clientSearchResolver.resolve(
@@ -71,6 +78,7 @@ public class RequestToPayService {
         validateRmtInfStrdConsistency(request);
         validateAutorisationModificationCompatibility(request);
         validatePayeLocationForMerchantCanals(request, paye);
+        validateBeneficiaireTypeForCanal(request, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -345,6 +353,31 @@ public class RequestToPayService {
                             + "BCEAO rejette autrement avec 'La localisation du client payé "
                             + "est obligatoire pour le canal 631 et le canal 500 lorsque "
                             + "le payé est un commerçant'.");
+        }
+    }
+
+    /**
+     * Sur les canaux {@code 520} (E_COMMERCE_LIVRAISON), {@code 521}
+     * (E_COMMERCE_IMMEDIAT) et {@code 401} (FACTURE), le bénéficiaire (payé)
+     * ne peut pas être une personne physique ({@code P}) ni un commerçant
+     * ({@code C}). Ces canaux sont réservés aux entités de type Business ({@code B})
+     * ou Government ({@code G}).
+     */
+    private static void validateBeneficiaireTypeForCanal(
+            RequestToPayRequest req, ResolvedClient paye) {
+        CanalCommunicationRtp canal = req.getCanalCommunication();
+        if (canal != CanalCommunicationRtp.E_COMMERCE_LIVRAISON
+                && canal != CanalCommunicationRtp.E_COMMERCE_IMMEDIAT
+                && canal != CanalCommunicationRtp.FACTURE) return;
+
+        TypeClient payeType = paye.clientInfo().getTypeClient();
+        if (payeType == TypeClient.P || payeType == TypeClient.C) {
+            throw new IllegalArgumentException(
+                    "Le bénéficiaire (payé) de type " + payeType + " ("
+                            + payeType.getDescription() + ") n'est pas autorisé sur le canal "
+                            + canal.name() + " (LclInstrm " + canal.getCode() + "). "
+                            + "Les canaux 401, 520 et 521 sont réservés aux bénéficiaires "
+                            + "de type B (Business) ou G (Government).");
         }
     }
 
