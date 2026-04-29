@@ -1094,6 +1094,12 @@ public class TransactionService {
             extra.put("villeNaissanceClientPaye", rtp.getVilleNaissancePaye());
         if (rtp.getPaysNaissancePaye() != null)
             extra.put("paysNaissanceClientPaye", rtp.getPaysNaissancePaye());
+        // AIP cross-checks document reference between PAIN.013 and accepting PACS.008.
+        // Missing typeDocumentReference/numeroDocumentReference triggers TransactionNotFound.
+        if (rtp.getTypeDocumentReference() != null)
+            extra.put("typeDocumentReference", rtp.getTypeDocumentReference().name());
+        if (rtp.getNumeroDocumentReference() != null && !rtp.getNumeroDocumentReference().isBlank())
+            extra.put("numeroDocumentReference", rtp.getNumeroDocumentReference());
         return extra;
     }
 
