@@ -121,6 +121,7 @@ public class TransactionService {
 
         CanalCommunication canal = resolveCanal(request.getCanal());
         validateLocalisationRules(canal, request);
+        validatePayeTypeForCanal(canal, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -194,6 +195,7 @@ public class TransactionService {
         ResolvedClient paye = clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
 
         CanalCommunication canal = resolveCanal(request.getCanal());
+        validatePayeTypeForCanal(canal, paye);
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
@@ -997,6 +999,25 @@ public class TransactionService {
             throw new IllegalArgumentException(
                     "La localisation GPS (latitude, longitude) est obligatoire pour le canal "
                             + canal.name());
+        }
+    }
+
+    /**
+     * BCEAO : sur un transfert via QR Code dynamique (canal 400), le bénéficiaire
+     * (payé) ne peut PAS être une personne physique. Le QR dynamique est par
+     * définition un instrument d'encaissement marchand — l'autoriser sur un
+     * compte personnel n'a pas de sens métier et l'AIP rejette de toute façon.
+     * On bloque en local plutôt que d'attendre un ADMI.002.
+     */
+    private static void validatePayeTypeForCanal(CanalCommunication canal, ResolvedClient paye) {
+        if (canal != CanalCommunication.QR_CODE_DYNAMIQUE) return;
+        TypeClient typeClient = paye.clientInfo() != null ? paye.clientInfo().getTypeClient() : null;
+        if (typeClient == TypeClient.P) {
+            throw new IllegalArgumentException(
+                    "Canal QR_CODE_DYNAMIQUE (400) : le bénéficiaire ne peut pas être une "
+                            + "personne physique (typeClient=P). Ce canal est réservé aux "
+                            + "encaissements marchands — utiliser un alias résolvant à un "
+                            + "client de type B (business), C (commerçant) ou G (gouvernement).");
         }
     }
 
