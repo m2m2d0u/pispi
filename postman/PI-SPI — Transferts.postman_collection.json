@@ -109,7 +109,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'B2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 500 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -157,7 +157,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'B2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 520 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -205,7 +205,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'B2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'B2B' avec le canal 521 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -551,7 +551,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'B2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'B2P' avec le canal 631 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -796,7 +796,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'P2B' avec le canal 401 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 401 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -844,7 +844,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'P2B' avec le canal 500 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 500 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -892,7 +892,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'P2B' avec le canal 520 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 520 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -940,7 +940,7 @@
               ]
             },
             {
-              "name": "Envoyer un pacs.008 'P2B' avec le canal 521 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'P2B' avec le canal 521 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -1187,10 +1187,93 @@
           ]
         },
         {
+          "name": "G2P",
+          "item": [
+            {
+              "name": "Envoyer un pacs.008 'G2P' avec le canal 733 (paiement gouvernement → particulier)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "transferts"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteG}}\",\n  \"montant\": 1,\n  \"canal\": \"733\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Bourse étudiante — avril 2026\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurG}}\",\n  \"alias\": \"{{aliasP}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "Virement **G2P** (Government → Person) via canal API Business (`733`). Cas typique : versement de prestations sociales, bourses, indemnités. `searchPayeurG` doit référencer une RAC_SEARCH sur un alias de typeClient G."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Envoyer un pacs.008 'G2B' avec le canal 999 (ordre de transfert)",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "transferts"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteG}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Règlement fournisseur marché public\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurG}}\",\n  \"alias\": \"{{aliasB}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "description": "Virement **G2B** (Government → Business) via canal ordre de transfert (`999`). Typique pour règlements de marchés publics. `searchPayeurG` doit référencer une RAC_SEARCH sur un alias typeClient G."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "P2P",
           "item": [
             {
-              "name": "Envoyer un pacs.008 'P2P' avec le canal 631 (rejeté avec le code FF05 par PI)",
+              "name": "Envoyer un pacs.008 'P2P' avec le canal 631 (rejeté avec le code FF05 par l'AIP)",
               "request": {
                 "method": "POST",
                 "header": [
@@ -1389,32 +1472,20 @@
       "name": "Paiements programmés (send_schedule)",
       "item": [
         {
-          "name": "Envoyer un paiement programmé (abonnement mensuel P2C)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/transferts",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "transferts"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"action\": \"send_schedule\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement programmé — abonnement coiffure mensuelle\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\",\n  \"dateDebut\": \"2026-05-01T00:00:00Z\",\n  \"frequence\": \"M\",\n  \"periodicite\": 1\n}"
-            }
-          },
+          "name": "Abonnement mensuel open-ended P2C",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// dateDebut = premier jour du mois suivant (dynamique, jamais périmé)",
+                  "const now = new Date();",
+                  "const debut = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));",
+                  "pm.variables.set('scheduleDebut', debut.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -1434,7 +1505,124 @@
                 ]
               }
             }
-          ]
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transferts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"send_schedule\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Abonnement coiffure mensuelle — open-ended\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\",\n  \"dateDebut\": \"{{scheduleDebut}}\",\n  \"frequence\": \"M\",\n  \"periodicite\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Abonnement mensuel **open-ended** (pas de `dateFin`) — le scheduler déclenchera une exécution chaque mois à partir de `dateDebut` (premier du mois suivant, calculé dynamiquement). Stopper via `DELETE /transferts/{id}`."
+          }
+        },
+        {
+          "name": "Abonnement trimestriel avec dateFin P2B",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// dateDebut = J+2, dateFin = J+365 (abonnement annuel, 4 exécutions trimestrielles)",
+                  "const debut = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);",
+                  "const fin   = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);",
+                  "pm.variables.set('scheduleDebut', debut.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));",
+                  "pm.variables.set('scheduleFin',   fin.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastEndToEndId', id);",
+                  "        console.log('Captured lastEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transferts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"send_schedule\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Abonnement trimestriel loyer — 4 versements\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasB}}\",\n  \"dateDebut\": \"{{scheduleDebut}}\",\n  \"dateFin\": \"{{scheduleFin}}\",\n  \"frequence\": \"M\",\n  \"periodicite\": 3\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Abonnement **trimestriel avec `dateFin`** — `periodicite: 3` + `frequence: M` = tous les 3 mois. Le scheduler désactive automatiquement le planning quand `nextExecutionDate > dateFin`. `dateDebut` et `dateFin` sont calculées dynamiquement par le pré-request script."
+          }
+        },
+        {
+          "name": "Programme (paiement unique futur) P2P",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Programme = send_schedule sans frequence — exécution unique à dateDebut",
+                  "const debut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);",
+                  "pm.variables.set('scheduleDebut', debut.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Statut 202 Accepted', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                  "});",
+                  "try {",
+                  "    const body = pm.response.json();",
+                  "    const id = body && body.data && body.data.endToEndId;",
+                  "    if (id) {",
+                  "        pm.collectionVariables.set('lastEndToEndId', id);",
+                  "        console.log('Captured lastEndToEndId =', id);",
+                  "    }",
+                  "} catch (e) { console.log('No JSON body'); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transferts"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"send_schedule\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"731\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Remboursement prévu dans 7 jours\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\",\n  \"dateDebut\": \"{{scheduleDebut}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "**Programme** (exécution unique différée) — `send_schedule` sans `frequence` ni `periodicite`. Le scheduler l'exécute une seule fois à `dateDebut` (J+7) puis désactive automatiquement la ligne (`statut=ACCC`). Contraste avec l'abonnement qui boucle."
+          }
         }
       ]
     },
@@ -1631,7 +1819,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"confirmationDate\": \"2026-04-23T10:30:00Z\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.36,\n  \"longitude\": -4.0083\n}"
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.36,\n  \"longitude\": -4.0083\n}"
             }
           }
         },
@@ -1670,14 +1858,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/transferts?page=0&size=20",
+              "raw": "{{baseUrl}}/api/v1/transferts?page=0&size=20&sort=createdAt,desc",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "v1",
-                "transferts?page=0&size=20"
+                "transferts"
+              ],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" },
+                { "key": "sort", "value": "createdAt,desc" }
               ]
             }
           }
@@ -1896,6 +2089,26 @@
     {
       "key": "aliasMCOD",
       "value": "999001"
+    },
+    {
+      "key": "compteG",
+      "value": "BCI001G001",
+      "description": "Numéro de compte d'un payeur de type G (Government) — valeur de test"
+    },
+    {
+      "key": "searchPayeurG",
+      "value": "",
+      "description": "endToEndId d'une RAC_SEARCH sur un alias typeClient G — à renseigner avec une valeur sandbox réelle"
+    },
+    {
+      "key": "scheduleDebut",
+      "value": "",
+      "description": "Calculé dynamiquement par le pré-request script des scénarios send_schedule"
+    },
+    {
+      "key": "scheduleFin",
+      "value": "",
+      "description": "Calculé dynamiquement par le pré-request script des scénarios send_schedule avec dateFin"
     },
     {
       "key": "lastEndToEndId",

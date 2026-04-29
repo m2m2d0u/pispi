@@ -37,11 +37,11 @@ public class ReturnFundsService {
     public ReturnFundsResponse requestReturn(ReturnFundsRequest request) {
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String identifiantDemande = IdGenerator.generateReturnRequestId(codeMembre);
 
+        // Spec §4.8.1 CAMT.056: msgId, codeMembreParticipantPaye, endToEndId, raison
         Map<String, Object> camt056 = new HashMap<>();
         camt056.put("msgId", msgId);
-        camt056.put("identifiantDemandeRetourFonds", identifiantDemande);
+        camt056.put("codeMembreParticipantPaye", request.getCodeMembreParticipantPaye());
         camt056.put("endToEndId", request.getEndToEndId());
         camt056.put("raison", request.getRaison().name());
 
@@ -49,10 +49,11 @@ public class ReturnFundsService {
 
         PiReturnRequest returnReq = PiReturnRequest.builder()
                 .msgId(msgId)
-                .identifiantDemande(identifiantDemande)
+                .identifiantDemande(msgId)
                 .endToEndId(request.getEndToEndId())
                 .direction(MessageDirection.OUTBOUND)
                 .codeMembrePayeur(codeMembre)
+                .codeMembrePaye(request.getCodeMembreParticipantPaye())
                 .raison(request.getRaison())
                 .statut(ReturnRequestStatus.PENDING)
                 .build();
@@ -77,11 +78,13 @@ public class ReturnFundsService {
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
 
+        // Spec §4.8.2 CAMT.029: msgId, msgIdDemande, codeMembreParticipantPayeur, statut, endToEndId, raison
         Map<String, Object> camt029 = new HashMap<>();
         camt029.put("msgId", msgId);
         camt029.put("msgIdDemande", returnReq.getMsgId());
-        camt029.put("identifiantDemandeRetourFonds", identifiantDemande);
+        camt029.put("codeMembreParticipantPayeur", returnReq.getCodeMembrePayeur());
         camt029.put("statut", "RJCR");
+        camt029.put("endToEndId", returnReq.getEndToEndId());
         camt029.put("raison", request.getRaison().name());
 
         messageLogService.log(msgId, returnReq.getEndToEndId(), IsoMessageType.CAMT_029, MessageDirection.OUTBOUND, camt029, null, null);
@@ -102,7 +105,8 @@ public class ReturnFundsService {
 
         String codeMembre = properties.getCodeMembre();
         String msgId = IdGenerator.generateMsgId(codeMembre);
-        String endToEndId = IdGenerator.generateEndToEndId(codeMembre);
+        // Spec §4.8.3 PACS.004: endToEndId must identify the original transfer being returned
+        String endToEndId = returnReq.getEndToEndId();
 
         Map<String, Object> pacs004 = new HashMap<>();
         pacs004.put("msgId", msgId);

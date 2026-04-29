@@ -18,6 +18,10 @@ public class ReturnFundsRequest {
     @NotBlank @Size(max = 35)
     private String endToEndId;
 
+    /** Code BIC-6 of the member PI that received the original transfer (who holds the funds). */
+    @NotBlank @Size(max = 6)
+    private String codeMembreParticipantPaye;
+
     @NotNull
     private CodeRaisonDemandeRetourFonds raison;
 }

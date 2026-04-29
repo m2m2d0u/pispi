@@ -47,17 +47,26 @@ public class ReturnFundsCallbackController {
     @PostMapping("/retour-fonds/demande")
     public ResponseEntity<Void> receiveReturnRequest(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
         String endToEndId = (String) payload.get("endToEndId");
+        String codeMembrePayeur = (String) payload.get("codeMembreParticipantPayeur");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056, MessageDirection.INBOUND, payload, 202, null);
+
+        // Spec §4.8.1 inbound fields: msgId, codeMembreParticipantPayeur, endToEndId, raison.
+        // identifiantDemandeRetourFonds is an internal AIP field not guaranteed in inbound payloads;
+        // use msgId as our local identifier to satisfy the NOT NULL constraint.
+        String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
+        if (identifiantDemande == null || identifiantDemande.isBlank()) {
+            identifiantDemande = msgId;
+        }
 
         PiReturnRequest req = PiReturnRequest.builder()
                 .msgId(msgId)
                 .identifiantDemande(identifiantDemande)
                 .endToEndId(endToEndId)
                 .direction(MessageDirection.INBOUND)
+                .codeMembrePayeur(codeMembrePayeur)
                 .raison(CodeRaisonDemandeRetourFonds.valueOf((String) payload.get("raison")))
                 .statut(ReturnRequestStatus.PENDING)
                 .build();
@@ -72,19 +81,22 @@ public class ReturnFundsCallbackController {
     @PostMapping("/retour-fonds/reponses")
     public ResponseEntity<Void> receiveReturnRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
-        String identifiantDemande = (String) payload.get("identifiantDemandeRetourFonds");
+        // Spec §4.8.2 inbound fields: msgId, codeMembreParticipantPaye, statut, endToEndId, raison.
+        // identifiantDemandeRetourFonds is not sent by the AIP on inbound CAMT.029;
+        // look up the return request by endToEndId + OUTBOUND direction.
+        String endToEndId = (String) payload.get("endToEndId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
-        messageLogService.log(msgId, null, IsoMessageType.CAMT_029, MessageDirection.INBOUND, payload, 202, null);
+        messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_029, MessageDirection.INBOUND, payload, 202, null);
 
-        returnRequestRepository.findByIdentifiantDemande(identifiantDemande).ifPresent(req -> {
+        returnRequestRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(req -> {
             req.setStatut(ReturnRequestStatus.RJCR);
             req.setRaisonRejet(CodeRaisonRejetDemandeRetourFonds.valueOf((String) payload.get("raison")));
             req.setMsgIdRejet(msgId);
             returnRequestRepository.save(req);
         });
 
-        webhookService.notify(WebhookEventType.RETURN_RESULT, null, msgId, payload);
+        webhookService.notify(WebhookEventType.RETURN_RESULT, endToEndId, msgId, payload);
         return ResponseEntity.accepted().build();
     }
 
