@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "36c1a3d7-5f02-43bb-9d3d-9411befb444f",
+    "_postman_id": "3b6cf0a1-cfb2-41fd-b5c2-f09ffdd85df8",
     "name": "PI-SPI — Request to Pay",
     "description": "Collection de tests pour les opérations Request-to-Pay (PAIN.013 / PAIN.014 — schéma BCEAO `DemandePaiement` / `ReponseDemandePaiement`).\n\n**Résolution des parties** (sur le modèle `TransferRequest`) — `endToEndIdSearchPayeur` et `endToEndIdSearchPaye` référencent des `endToEndId` de recherches d'alias RAC_SEARCH inbound déjà journalisées dans `pi_message_log`. PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `aliasClient*`, `otherClient*` et `codeMembreParticipant*`.\n\n**canalCommunication (RTP BCEAO)** : `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `E_COMMERCE_LIVRAISON` (520) | `E_COMMERCE_IMMEDIAT` (521) | `PARTICULIER` (631)\n\n**Règle BCEAO `typeCompteClientPaye`** : `CACC|SVGS|TRAN|LLSV|VACC|TAXE` — **pas `TRAL`**. Le service émet un 400 si l'alias résolu pour le payé porte `TRAL`.\n\n**Sérialisation BCEAO** : PI-SPI convertit les montants et le booléen `autorisationModificationMontant` en chaînes avant envoi à l'AIP (patterns `\\d+` / `true|false`).\n\n**`identifiantDemandePaiement`** : auto-généré par le script pre-request de la collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -67,7 +67,6 @@
             {
               "listen": "prerequest",
               "script": {
-                "type": "text/javascript",
                 "exec": [
                   "// Canal 401 (FACTURE): l'AIP rejette toute dateHeureExecution future avec",
                   "// 'Le débit différé n'est pas supporté lorsque le canal c'est 401'.",
@@ -76,7 +75,10 @@
                   "// d'échéance comme expiration de la demande.",
                   "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
                   "pm.variables.set('dateHeureExecutionNow', now);"
-                ]
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -90,7 +92,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 10,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -158,7 +160,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Achat médicaments ordonnance\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -226,7 +228,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash chez un agent PICASH\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantRetrait\": 1000,\n  \"fraisRetrait\": 10\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeC}}\",\n  \"motif\": \"Retrait cash chez un agent PICASH\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantRetrait\": 100,\n  \"fraisRetrait\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -260,7 +262,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1800,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 800,\n  \"montantRetrait\": 1000,\n  \"fraisRetrait\": 10\n}",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 180,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Paiement PICO — restauration rapide\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"montantAchat\": 80,\n  \"montantRetrait\": 100,\n  \"fraisRetrait\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -294,7 +296,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Commande e-commerce — livraison sous 3j\",\n  \"referenceBulk\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"dateHeureExecution\": \"2026-05-01T08:00:00.000Z\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Commande e-commerce — livraison sous 3j\",\n  \"referenceBulk\": \"CMD-JUM-20260422-553421\",\n  \"autorisationModificationMontant\": false\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -328,7 +330,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_IMMEDIAT\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Abonnement streaming mensuel — Plan Premium\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -571,7 +573,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 1,\n  \"latitude\": 5.3600,\n  \"longitude\": -4.0083\n}",
+              "raw": "{\n  \"confirmationDate\": \"{{$isoTimestamp}}\",\n  \"confirmationMethode\": \"biometry\",\n  \"montant\": 180,\n  \"latitude\": 5.3600,\n  \"longitude\": -4.0083\n}",
               "options": {
                 "raw": {
                   "language": "json"
