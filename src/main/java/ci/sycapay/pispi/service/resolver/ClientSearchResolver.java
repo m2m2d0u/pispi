@@ -215,7 +215,19 @@ public class ClientSearchResolver {
                             side, typeClient, endToEndIdSearch);
                 }
             }
-            case P, C -> {
+            case C -> {
+                // Type C (commerçant individuel): the BCEAO sandbox XSD only accepts
+                // {CCPT, NIDN} for <PrvtId>/<Othr>/<Cd> (POID added in spec v4.0.0
+                // is not yet in the sandbox XSD). The RAC_SEARCH payload stores the
+                // commercial registration number (POID value) in the
+                // identificationNationale field — sending it as NIDN triggers BE01
+                // because the AIP recognises the value as a commercial ID, not a
+                // personal national identity. No other scheme is valid in the sandbox.
+                // Omit identification for type C entirely — the AIP validates
+                // the payé by alias + account number + name, same as TRAL accounts
+                // (spec example shows no <Id> block for TRAL).
+            }
+            case P -> {
                 if (identificationNationale != null) {
                     builder.identifiant(identificationNationale)
                            .typeIdentifiant(CodeSystemeIdentification.NIDN);
@@ -223,20 +235,9 @@ public class ClientSearchResolver {
                     builder.identifiant(numeroPasseport)
                            .typeIdentifiant(CodeSystemeIdentification.CCPT);
                 } else if (identificationFiscale != null) {
-                    // Last-resort fallback — BCEAO v2.0.2 allows a type C
-                    // (commerçant individuel) to carry a TXID on top of NIDN,
-                    // but the account is keyed by the personal ID for P.
-                    // Use TXID only when nothing else is available so the
-                    // pacs.008 isn't empty.
+                    // Last-resort: TXID when no personal ID is present.
                     builder.identifiant(identificationFiscale)
                            .typeIdentifiant(CodeSystemeIdentification.TXID);
-                }
-                // Type C: identificationFiscale is ALSO the commercial fiscal ID
-                // (identificationFiscaleCommercant* in pacs.008 / pain.013).
-                // identificationRccm is the RCCM variant (mutually exclusive).
-                if (typeClient == TypeClient.C) {
-                    identificationFiscaleCommercant = identificationFiscale;
-                    builder.identificationRccm(identificationRccm);
                 }
             }
         }
@@ -267,9 +268,14 @@ public class ClientSearchResolver {
         // it as the {@code endToEndId} of the downstream PAIN.013 / PACS.008,
         // per BCEAO spec : "Le EndToEndId généré au moment de la recherche
         // d'alias est utilisé dans le pain.013 [/ pacs.008]".
+        // Type C: use RCCM as the identification (emitted as numeroRCCMClient* in the
+        // payload, which maps to <Othr>/<Id> with no <SchmeNm>/<Cd> — avoids the POID
+        // XSD restriction while satisfying the AIP "doit avoir une identification" rule.
+        // For type C: suppress RCCM — it maps to <Cd>POID</Cd> like fiscal ID.
+        String rccmToReturn = (typeClient == TypeClient.C) ? null : identificationRccm;
         return new ResolvedClient(builder.build(), other, iban, typeCompte, valeurAlias,
                 codeMembreParticipant, endToEndIdSearch,
-                identificationFiscaleCommercant, identificationRccm);
+                identificationFiscaleCommercant, rccmToReturn);
     }
 
     private static String str(Map<String, Object> map, String key) {
