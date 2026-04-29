@@ -115,6 +115,59 @@
           "response": []
         },
         {
+          "name": "Envoyer une demande de paiement sur site avec débit différé",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Canal 401 (FACTURE) avec autorisationModificationMontant=true.",
+                  "// Le service PI-SPI force dateHeureExecution à now+30s côté AIP",
+                  "// (même règle que les autres scénarios FACTURE — on la pré-calcule",
+                  "// ici uniquement pour la lisibilité du log Postman).",
+                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
+                  "pm.variables.set('dateHeureExecutionNow', now);",
+                  "// dateHeureLimiteAction = J+30 (expiration de l'autorisation variable)",
+                  "const limite = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);",
+                  "pm.variables.set('dateHeureLimiteActionJ30', limite.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 50,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Réservation hôtel — montant final à confirmer au check-out\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **sur site avec débit différé / montant variable** (canal `FACTURE` → `401`).\n\nCas d'usage : réservation hôtel ou location — le commerçant (payé B) émet une facture avec pré-autorisation de débit variable (`autorisationModificationMontant: true`) pour couvrir les extras. Le montant final est ajusté au check-out.\n\n**autorisationModificationMontant: true** — seul le canal 401 est supporté par l'AIP sandbox pour `<GrntedPmtReqd>`. Co-occurrence obligatoire avec `montantRemisePaiementImmediat` ou `tauxRemisePaiementImmediat` pour respecter la séquence XSD `<ImdtPmtRbt>` → `<GrntedPmtReqd>`.\n\n**dateHeureExecution** : forcée à now+30s par PI-SPI (règle AIP : débit différé non supporté pour 401, mais ReqdExctnDt doit être ≥ CreDtTm)."
+          },
+          "response": []
+        },
+        {
           "name": "Envoyer une demande de paiement marchand sur site (immédiat)",
           "request": {
             "method": "POST",
@@ -354,6 +407,25 @@
         },
         {
           "name": "Envoyer une demande de paiement e-commerce avec débit différé",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Canal 520 (E_COMMERCE_LIVRAISON): dateHeureExecution exprime la date de",
+                  "// livraison prévue (débit différé). L'AIP rejette GrntedPmtReqd pour ce",
+                  "// canal — ne pas utiliser autorisationModificationMontant. Le caractère",
+                  "// 'différé' est porté par dateHeureExecution (réglée dynamiquement ici",
+                  "// à J+7 pour éviter que la date durcissée devienne périmée).",
+                  "const exec = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);",
+                  "pm.variables.set('dateHeureExecutionJ7', exec.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));",
+                  "const limite = new Date(Date.now() + 37 * 24 * 60 * 60 * 1000);",
+                  "pm.variables.set('dateHeureLimiteActionJ37', limite.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -364,7 +436,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"2026-05-15T10:00:00Z\",\n  \"dateHeureLimiteAction\": \"2026-06-05T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu au lancement\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionJ7}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ37}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — débit prévu à la livraison J+7\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -382,7 +454,7 @@
                 "rtp"
               ]
             },
-            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande). Canal `E_COMMERCE_LIVRAISON` → `520`.\n\n**autorisationModificationMontant: true** + **montantRemisePaiementImmediat** : co-occurrence imposée par le XSD pain.013 — `<ImdtPmtRbt>` (bloc remise) doit précéder `<GrntedPmtReqd>` (autorisation). La remise matérialise l'engagement précommande \"je débloque le paiement maintenant pour bénéficier de la remise\" — la garde `validateAutorisationModificationCompatibility` côté service refuse le combo sans remise associée.\n\n**dateHeureExecution** postérieure à `dateHeureLimiteAction` exprime le débit différé : la demande est acceptée immédiatement, le débit effectif est programmé."
+            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande à la livraison). Canal `E_COMMERCE_LIVRAISON` → `520`.\n\nLe caractère différé est exprimé par `dateHeureExecution` (ReqdExctnDt) positionnée à J+7 — l'AIP débite effectivement à cette date. `autorisationModificationMontant` n'est **pas** utilisé sur ce canal : l'AIP sandbox rejette `<GrntedPmtReqd>` pour 520 avec \"Element GrntedPmtReqd: not expected\" (seul le canal 401 l'accepte).\n\n`dateHeureExecution` et `dateHeureLimiteAction` sont calculées dynamiquement par le pré-request script pour éviter toute date périmée."
           },
           "response": []
         },
@@ -398,7 +470,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceBulk\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"PARTICULIER\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 1,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeP}}\",\n  \"motif\": \"Cotisation mensuelle Tontine Espoir — Avril 2026\",\n  \"referenceBulk\": \"TONTINE-ESPOIR-AVR-2026\",\n  \"identifiantMandat\": \"MAND-TONTINE-ESP-MT-A042\",\n  \"signatureNumeriqueMandat\": \"bWFuZGF0LXRvbnRpbmUtZXNwb2lyLWEwNDItc2lnbmF0dXJl\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

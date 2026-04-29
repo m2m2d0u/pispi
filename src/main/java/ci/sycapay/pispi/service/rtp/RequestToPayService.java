@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -291,17 +292,19 @@ public class RequestToPayService {
     private static void validateAutorisationModificationCompatibility(RequestToPayRequest req) {
         if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
         CanalCommunicationRtp canal = req.getCanalCommunication();
-        // Only canals that allow deferred semantics may carry GrntedPmtReqd
-        boolean allowed = canal == CanalCommunicationRtp.FACTURE
-                       || canal == CanalCommunicationRtp.E_COMMERCE_LIVRAISON;
+        // Only FACTURE (401) is confirmed by the AIP sandbox to carry GrntedPmtReqd.
+        // Canal 520 also rejects with "Element GrntedPmtReqd: not expected. Expected
+        // is ImdtPmtRbt" — the "débit différé" semantics for E_COMMERCE_LIVRAISON are
+        // expressed via a future dateHeureExecution (ReqdExctnDt), not GrntedPmtReqd.
+        boolean allowed = canal == CanalCommunicationRtp.FACTURE;
         if (!allowed) {
             throw new IllegalArgumentException(
                     "'autorisationModificationMontant=true' n'est pas supporté sur le canal "
                             + canal.name() + " (" + canal.getCode() + "). "
                             + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
-                            + "Expected is ImdtPmtRbt'. Ce flag suppose un paiement différé "
-                            + "ou à montant variable, qui n'est compatible qu'avec les canaux "
-                            + "401 (FACTURE) ou 520 (E_COMMERCE_LIVRAISON). "
+                            + "Expected is ImdtPmtRbt'. Ce flag n'est supporté que sur le "
+                            + "canal 401 (FACTURE). Pour un paiement e-commerce différé (520), "
+                            + "exprimer le délai via 'dateHeureExecution'. "
                             + "Pour un paiement immédiat (500/521/631), retirer le flag.");
         }
         // When set, GrntedPmtReqd must be preceded by ImdtPmtRbt in the XSD.
@@ -431,7 +434,7 @@ public class RequestToPayService {
         if (hasAchat && hasRetrait) {
             // BCEAO rule (par symétrie avec PICASH): montant = montantAchat + montantRetrait
             // (les frais éventuels sont débités séparément).
-            java.math.BigDecimal expected = req.getMontantAchat().add(req.getMontantRetrait());
+            BigDecimal expected = req.getMontantAchat().add(req.getMontantRetrait());
             if (req.getMontant() != null
                     && req.getMontant().compareTo(expected) != 0) {
                 throw new IllegalArgumentException(
