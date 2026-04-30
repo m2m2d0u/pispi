@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "1a3393cd-e9df-4df8-8ef4-06ac47ea0ad2",
     "name": "PI-SPI — Transferts (mobile)",
-    "description": "Scénarios BCEAO pacs.008 adaptés au nouvel endpoint mobile /api/v1/transferts (TransactionInitiationRequest oneOf). Flow en deux phases : POST /transferts (initier, retourne statut=initie) puis PUT /transferts/{id} (confirmer, émet PACS.008 ou PAIN.013). Chaque initiation capture `endToEndId` dans la variable `lastEndToEndId` — la requête `Confirmer la dernière transaction` du dossier Flux utilise cette variable automatiquement.",
+    "description": "Scénarios BCEAO pacs.008 adaptés au nouvel endpoint mobile /api/v1/transferts (TransactionInitiationRequest oneOf). Flow en deux phases : POST /transferts (initier, retourne statut=initie) puis PUT /transferts/{id} (confirmer, émet PACS.008 ou PAIN.013). Chaque initiation capture `endToEndId` dans la variable `lastEndToEndId` — la requête `Confirmer la dernière transaction` du dossier Flux utilise cette variable automatiquement.\n\n**Deux modes d'identification du bénéficiaire** (BCEAO §4.3 — exclusifs, validés par @AssertTrue côté DTO) :\n\n- **Mode alias** : champ `alias` dans le body. PI-SPI résout l'identité via la dernière RAC_SEARCH journalisée pour cet alias. Utilisé par défaut.\n- **Mode vérification d'identité** : champ `endToEndIdVerification` dans le body. PI-SPI résout l'identité via une ACMT.024 INBOUND déjà journalisée (résultat d'une vérification d'identité). Pré-requis : faire d'abord `POST /api/v1/verifications` (collection `PI-SPI — Vérification d'identité`) puis renseigner la variable `lastVerificationEndToEndId` avec l'e2e de la réponse vérifiée.\n\nLes scénarios dont le nom contient *« par vérification d'identité »* utilisent le mode #2 et requièrent que `lastVerificationEndToEndId` soit valorisée (sinon 400 \"endToEndId de vérification introuvable\").",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -323,7 +323,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasB}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
@@ -525,7 +525,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert B2P USSD avec vérification d'identité préalable\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
@@ -1015,7 +1015,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"300\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Paiement P2C USSD avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
@@ -1159,7 +1159,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasC}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Virement P2C par ordre de transfert avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
@@ -1343,7 +1343,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"alias\": \"{{aliasP}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteP}}\",\n  \"montant\": 1,\n  \"canal\": \"633\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Transfert P2P via adresse de paiement avec vérification d'identité\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
@@ -2113,6 +2113,11 @@
     {
       "key": "lastEndToEndId",
       "value": ""
+    },
+    {
+      "key": "lastVerificationEndToEndId",
+      "value": "",
+      "description": "endToEndId d'une ACMT.024 INBOUND (vérification d'identité réussie). Capturé automatiquement par les scénarios `respond` de la collection 'PI-SPI — Vérification d'identité', ou à renseigner manuellement après une vérification d'identité aboutie. Utilisé par les scénarios de transfert canal 300/633/999 'par vérification d'identité' (mode account-based, alternatif à l'alias)."
     },
     {
       "key": "incomingEndToEndId",

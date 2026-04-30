@@ -103,24 +103,24 @@ public class TransactionService {
     }
 
     private TransactionResponse initiateSendNow(TransactionImmediatRequest request) {
-        if (request.getIban() != null || request.getOthr() != null) {
-            throw new UnsupportedOperationException(
-                    "Les modes 'iban + payePSP' et 'othr + payePSP' seront implémentés "
-                            + "prochainement. Pour le moment, utilisez le mode 'alias'.");
-        }
-        if (request.getAlias() == null || request.getAlias().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Le mode 'alias' est obligatoire en Phase 3.2 (iban/othr à venir)");
-        }
+        // Mode d'identification (validé exclusif par @AssertTrue sur le DTO):
+        //   - alias présent  → résolution via RAC_SEARCH
+        //   - endToEndIdVerification présent → résolution via ACMT.024
+        boolean useVerification = request.getEndToEndIdVerification() != null
+                && !request.getEndToEndIdVerification().isBlank();
 
-        // Resolve both sides. The payer comes from the endToEndIdSearchPayeur
-        // bridge (see DTO javadoc — transitional until OAuth is wired), the
-        // payee comes from the latest RAC_SEARCH matching the alias.
+        // Resolve both sides. Le payeur vient toujours de l'endToEndIdSearchPayeur
+        // (bridge transitoire, cf. javadoc du DTO — jusqu'à ce que l'identité du
+        // client connecté arrive via Spring Security). Le payé vient soit du
+        // dernier RAC_SEARCH pour l'alias, soit d'une ACMT.024 vérifiée.
         ResolvedClient payeur = clientSearchResolver.resolve(
                 request.getEndToEndIdSearchPayeur(), "payeur");
-        ResolvedClient paye = clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
+        ResolvedClient paye = useVerification
+                ? clientSearchResolver.resolveByVerification(request.getEndToEndIdVerification(), "paye")
+                : clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
 
-        Optional<PiTransfer> optionalPiTransfer = transferRepository.findByEndToEndIdAndDirection(paye.endToEndIdSearch(), MessageDirection.OUTBOUND);
+        Optional<PiTransfer> optionalPiTransfer = transferRepository
+                .findByEndToEndIdAndDirection(paye.endToEndIdSearch(), MessageDirection.OUTBOUND);
 
         if (optionalPiTransfer.isPresent()) {
             throw new InvalidStateException("Le endToEndIdSearch existe déjà sur la base de données");

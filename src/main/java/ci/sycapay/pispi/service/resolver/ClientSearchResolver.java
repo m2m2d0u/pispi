@@ -71,6 +71,116 @@ public class ClientSearchResolver {
                 .getEndToEndId();
     }
 
+    /**
+     * Résoudre un participant depuis le résultat d'une vérification d'identité
+     * (ACMT.024 INBOUND) plutôt qu'une RAC_SEARCH.
+     *
+     * <p>BCEAO §4.3 : « Lorsque c'est un numéro de compte qui est utilisé, le
+     * transfert de fonds est précédé d'une vérification d'identité. » Le
+     * caller fait d'abord {@code POST /api/v1/verifications} (ACMT.023), reçoit
+     * la réponse ACMT.024 du PSP destinataire (logguée INBOUND), puis utilise
+     * son {@code endToEndId} dans son {@code POST /api/v1/transferts} pour
+     * que le PACS.008 réutilise le même e2e (chaînage ACMT.023 ↔ PACS.008).
+     *
+     * <p>Symétrique de {@link #resolve(String, String)} mais lit l'ACMT.024
+     * au lieu du RAC_SEARCH. Les champs ISO 20022 communs (compte, identité,
+     * naissance) sont remplis depuis le payload ACMT.024 (cf.
+     * {@code IdentityVerificationService.respond} qui définit les noms de
+     * champs côté émission, miroir des champs côté réception).
+     */
+    public ResolvedClient resolveByVerification(String endToEndIdVerification, String side) {
+        PiMessageLog entry = messageLogRepository
+                .findFirstByEndToEndIdAndDirectionAndMessageTypeOrderByCreatedAtDesc(
+                        endToEndIdVerification, MessageDirection.INBOUND, IsoMessageType.ACMT_024)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Résultat de vérification d'identité (ACMT.024) introuvable pour endToEndId",
+                        endToEndIdVerification));
+
+        Map<String, Object> data;
+        try {
+            data = objectMapper.readValue(entry.getPayload(), new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new IllegalStateException("Impossible de lire le payload ACMT.024 [endToEndId="
+                    + endToEndIdVerification + "]", e);
+        }
+
+        // Garde : la vérification doit avoir réussi pour servir d'amorce à un transfert.
+        Object resultat = data.get("resultatVerification");
+        boolean verified = "true".equalsIgnoreCase(String.valueOf(resultat))
+                || Boolean.TRUE.equals(resultat);
+        if (!verified) {
+            throw new InvalidStateException(
+                    "ACMT.024 [endToEndId=" + endToEndIdVerification + "] a un "
+                            + "resultatVerification != true — un transfert ne peut pas être "
+                            + "amorcé sur une vérification ayant échoué.");
+        }
+
+        // Champs ACMT.024 (cf. spec BCEAO IdentiteReponse + notre IdentityVerificationService.respond)
+        String nom = str(data, "nomClient");
+        String typeClientStr = str(data, "typeClient");
+        String typeCompteStr = str(data, "typeCompte");
+        String iban = str(data, "ibanClient");
+        String other = str(data, "otherClient");
+        String paysResidence = str(data, "paysResidence");
+        String ville = str(data, "villeClient");
+        String adresse = str(data, "adresseComplete");
+        String numeroIdentification = str(data, "numeroIdentification");
+        String systemeIdentificationStr = str(data, "systemeIdentification");
+        String dateNaissance = str(data, "dateNaissance");
+        String villeNaissance = str(data, "villeNaissance");
+        String paysNaissance = str(data, "paysNaissance");
+        String numeroRCCM = str(data, "numeroRCCMClient");
+        String identificationFiscaleCommercant = str(data, "identificationFiscaleCommercant");
+        String codeMembreParticipant = str(data, "codeMembreParticipant");
+
+        if (nom == null || typeClientStr == null || typeCompteStr == null || paysResidence == null) {
+            throw new IllegalStateException(
+                    "Payload ACMT.024 incomplet pour le " + side
+                            + " [endToEndId=" + endToEndIdVerification + "] — "
+                            + "nomClient, typeClient, typeCompte, paysResidence requis.");
+        }
+
+        TypeClient typeClient;
+        try {
+            typeClient = TypeClient.valueOf(typeClientStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("typeClient inconnu dans ACMT.024: " + typeClientStr);
+        }
+        TypeCompte typeCompte;
+        try {
+            typeCompte = TypeCompte.valueOf(typeCompteStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("typeCompte inconnu dans ACMT.024: " + typeCompteStr);
+        }
+
+        ClientInfo.ClientInfoBuilder builder = ClientInfo.builder()
+                .nom(nom)
+                .typeClient(typeClient)
+                .pays(paysResidence);
+        if (ville != null) builder.ville(ville);
+        if (adresse != null) builder.adresse(adresse);
+        if (dateNaissance != null) builder.dateNaissance(dateNaissance);
+        if (paysNaissance != null) builder.paysNaissance(paysNaissance);
+        if (villeNaissance != null) builder.lieuNaissance(villeNaissance);
+        if (numeroIdentification != null) builder.identifiant(numeroIdentification);
+        if (systemeIdentificationStr != null) {
+            try {
+                builder.typeIdentifiant(CodeSystemeIdentification.valueOf(systemeIdentificationStr));
+            } catch (IllegalArgumentException e) {
+                log.warn("systemeIdentification inconnu dans ACMT.024 [endToEndId={}, value={}]",
+                        endToEndIdVerification, systemeIdentificationStr);
+            }
+        }
+
+        log.info("Client {} résolu depuis vérification d'identité [endToEndId={}]",
+                side, endToEndIdVerification);
+        // {@code aliasValue} laissé null : la vérification ne passe pas par un alias
+        // (c'est précisément le mode account-based, alternative à RAC_SEARCH).
+        return new ResolvedClient(builder.build(), other, iban, typeCompte, null,
+                codeMembreParticipant, endToEndIdVerification,
+                identificationFiscaleCommercant, numeroRCCM);
+    }
+
     public String resolveName(String nom, String denominationSociale, TypeClient typeClient){
         if (typeClient == TypeClient.B) {
             return denominationSociale;

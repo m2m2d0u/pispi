@@ -13,13 +13,20 @@ import java.math.BigDecimal;
 /**
  * {@code action = send_now}. Immediate debit — emits a PACS.008 after confirmation.
  *
- * <p>The BCEAO spec defines three beneficiary identification modes, which the
- * client picks exactly one of:
+ * <p>BCEAO §4.3 : tout transfert est précédé soit d'une recherche d'alias
+ * (RAC_SEARCH), soit d'une vérification d'identité (ACMT.023/024). Le caller
+ * choisit exactement un mode :
+ *
  * <ul>
- *   <li>{@code alias} — alias (MBNO/SHID/MCOD). PSP is looked up via RAC_SEARCH.</li>
- *   <li>{@code iban} + {@code payePSP} — bank account. No RAC_SEARCH needed but
- *       we still emit one for consistency (per §4.2, no caching is allowed).</li>
- *   <li>{@code othr} + {@code payePSP} — non-IBAN (EME/TRAL) account.</li>
+ *   <li><b>{@code alias}</b> — alias BCEAO (MBNO / SHID / MCOD). PI-SPI résout
+ *       le bénéficiaire depuis le dernier RAC_SEARCH journalisé pour cet alias.
+ *       L'{@code endToEndId} du PACS.008 réutilise celui du RAC_SEARCH.</li>
+ *   <li><b>{@code endToEndIdVerification}</b> — {@code endToEndId} d'une
+ *       ACMT.024 INBOUND déjà journalisée (résultat d'une vérification
+ *       d'identité initiée via {@code POST /api/v1/verifications}). PI-SPI
+ *       résout l'identité du bénéficiaire depuis le payload ACMT.024 et
+ *       réutilise cet e2e pour le PACS.008 (chaînage ACMT.023 ↔ PACS.008
+ *       imposé par la spec).</li>
  * </ul>
  *
  * <p>QR code flows (canal {@code 731}) carry {@code alias} plus an optional
@@ -30,17 +37,25 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class TransactionImmediatRequest extends TransactionInitiationRequest {
 
-    /** Alias (MBNO/SHID/MCOD) du bénéficiaire — exclusif avec iban/othr. */
+    /**
+     * Alias (MBNO/SHID/MCOD) du bénéficiaire. Mutuellement exclusif avec
+     * {@code endToEndIdVerification}. PI-SPI résout l'identité depuis la
+     * dernière RAC_SEARCH journalisée pour cet alias.
+     */
     private String alias;
 
-    /** IBAN du bénéficiaire — doit être accompagné de payePSP. */
-    private String iban;
-
-    /** Autre référence de compte (EME/TRAL) — doit être accompagnée de payePSP. */
-    private String othr;
-
-    /** Code membre du PSP du bénéficiaire (requis avec iban ou othr). */
-    private String payePSP;
+    /**
+     * {@code endToEndId} d'une ACMT.024 INBOUND déjà journalisée (résultat
+     * d'une vérification d'identité). Mutuellement exclusif avec {@code alias}.
+     * PI-SPI résout l'identité du bénéficiaire (compte, type, naissance,
+     * identification) depuis le payload de cette vérification, et réutilise
+     * cet e2e pour le PACS.008.
+     *
+     * <p>Pré-requis : avoir effectué une vérification via
+     * {@code POST /api/v1/verifications} et reçu la réponse ACMT.024 (statut
+     * VERIFIED).
+     */
+    private String endToEndIdVerification;
 
     /**
      * Identifiant de transaction — correspond à {@code identifiantTransaction}
@@ -96,24 +111,18 @@ public class TransactionImmediatRequest extends TransactionInitiationRequest {
     private String numeroDocumentReference;
 
     /**
-     * Exactly one of the three beneficiary-identification modes must be provided.
-     * Keep this validation in the DTO so a malformed request fails fast with a
-     * clear 400 before we touch the resolver.
+     * Exactement un mode d'identification du bénéficiaire est requis :
+     * soit {@code alias} (RAC_SEARCH), soit {@code endToEndIdVerification}
+     * (ACMT.024). On valide en DTO pour échouer en 400 propre avant d'atteindre
+     * le résolver.
      */
     @JsonIgnore
     @AssertTrue(message = "Un et un seul mode d'identification du bénéficiaire est requis : "
-            + "'alias' OU ('iban' + 'payePSP') OU ('othr' + 'payePSP')")
+            + "'alias' (transfert via RAC_SEARCH) OU 'endToEndIdVerification' "
+            + "(transfert via vérification d'identité ACMT.023/024)")
     public boolean isBeneficiaryIdentifierValid() {
         boolean hasAlias = alias != null && !alias.isBlank();
-        boolean hasIban = iban != null && !iban.isBlank();
-        boolean hasOthr = othr != null && !othr.isBlank();
-        boolean hasPsp = payePSP != null && !payePSP.isBlank();
-
-        int modes = (hasAlias ? 1 : 0) + (hasIban ? 1 : 0) + (hasOthr ? 1 : 0);
-        if (modes != 1) return false;
-
-        // iban/othr require payePSP; alias does not (PSP is resolved via RAC_SEARCH)
-        if ((hasIban || hasOthr) && !hasPsp) return false;
-        return true;
+        boolean hasVerif = endToEndIdVerification != null && !endToEndIdVerification.isBlank();
+        return (hasAlias ^ hasVerif);   // XOR — exactement un des deux
     }
 }
