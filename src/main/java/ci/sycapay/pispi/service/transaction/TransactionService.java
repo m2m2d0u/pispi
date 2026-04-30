@@ -120,6 +120,13 @@ public class TransactionService {
                 request.getEndToEndIdSearchPayeur(), "payeur");
         ResolvedClient paye = clientSearchResolver.resolveByAlias(request.getAlias(), "paye");
 
+        Optional<PiTransfer> optionalPiTransfer = transferRepository.findByEndToEndIdAndDirection(paye.endToEndIdSearch(), MessageDirection.OUTBOUND);
+
+        if (optionalPiTransfer.isPresent()) {
+            throw new InvalidStateException("Le endToEndIdSearch existe déjà sur la base de données");
+        }
+
+
         CanalCommunication canal = resolveCanal(request.getCanal());
         validateLocalisationRules(canal, request);
         validatePayeTypeForCanal(canal, paye);
@@ -1363,25 +1370,28 @@ public class TransactionService {
             p.put("numeroIdentificationClientPayeur", t.getIdentifiantClientPayeur());
         if (t.getAliasPayeur() != null)
             p.put("aliasClientPayeur", t.getAliasPayeur());
-        if (t.getIdentificationFiscaleCommercantPayeur() != null)
-            p.put("identificationFiscaleCommercantPayeur", t.getIdentificationFiscaleCommercantPayeur());
-        else if (t.getIdentificationRccmClientPayeur() != null)
-            p.put("numeroRCCMClientPayeur", t.getIdentificationRccmClientPayeur());
+        emitMerchantIds(p, t.getTypeClientPayeur(),
+                t.getIdentificationFiscaleCommercantPayeur(),
+                t.getIdentificationRccmClientPayeur(),
+                "identificationFiscaleCommercantPayeur", "numeroRCCMClientPayeur");
         if (t.getVilleClientPayeur() != null)
             p.put("villeClientPayeur", t.getVilleClientPayeur());
         if (t.getAdresseClientPayeur() != null)
             p.put("adresseClientPayeur", t.getAdresseClientPayeur());
-        // Birth data (spec pp.70-71): only for bank-held account types (CACC/SVGS/LLSV/VACC/TAXE).
-        // TRAN/TRAL are EME/mobile accounts — sending birth data for those causes BE01.
-        // The BCEAO example (p.75) confirms: CACC side carries birth data, TRAN side does not.
-        if (isBankAccountType(t.getTypeComptePayeur())) {
-            if (t.getDateNaissanceClientPayeur() != null)
-                p.put("dateNaissanceClientPayeur", t.getDateNaissanceClientPayeur());
-            if (t.getVilleNaissanceClientPayeur() != null)
-                p.put("villeNaissanceClientPayeur", t.getVilleNaissanceClientPayeur());
-            if (t.getPaysNaissanceClientPayeur() != null)
-                p.put("paysNaissanceClientPayeur", t.getPaysNaissanceClientPayeur());
-        }
+        // Naissance — émis dès qu'on en a la donnée, pour TOUS les types de
+        // compte. Réponse BCEAO support (2026-04-30) : "Toutes les informations
+        // retournées par la recherche d'alias doivent être renseignées dans le
+        // pacs.008 ou le pain.013." Omettre dateNaissance / paysNaissance /
+        // villeNaissance quand la RAC_SEARCH les avait → BE01
+        // InconsistenWithEndCustomer. L'ancienne garde {@code isBankAccountType}
+        // (qui filtrait pour TRAN/TRAL) a été retirée — l'exemple BCEAO de la
+        // doc inclut la naissance même sur Dbtr avec compte TRAN.
+        if (t.getDateNaissanceClientPayeur() != null)
+            p.put("dateNaissanceClientPayeur", t.getDateNaissanceClientPayeur());
+        if (t.getVilleNaissanceClientPayeur() != null)
+            p.put("villeNaissanceClientPayeur", t.getVilleNaissanceClientPayeur());
+        if (t.getPaysNaissanceClientPayeur() != null)
+            p.put("paysNaissanceClientPayeur", t.getPaysNaissanceClientPayeur());
 
         // Payé — from snapshot
         p.put("nomClientPaye", t.getNomClientPaye());
@@ -1397,22 +1407,21 @@ public class TransactionService {
             p.put("numeroIdentificationClientPaye", t.getIdentifiantClientPaye());
         if (t.getAliasPaye() != null)
             p.put("aliasClientPaye", t.getAliasPaye());
-        if (t.getIdentificationFiscaleCommercantPaye() != null)
-            p.put("identificationFiscaleCommercantPaye", t.getIdentificationFiscaleCommercantPaye());
-        else if (t.getIdentificationRccmClientPaye() != null)
-            p.put("numeroRCCMClientPaye", t.getIdentificationRccmClientPaye());
+        emitMerchantIds(p, t.getTypeClientPaye(),
+                t.getIdentificationFiscaleCommercantPaye(),
+                t.getIdentificationRccmClientPaye(),
+                "identificationFiscaleCommercantPaye", "numeroRCCMClientPaye");
         if (t.getVilleClientPaye() != null)
             p.put("villeClientPaye", t.getVilleClientPaye());
         if (t.getAdresseClientPaye() != null)
             p.put("adresseClientPaye", t.getAdresseClientPaye());
-        if (isBankAccountType(t.getTypeComptePaye())) {
-            if (t.getDateNaissanceClientPaye() != null)
-                p.put("dateNaissanceClientPaye", t.getDateNaissanceClientPaye());
-            if (t.getVilleNaissanceClientPaye() != null)
-                p.put("villeNaissanceClientPaye", t.getVilleNaissanceClientPaye());
-            if (t.getPaysNaissanceClientPaye() != null)
-                p.put("paysNaissanceClientPaye", t.getPaysNaissanceClientPaye());
-        }
+        // Idem côté payé : naissance émise dès qu'on en a, sans filtre par typeCompte.
+        if (t.getDateNaissanceClientPaye() != null)
+            p.put("dateNaissanceClientPaye", t.getDateNaissanceClientPaye());
+        if (t.getVilleNaissanceClientPaye() != null)
+            p.put("villeNaissanceClientPaye", t.getVilleNaissanceClientPaye());
+        if (t.getPaysNaissanceClientPaye() != null)
+            p.put("paysNaissanceClientPaye", t.getPaysNaissanceClientPaye());
 
         // Transaction-level
         if (t.getTypeTransaction() != null) p.put("typeTransaction", t.getTypeTransaction().name());
@@ -1527,6 +1536,41 @@ public class TransactionService {
      * failed with {@code "ibanClientPayeur est invalide"}. The split above
      * satisfies both.
      */
+    /**
+     * Émission des identifiants marchand sur PACS.008 (et PAIN.013) avec
+     * gating type-aware :
+     *
+     * <ul>
+     *   <li><b>Type C</b> (commerçant individuel — XML {@code <PrvtId>}) :
+     *       les deux peuvent coexister puisque {@code <PrvtId>} autorise
+     *       plusieurs {@code <Othr>}. Le BCEAO support a confirmé que
+     *       {@code identificationRCCM} (= POID) DOIT être présent à côté de
+     *       {@code identificationFiscaleCommercant} (= TXID) si la
+     *       RAC_SEARCH les a retournés tous les deux. Sinon BE01.</li>
+     *   <li><b>Type B / G</b> (personne morale — XML {@code <OrgId>}) : le
+     *       schéma BCEAO restreint capse {@code <Othr>} à
+     *       {@code maxOccurs="1"} dans {@code <OrgId>}. On émet donc
+     *       {@code identificationFiscaleCommercant} (canonical TXID), à
+     *       défaut {@code numeroRCCMClient}, jamais les deux.</li>
+     *   <li><b>Type P / autre</b> : aucun identifiant marchand applicable.</li>
+     * </ul>
+     */
+    private static void emitMerchantIds(Map<String, Object> payload,
+                                        TypeClient typeClient,
+                                        String fiscalCommercant,
+                                        String rccm,
+                                        String fiscalKey,
+                                        String rccmKey) {
+        if (typeClient == TypeClient.C) {
+            if (fiscalCommercant != null) payload.put(fiscalKey, fiscalCommercant);
+            if (rccm != null) payload.put(rccmKey, rccm);
+            return;
+        }
+        // B / G / P : un seul Othr autorisé sous OrgId — fiscal d'abord, RCCM en fallback.
+        if (fiscalCommercant != null) payload.put(fiscalKey, fiscalCommercant);
+        else if (rccm != null) payload.put(rccmKey, rccm);
+    }
+
     private static void putAccountId(Map<String, Object> payload,
                                      String ibanKey, String othrKey,
                                      TypeCompte typeCompte,

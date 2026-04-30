@@ -298,14 +298,19 @@ public class ClientSearchResolver {
         // it as the {@code endToEndId} of the downstream PAIN.013 / PACS.008,
         // per BCEAO spec : "Le EndToEndId généré au moment de la recherche
         // d'alias est utilisé dans le pain.013 [/ pacs.008]".
-        // Type C: use RCCM as the identification (emitted as numeroRCCMClient* in the
-        // payload, which maps to <Othr>/<Id> with no <SchmeNm>/<Cd> — avoids the POID
-        // XSD restriction while satisfying the AIP "doit avoir une identification" rule.
-        // For type C: suppress RCCM — it maps to <Cd>POID</Cd> like fiscal ID.
-        String rccmToReturn = (typeClient == TypeClient.C) ? null : identificationRccm;
+        //
+        // {@code identificationRccm} (= POID/RCCM) est propagé intact pour TOUS
+        // les types. C'est le builder pacs.008 / pain.013 (via {@code emitMerchantIds}
+        // type-aware) qui décide d'émettre côté payload selon le typeClient :
+        //   - Type C : émis comme second {@code <Othr>} dans {@code <PrvtId>} (XSD autorise).
+        //   - Type B/G : émis comme {@code <Othr>} unique dans {@code <OrgId>} si pas
+        //     d'identifiant primaire (XSD restreint à 1 Othr).
+        // Réponse support BCEAO (2026-04-30) : "Toutes les informations retournées par
+        // la recherche d'alias doivent être renseignées dans le pacs.008 ou le pain.013."
+        // Omettre RCCM pour type C déclenche BE01 InconsistenWithEndCustomer.
         return new ResolvedClient(builder.build(), other, iban, typeCompte, valeurAlias,
                 codeMembreParticipant, endToEndIdSearch,
-                identificationFiscaleCommercant, rccmToReturn);
+                identificationFiscaleCommercant, identificationRccm);
     }
 
     private static String str(Map<String, Object> map, String key) {

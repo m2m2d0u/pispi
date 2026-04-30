@@ -656,29 +656,37 @@ public class RequestToPayService {
         p.put("deviseCompteClientPayeur", "XOF");
         putIfNotBlank(p, "aliasClientPayeur", payeur.aliasValue());
         putIfNotBlank(p, "codeMembreParticipantPayeur", payeur.codeMembre());
-        // identificationFiscaleCommercant maps to <Dbtr>/<Id>/<OrgId>/<Othr> —
-        // the SAME XSD path as numeroIdentificationClientPayeur. BCEAO restricted
-        // schema caps Othr at maxOccurs=1 inside OrgId, so emitting both for a
-        // type B/G client triggers "Element 'Othr': not expected" (we hit this
-        // on PACS.008 and fixed it in ClientSearchResolver — same rule applies
-        // to PAIN.013). For B/G the fiscal IS the primary numeroIdentification
-        // (TXID), so skip the duplicate; only type C carries a distinct
-        // commercial fiscal ID alongside its NIDN primary.
+        // Identifiants marchand — gating type-aware (BCEAO support, 2026-04) :
+        //   Type C (commerçant individuel, XML <PrvtId>) : émettre LES DEUX
+        //     (identificationFiscaleCommercant = TXID + numeroRCCMClient = POID/RCCM)
+        //     car <PrvtId> autorise plusieurs <Othr>. Omettre l'un déclenche
+        //     BE01 "Toutes les informations retournées par la recherche d'alias
+        //     doivent être renseignées".
+        //   Type B/G (personne morale, XML <OrgId>) : un seul Othr autorisé
+        //     par le XSD restreint BCEAO ; fiscal d'abord, RCCM en fallback.
+        //   Type P : pas d'ID marchand applicable.
         TypeClient payeurTypeClient = payeurInfo.getTypeClient();
-        boolean payeurIsBG = payeurTypeClient == TypeClient.B || payeurTypeClient == TypeClient.G;
-        if (!payeurIsBG) {
-            String idFiscCommPayeur = payeur.identificationFiscaleCommercant() != null
-                    ? payeur.identificationFiscaleCommercant()
-                    : request.getIdentificationFiscaleCommercantPayeur();
+        String idFiscCommPayeur = payeur.identificationFiscaleCommercant() != null
+                ? payeur.identificationFiscaleCommercant()
+                : request.getIdentificationFiscaleCommercantPayeur();
+        if (payeurTypeClient == TypeClient.C) {
+            if (idFiscCommPayeur != null)
+                p.put("identificationFiscaleCommercantPayeur", idFiscCommPayeur);
+            if (payeur.identificationRccm() != null)
+                p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
+        } else if (payeurTypeClient == TypeClient.B || payeurTypeClient == TypeClient.G) {
+            // B/G — un seul Othr (XSD <OrgId> capé)
+            if (payeur.identificationRccm() != null && payeurInfo.getIdentifiant() == null) {
+                p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
+            }
+            // Sinon : fiscal omis car redondant avec numeroIdentification (TXID primaire)
+        } else {
+            // P et autres : fiscal d'abord, RCCM en fallback (mostly no-op pour P).
             if (idFiscCommPayeur != null) {
                 p.put("identificationFiscaleCommercantPayeur", idFiscCommPayeur);
             } else if (payeur.identificationRccm() != null) {
                 p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
             }
-        } else if (payeur.identificationRccm() != null
-                && payeurInfo.getIdentifiant() == null) {
-            // B/G with RCCM only (no fiscal) — RCCM becomes the sole identifier
-            p.put("numeroRCCMClientPayeur", payeur.identificationRccm());
         }
 
         // Payé party — flat fields (resolved).
@@ -705,22 +713,26 @@ public class RequestToPayService {
         p.put("typeCompteClientPaye", paye.typeCompte().name());
         p.put("deviseCompteClientPaye", "XOF");
         putIfNotBlank(p, "aliasClientPaye", paye.aliasValue());
-        // Same dedup as payeur: skip identificationFiscaleCommercant for B/G
-        // (numeroIdentification already carries it) — see header comment above.
+        // Identifiants marchand — même gating type-aware que côté payeur (cf. commentaire ci-dessus).
         TypeClient payeTypeClient = payeInfo.getTypeClient();
-        boolean payeIsBG = payeTypeClient == TypeClient.B || payeTypeClient == TypeClient.G;
-        if (!payeIsBG) {
-            String idFiscCommPaye = paye.identificationFiscaleCommercant() != null
-                    ? paye.identificationFiscaleCommercant()
-                    : request.getIdentificationFiscaleCommercantPaye();
+        String idFiscCommPaye = paye.identificationFiscaleCommercant() != null
+                ? paye.identificationFiscaleCommercant()
+                : request.getIdentificationFiscaleCommercantPaye();
+        if (payeTypeClient == TypeClient.C) {
+            if (idFiscCommPaye != null)
+                p.put("identificationFiscaleCommercantPaye", idFiscCommPaye);
+            if (paye.identificationRccm() != null)
+                p.put("numeroRCCMClientPaye", paye.identificationRccm());
+        } else if (payeTypeClient == TypeClient.B || payeTypeClient == TypeClient.G) {
+            if (paye.identificationRccm() != null && payeInfo.getIdentifiant() == null) {
+                p.put("numeroRCCMClientPaye", paye.identificationRccm());
+            }
+        } else {
             if (idFiscCommPaye != null) {
                 p.put("identificationFiscaleCommercantPaye", idFiscCommPaye);
             } else if (paye.identificationRccm() != null) {
                 p.put("numeroRCCMClientPaye", paye.identificationRccm());
             }
-        } else if (paye.identificationRccm() != null
-                && payeInfo.getIdentifiant() == null) {
-            p.put("numeroRCCMClientPaye", paye.identificationRccm());
         }
 
         // -----------------------------------------------------------------
