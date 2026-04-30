@@ -57,7 +57,7 @@ public class RequestToPayController {
     public ApiResponse<RequestToPayResponse> rejectRtp(
             @PathVariable String endToEndId,
             @Valid @RequestBody RtpRejectRequest request) {
-        return ApiResponse.ok(rtpService.rejectRtp(endToEndId, request.getCodeRaison()));
+        return ApiResponse.ok(rtpService.rejectRtp(endToEndId, request.getCodeRaison().name()));
     }
 
     @Operation(summary = "Accepter une demande de paiement entrante",

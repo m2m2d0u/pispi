@@ -1295,15 +1295,17 @@ public class TransactionService {
             p.put("villeClientPayeur", t.getVilleClientPayeur());
         if (t.getAdresseClientPayeur() != null)
             p.put("adresseClientPayeur", t.getAdresseClientPayeur());
-        // Birth data (spec pp.70-71): required when bank participant, type P, typeCompte != TRAL.
-        // Emitted whenever available — TRAL/EME RAC_SEARCH payloads never carry birth data so
-        // fields will be null for those account types and nothing is emitted.
-        if (t.getDateNaissanceClientPayeur() != null)
-            p.put("dateNaissanceClientPayeur", t.getDateNaissanceClientPayeur());
-        if (t.getVilleNaissanceClientPayeur() != null)
-            p.put("villeNaissanceClientPayeur", t.getVilleNaissanceClientPayeur());
-        if (t.getPaysNaissanceClientPayeur() != null)
-            p.put("paysNaissanceClientPayeur", t.getPaysNaissanceClientPayeur());
+        // Birth data (spec pp.70-71): only for bank-held account types (CACC/SVGS/LLSV/VACC/TAXE).
+        // TRAN/TRAL are EME/mobile accounts — sending birth data for those causes BE01.
+        // The BCEAO example (p.75) confirms: CACC side carries birth data, TRAN side does not.
+        if (isBankAccountType(t.getTypeComptePayeur())) {
+            if (t.getDateNaissanceClientPayeur() != null)
+                p.put("dateNaissanceClientPayeur", t.getDateNaissanceClientPayeur());
+            if (t.getVilleNaissanceClientPayeur() != null)
+                p.put("villeNaissanceClientPayeur", t.getVilleNaissanceClientPayeur());
+            if (t.getPaysNaissanceClientPayeur() != null)
+                p.put("paysNaissanceClientPayeur", t.getPaysNaissanceClientPayeur());
+        }
 
         // Payé — from snapshot
         p.put("nomClientPaye", t.getNomClientPaye());
@@ -1327,12 +1329,14 @@ public class TransactionService {
             p.put("villeClientPaye", t.getVilleClientPaye());
         if (t.getAdresseClientPaye() != null)
             p.put("adresseClientPaye", t.getAdresseClientPaye());
-        if (t.getDateNaissanceClientPaye() != null)
-            p.put("dateNaissanceClientPaye", t.getDateNaissanceClientPaye());
-        if (t.getVilleNaissanceClientPaye() != null)
-            p.put("villeNaissanceClientPaye", t.getVilleNaissanceClientPaye());
-        if (t.getPaysNaissanceClientPaye() != null)
-            p.put("paysNaissanceClientPaye", t.getPaysNaissanceClientPaye());
+        if (isBankAccountType(t.getTypeComptePaye())) {
+            if (t.getDateNaissanceClientPaye() != null)
+                p.put("dateNaissanceClientPaye", t.getDateNaissanceClientPaye());
+            if (t.getVilleNaissanceClientPaye() != null)
+                p.put("villeNaissanceClientPaye", t.getVilleNaissanceClientPaye());
+            if (t.getPaysNaissanceClientPaye() != null)
+                p.put("paysNaissanceClientPaye", t.getPaysNaissanceClientPaye());
+        }
 
         // Transaction-level
         if (t.getTypeTransaction() != null) p.put("typeTransaction", t.getTypeTransaction().name());
@@ -1401,6 +1405,21 @@ public class TransactionService {
             case RJCT, TMOT, ECHEC -> TransactionStatut.REJETE;
             case PEND, ACSP -> TransactionStatut.INITIE;
         };
+    }
+
+    /**
+     * Returns true for account types that belong to bank participants (CACC/SVGS/LLSV/VACC/TAXE).
+     * Used to gate birth-data emission: spec pp.70-71 conditions birth data on
+     * "le participant est une banque" — proxied here by account type, confirmed by
+     * the BCEAO reference example (p.75) where the CACC side carries birth data and
+     * the TRAN side does not.
+     */
+    private static boolean isBankAccountType(TypeCompte typeCompte) {
+        return typeCompte == TypeCompte.CACC
+                || typeCompte == TypeCompte.SVGS
+                || typeCompte == TypeCompte.LLSV
+                || typeCompte == TypeCompte.VACC
+                || typeCompte == TypeCompte.TAXE;
     }
 
     /**
