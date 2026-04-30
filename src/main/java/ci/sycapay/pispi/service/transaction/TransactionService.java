@@ -327,7 +327,9 @@ public class TransactionService {
         return toResponseFromRtp(rtpResp, paye, payeur, rtpCanal, request);
     }
 
-    /** Choose the PAIN.013 canal based on the payé's typeClient. */
+    /**
+     * Choose the PAIN.013 canal based on the payé's typeClient.
+     */
     private CanalCommunicationRtp remapReceiveNowCanal(
             TypeClient payeType) {
         if (payeType == null) {
@@ -356,7 +358,9 @@ public class TransactionService {
         }
     }
 
-    /** Map the legacy {@code RequestToPayResponse} into the unified mobile shape. */
+    /**
+     * Map the legacy {@code RequestToPayResponse} into the unified mobile shape.
+     */
     private TransactionResponse toResponseFromRtp(
             RequestToPayResponse rtp,
             ResolvedClient paye,
@@ -587,7 +591,7 @@ public class TransactionService {
         t.setStatut(TransferStatus.PEND);
         t.setConfirmationDate(cmd.getConfirmationDate().withOffsetSameInstant(ZoneOffset.UTC).toLocalDateTime());
         t.setConfirmationMethode(cmd.getConfirmationMethode());
-        if (cmd.getLatitude() != null)  t.setLatitudeClientPayeur(cmd.getLatitude().toPlainString());
+        if (cmd.getLatitude() != null) t.setLatitudeClientPayeur(cmd.getLatitude().toPlainString());
         if (cmd.getLongitude() != null) t.setLongitudeClientPayeur(cmd.getLongitude().toPlainString());
         if (cmd.getMotif() != null && !cmd.getMotif().isBlank()) t.setMotif(cmd.getMotif());
         transferRepository.save(t);
@@ -944,7 +948,7 @@ public class TransactionService {
      */
     @Transactional
     public TransactionResponse rejectIncomingTransfer(String endToEndId,
-                                                     IncomingTransferRejectCommand cmd) {
+                                                      IncomingTransferRejectCommand cmd) {
         PiTransfer transfer = transferRepository
                 .findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -1003,7 +1007,7 @@ public class TransactionService {
     private void validateLocalisationRules(CanalCommunication canal, TransactionImmediatRequest req) {
         if (CANALS_REQUIRING_LOCALISATION.contains(canal)
                 && (req.getLatitude() == null || req.getLatitude().isBlank()
-                    || req.getLongitude() == null || req.getLongitude().isBlank())) {
+                || req.getLongitude() == null || req.getLongitude().isBlank())) {
             throw new IllegalArgumentException(
                     "La localisation GPS (latitude, longitude) est obligatoire pour le canal "
                             + canal.name());
@@ -1086,8 +1090,8 @@ public class TransactionService {
      * </ol>
      */
     private String resolveIdentifiantTransaction(CanalCommunication canal,
-                                                  String callerTxId,
-                                                  String endToEndId) {
+                                                 String callerTxId,
+                                                 String endToEndId) {
         if (callerTxId != null && !callerTxId.isBlank()) {
             return callerTxId.length() > 35 ? callerTxId.substring(0, 35) : callerTxId;
         }
@@ -1159,8 +1163,8 @@ public class TransactionService {
     }
 
     private static void applyPayeurSnapshot(PiTransfer.PiTransferBuilder b,
-                                             String codeMembre, ResolvedClient payeur,
-                                             String racSearchRef) {
+                                            String codeMembre, ResolvedClient payeur,
+                                            String racSearchRef) {
         b.codeMembrePayeur(codeMembre)
                 .numeroComptePayeur(payeur.other())
                 .typeComptePayeur(payeur.typeCompte())
@@ -1478,23 +1482,29 @@ public class TransactionService {
                                      String iban, String other) {
         String value;
         String key;
-        if (typeCompte == TypeCompte.TRAL) {
+        if (typeCompte == TypeCompte.TRAN
+                || typeCompte == TypeCompte.VACC
+        ) {
             key = othrKey;
             value = other != null ? other : iban;
         } else if (typeCompte == TypeCompte.CACC
                 || typeCompte == TypeCompte.SVGS
                 || typeCompte == TypeCompte.LLSV
-                || typeCompte == TypeCompte.VACC
                 || typeCompte == TypeCompte.TAXE) {
             // Strict IBAN types — schema requires <IBAN>
             key = ibanKey;
             value = iban != null ? iban : other;
         } else {
             // TRAN or null — prefer iban if present, else other
-            if (iban != null) { key = ibanKey; value = iban; }
-            else if (other != null) { key = othrKey; value = other; }
-            else return;
+            if (iban != null) {
+                key = ibanKey;
+                value = iban;
+            } else if (other != null) {
+                key = othrKey;
+                value = other;
+            } else return;
         }
+        log.debug("PACS.008 for account type: {}, key={}: value={}", typeCompte, key, value);
         if (value != null) payload.put(key, value);
     }
 }
