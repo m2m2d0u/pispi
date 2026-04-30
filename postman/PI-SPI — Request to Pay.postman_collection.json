@@ -272,6 +272,40 @@
           "response": []
         },
         {
+          "name": "Envoyer une demande de paiement marchand sur site avec débit différé",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canalCommunication\": \"MARCHAND_SUR_SITE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10000,\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Achat réfrigérateur — paiement différé fin de mois\",\n  \"latitudeClientPaye\": \"5.3600\",\n  \"longitudeClientPaye\": \"-4.0083\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rtp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rtp"
+              ]
+            },
+            "description": "Demande de paiement **marchand sur site avec débit différé** — canal `MARCHAND_SUR_SITE` → `500`.\n\n**Cas d'usage** : un client se rend chez un marchand pour acheter un réfrigérateur à 10 000 XOF. Le marchand offre 100 XOF de remise s'il paie immédiatement (débit différé fin de mois sinon).\n\n**Mapping vers le XML BCEAO `<PmtCond>`** :\n```\nautorisationModificationMontant: false   →  <AmtModAllwd>false</AmtModAllwd>\nmontantRemisePaiementImmediat: 100       →  <ImdtPmtRbt><Amt Ccy=\"XOF\">100</Amt></ImdtPmtRbt>\n(implicite côté transformeur AIP)        →  <EarlyPmtAllwd>true</EarlyPmtAllwd>\n(implicite côté transformeur AIP)        →  <GrntedPmtReqd>false</GrntedPmtReqd>\n```\n\n**Pourquoi cette combinaison fonctionne** :\n- `<AmtModAllwd>false</AmtModAllwd>` : le débiteur ne peut pas modifier le montant (10 000 fixe).\n- `<ImdtPmtRbt>100</ImdtPmtRbt>` : 100 XOF de remise si paiement immédiat.\n- `<EarlyPmtAllwd>true</EarlyPmtAllwd>` : autorise le paiement anticipé (sinon la remise serait inutile).\n- `<GrntedPmtReqd>false</GrntedPmtReqd>` : ce n'est pas une facture garantie à montant variable (ça serait `true` sur canal 401).\n\nL'AIP rejette `autorisationModificationMontant: false` SEULEMENT sur canal 401 (FACTURE) — sur 500/520/521/631 c'est valide. Voir l'exemple BCEAO PI-SPECS pain.013 §4.7.1.1."
+          },
+          "response": []
+        },
+        {
           "name": "Envoyer une demande de paiement PICASH",
           "request": {
             "method": "POST",
