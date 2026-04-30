@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "3b6cf0a1-cfb2-41fd-b5c2-f09ffdd85df8",
+    "_postman_id": "02612370-b0c4-4ed4-97d3-c476571c4094",
     "name": "PI-SPI — Request to Pay",
     "description": "Collection de tests pour les opérations Request-to-Pay (PAIN.013 / PAIN.014 — schéma BCEAO `DemandePaiement` / `ReponseDemandePaiement`).\n\n**Résolution des parties** (sur le modèle `TransferRequest`) — `endToEndIdSearchPayeur` et `endToEndIdSearchPaye` référencent des `endToEndId` de recherches d'alias RAC_SEARCH inbound déjà journalisées dans `pi_message_log`. PI-SPI reconstruit automatiquement `nomClient*`, `typeClient*`, `paysClient*`, `typeCompteClient*`, `aliasClient*`, `otherClient*` et `codeMembreParticipant*`.\n\n**canalCommunication (RTP BCEAO)** : `FACTURE` (401) | `MARCHAND_SUR_SITE` (500) | `E_COMMERCE_LIVRAISON` (520) | `E_COMMERCE_IMMEDIAT` (521) | `PARTICULIER` (631)\n\n**Règle BCEAO `typeCompteClientPaye`** : `CACC|SVGS|TRAN|LLSV|VACC|TAXE` — **pas `TRAL`**. Le service émet un 400 si l'alias résolu pour le payé porte `TRAL`.\n\n**Sérialisation BCEAO** : PI-SPI convertit les montants et le booléen `autorisationModificationMontant` en chaînes avant envoi à l'AIP (patterns `\\d+` / `true|false`).\n\n**`identifiantDemandePaiement`** : auto-généré par le script pre-request de la collection.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
@@ -92,7 +92,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 10,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
+              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 100,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"2026-05-22T23:59:59.000Z\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Facture équipement électroménager avec remise 10%\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 10,\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-BK-2026-0108\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -110,7 +110,7 @@
                 "rtp"
               ]
             },
-            "description": "Demande de paiement de facture avec **remise pour paiement immédiat** (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de remise — mutuellement exclusif avec `tauxRemisePaiementImmediat`. Sérialisé en chaîne côté AIP.\n**autorisationModificationMontant** : sérialisé en chaîne `\"false\"` côté AIP."
+            "description": "Demande de paiement de facture avec **remise pour paiement immédiat** (canal `FACTURE` → `401`).\n\n**montantRemisePaiementImmediat** : montant fixe de remise — mutuellement exclusif avec `tauxRemisePaiementImmediat`. Sérialisé en chaîne côté AIP.\n\n**autorisationModificationMontant: true** : sur canal 401 (FACTURE), `true` matérialise un `<GrntedPmtReqd>` (paiement garanti à montant variable). Le XSD pain.013 exige que `<ImdtPmtRbt>` (remise) précède `<GrntedPmtReqd>` — d'où l'obligation de fournir `montantRemisePaiementImmediat` ou `tauxRemisePaiementImmediat` en parallèle.\n\n⚠️ **Ne jamais envoyer `false` sur canal 401** : l'AIP rejette avec *« Le débit différé n'est pas supporté lorsque le canal c'est '401' »*. La garde locale `validateAutorisationModificationCompatibility` bloque ce combo en 400 avant tout appel AIP."
           },
           "response": []
         },
@@ -120,7 +120,6 @@
             {
               "listen": "prerequest",
               "script": {
-                "type": "text/javascript",
                 "exec": [
                   "// Canal 401 (FACTURE) avec autorisationModificationMontant=true.",
                   "// Le service PI-SPI force dateHeureExecution à now+30s côté AIP",
@@ -131,7 +130,10 @@
                   "// dateHeureLimiteAction = J+30 (expiration de l'autorisation variable)",
                   "const limite = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);",
                   "pm.variables.set('dateHeureLimiteActionJ30', limite.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
-                ]
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -145,7 +147,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"FACTURE\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 50,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
               "options": {
                 "raw": {
                   "language": "json"

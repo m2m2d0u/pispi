@@ -291,12 +291,13 @@ public class RequestToPayService {
      * {@code null} pass through unconditionally.
      */
     private static void validateAutorisationModificationCompatibility(RequestToPayRequest req) {
-        if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
+        Boolean amm = req.getAutorisationModificationMontant();
+        if (amm == null) return;   // champ absent → aucune contrainte particulière
         CanalCommunicationRtp canal = req.getCanalCommunication();
 
-        // false = "débit différé fin de mois" (AmtModAllwd) — forbidden on canal 401.
-        // AIP rejects with "Le débit différé n'est pas supporté lorsque le canal c'est '401'".
-        if (Boolean.FALSE.equals(req.getAutorisationModificationMontant())) {
+        // false = "débit différé fin de mois" (<AmtModAllwd>false) — interdit sur canal 401.
+        // L'AIP rejette avec "Le débit différé n'est pas supporté lorsque le canal c'est '401'".
+        if (!amm) {
             if (canal == CanalCommunicationRtp.FACTURE) {
                 throw new IllegalArgumentException(
                         "'autorisationModificationMontant=false' (débit différé fin de mois) "
@@ -304,25 +305,26 @@ public class RequestToPayService {
                                 + "L'AIP rejette avec 'Le débit différé n'est pas supporté "
                                 + "lorsque le canal c'est 401'. "
                                 + "Pour un paiement FACTURE à montant variable/garanti, "
-                                + "utiliser 'autorisationModificationMontant=true' + remise.");
+                                + "utiliser 'autorisationModificationMontant=true' + remise. "
+                                + "Pour un paiement FACTURE immédiat sans modification de "
+                                + "montant, retirer le champ entièrement (null).");
             }
             return;
         }
 
-        // true = "facture avec date d'échéance" (GrntedPmtReqd) — canal 401 only.
-        // AIP rejects other canals with "Element GrntedPmtReqd: not expected. Expected is ImdtPmtRbt".
-        if (!Boolean.TRUE.equals(req.getAutorisationModificationMontant())) return;
-
-        if (canal != CanalCommunicationRtp.FACTURE) {
-            throw new IllegalArgumentException(
-                    "'autorisationModificationMontant=true' (<GrntedPmtReqd>) n'est pas supporté "
-                            + "sur le canal " + canal.name() + " (" + canal.getCode() + "). "
-                            + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
-                            + "Expected is ImdtPmtRbt'. "
-                            + "Seul le canal 401 (FACTURE) accepte true (montant variable/garanti). "
-                            + "Pour un débit différé sur canal 520, utiliser false + montantRemisePaiementImmediat.");
-        }
-        // GrntedPmtReqd must be preceded by ImdtPmtRbt in the XSD — remise required.
+        // true = "facture avec date d'échéance" (<GrntedPmtReqd>) — canal 401 uniquement.
+        // L'AIP rejette les autres canaux avec "Element GrntedPmtReqd: not expected.
+        // Expected is ImdtPmtRbt".
+//        if (canal != CanalCommunicationRtp.FACTURE) {
+//            throw new IllegalArgumentException(
+//                    "'autorisationModificationMontant=true' (<GrntedPmtReqd>) n'est pas supporté "
+//                            + "sur le canal " + canal.name() + " (" + canal.getCode() + "). "
+//                            + "L'AIP rejette avec 'Element GrntedPmtReqd: not expected. "
+//                            + "Expected is ImdtPmtRbt'. "
+//                            + "Seul le canal 401 (FACTURE) accepte true (montant variable/garanti). "
+//                            + "Pour un débit différé sur canal 520, utiliser false + montantRemisePaiementImmediat.");
+//        }
+        // <GrntedPmtReqd> doit être précédé de <ImdtPmtRbt> dans le XSD — remise requise.
         boolean hasRemise = req.getMontantRemisePaiementImmediat() != null
                          || req.getTauxRemisePaiementImmediat() != null;
         if (!hasRemise) {
