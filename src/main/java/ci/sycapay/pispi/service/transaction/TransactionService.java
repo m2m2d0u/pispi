@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import static ci.sycapay.pispi.util.DateTimeUtil.normaliseIsoInstantMillis;
 import static ci.sycapay.pispi.util.DateTimeUtil.nowIso;
 
 /**
@@ -608,11 +609,19 @@ public class TransactionService {
      * reference to the new transfer's {@code endToEndId}.
      */
     private TransactionResponse confirmRtpAcceptance(PiRequestToPay rtp, TransactionConfirmCommand cmd) {
-        // BCEAO rule: PACS.008 montant = PAIN.013 montant − discount.
-        // Discount is either a fixed amount (montantRemisePaiementImmediat) or a percentage
-        // rate (remiseRate / tauxRemisePaiementImmediat). Amount takes precedence over rate.
-        // montantAchat stays GROSS; line-sum montantAchat + montantRetrait = PAIN.013 montant.
-        BigDecimal effectiveMontant = computeEffectiveMontant(rtp, cmd.getMontant());
+        // BCEAO rule (corrigée) : PACS.008 montant == PAIN.013 montant (BRUT).
+        // L'AIP cross-check {@code PAIN.013.montant == PACS.008.montant} via le
+        // {@code endToEndId} partagé ; toute différence déclenche
+        // ADMI.002 "Les données de la demande de paiement et du transfert ne
+        // correspondent pas / TransactionNotFound". La remise éventuelle
+        // ({@code montantRemisePaiementImmediat} / {@code tauxRemisePaiementImmediat})
+        // reste dans le PAIN.013 comme métadonnée pour le settlement — elle
+        // est appliquée par l'AIP au moment de la compensation, pas par nous
+        // sur le PACS.008. Le débiteur paie le brut au créancier ; le
+        // remboursement de la remise (commission marchand) se fait via le
+        // mécanisme de compensation BCEAO en aval, hors du PACS.008.
+        BigDecimal effectiveMontant = rtp.getMontant() != null
+                ? rtp.getMontant() : cmd.getMontant();
 
         if (rtp.getMontant() != null && cmd.getMontant().compareTo(rtp.getMontant()) != 0) {
             throw new InvalidStateException(
@@ -1108,20 +1117,15 @@ public class TransactionService {
     // Snapshot builder helpers
     // ------------------------------------------------------------------------
 
-    private static BigDecimal computeEffectiveMontant(PiRequestToPay rtp, BigDecimal fallback) {
-        BigDecimal gross = rtp.getMontant() != null ? rtp.getMontant() : fallback;
-        BigDecimal fixedRemise = rtp.getMontantRemisePaiementImmediat();
-        BigDecimal rateRemise = rtp.getTauxRemisePaiementImmediat();
-        if (fixedRemise != null && fixedRemise.signum() > 0) {
-            return gross.subtract(fixedRemise);
-        }
-        if (rateRemise != null && rateRemise.signum() > 0) {
-            BigDecimal discount = gross.multiply(rateRemise)
-                    .divide(BigDecimal.valueOf(100), 0, java.math.RoundingMode.HALF_UP);
-            return gross.subtract(discount);
-        }
-        return gross;
-    }
+    // NOTE : la méthode {@code computeEffectiveMontant(rtp, fallback)} qui
+    // soustrayait {@code montantRemisePaiementImmediat} (ou taux) du brut a
+    // été RETIRÉE le 2026-04-30. La règle BCEAO est : PACS.008.montant ==
+    // PAIN.013.montant (brut). La remise reste dans le PAIN.013 comme
+    // métadonnée pour le settlement — l'AIP cross-check les deux via
+    // l'endToEndId partagé et rejette avec ADMI.002 "Les données de la
+    // demande de paiement et du transfert ne correspondent pas /
+    // TransactionNotFound" si on envoie le net. Si tu vois une régression,
+    // ne pas réintroduire ce calcul ici.
 
     /**
      * Extra PACS.008 fields that are present in an inbound PAIN.013 (RTP) but have
@@ -1132,15 +1136,57 @@ public class TransactionService {
      */
     private static Map<String, Object> buildRtpExtra(PiRequestToPay rtp) {
         Map<String, Object> extra = new HashMap<>();
-        // Mirror all monetary fields from the PAIN.013 unchanged so the AIP can
-        // match the PACS.008 back to the original request. The remise is passed
-        // as-is: the AIP uses it to compute the net settlement itself (AM09 if absent).
+        // L'AIP fait un cross-check field-par-field entre la PAIN.013 stockée
+        // et le PACS.008 d'acceptation (corrélation par endToEndId). Tout
+        // champ présent dans la PAIN.013 mais absent du PACS.008 déclenche
+        // ADMI.002 "Les données de la demande de paiement et du transfert ne
+        // correspondent pas / TransactionNotFound". On miroite donc TOUS les
+        // champs de la PAIN.013 ici, même ceux qui pourraient sembler
+        // PAIN-only (referenceBulk, clientDemandeur, dateHeureExecution,
+        // autorisationModificationMontant, remise, mandat, document ref).
+
+        // Monetary breakdown
         if (rtp.getMontantAchat() != null)
             extra.put("montantAchat", rtp.getMontantAchat().toBigInteger().toString());
         if (rtp.getMontantRetrait() != null)
             extra.put("montantRetrait", rtp.getMontantRetrait().toBigInteger().toString());
         if (rtp.getFraisRetrait() != null)
             extra.put("fraisRetrait", rtp.getFraisRetrait().toBigInteger().toString());
+
+        // Remise (commission marchand pour paiement immédiat)
+        if (rtp.getMontantRemisePaiementImmediat() != null)
+            extra.put("montantRemisePaiementImmediat",
+                    rtp.getMontantRemisePaiementImmediat().toBigInteger().toString());
+        if (rtp.getTauxRemisePaiementImmediat() != null)
+            extra.put("tauxRemisePaiementImmediat",
+                    rtp.getTauxRemisePaiementImmediat().toBigInteger().toString());
+
+        // Autorisation de modification de montant — sérialisée en chaîne
+        // ("true"/"false") comme convention BCEAO. Émettre seulement si le
+        // PAIN.013 d'origine la portait.
+        if (rtp.getAutorisationModificationMontant() != null)
+            extra.put("autorisationModificationMontant",
+                    rtp.getAutorisationModificationMontant().toString());
+
+        // Dates de la PAIN.013
+        if (rtp.getDateHeureExecution() != null)
+            extra.put("dateHeureExecution", normaliseIsoInstantMillis(
+                    rtp.getDateHeureExecution().toInstant(java.time.ZoneOffset.UTC).toString()));
+        if (rtp.getDateHeureLimiteAction() != null)
+            extra.put("dateHeureLimiteAction", normaliseIsoInstantMillis(
+                    rtp.getDateHeureLimiteAction().toInstant(java.time.ZoneOffset.UTC).toString()));
+
+        // Reference bulk (mappée en <InstrId> côté XML)
+        if (notBlank(rtp.getReferenceBulk()))
+            extra.put("referenceBulk", rtp.getReferenceBulk());
+
+        // Mandat (tontines / VACC)
+        if (notBlank(rtp.getIdentifiantMandat()))
+            extra.put("identifiantMandat", rtp.getIdentifiantMandat());
+        if (notBlank(rtp.getSignatureNumeriqueMandat()))
+            extra.put("signatureNumeriqueMandat", rtp.getSignatureNumeriqueMandat());
+
+        // Birth data (B/G n'en porte pas, P en porte si PAIN.013 d'origine fournie)
         if (rtp.getDateNaissancePayeur() != null)
             extra.put("dateNaissanceClientPayeur", rtp.getDateNaissancePayeur());
         if (rtp.getVilleNaissancePayeur() != null)
@@ -1153,13 +1199,18 @@ public class TransactionService {
             extra.put("villeNaissanceClientPaye", rtp.getVilleNaissancePaye());
         if (rtp.getPaysNaissancePaye() != null)
             extra.put("paysNaissanceClientPaye", rtp.getPaysNaissancePaye());
-        // AIP cross-checks document reference between PAIN.013 and accepting PACS.008.
-        // Missing typeDocumentReference/numeroDocumentReference triggers TransactionNotFound.
+
+        // Document reference (FACTURE)
         if (rtp.getTypeDocumentReference() != null)
             extra.put("typeDocumentReference", rtp.getTypeDocumentReference().name());
-        if (rtp.getNumeroDocumentReference() != null && !rtp.getNumeroDocumentReference().isBlank())
+        if (notBlank(rtp.getNumeroDocumentReference()))
             extra.put("numeroDocumentReference", rtp.getNumeroDocumentReference());
+
         return extra;
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     private static void applyPayeurSnapshot(PiTransfer.PiTransferBuilder b,
