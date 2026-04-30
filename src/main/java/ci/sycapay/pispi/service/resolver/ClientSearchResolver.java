@@ -75,6 +75,8 @@ public class ClientSearchResolver {
         if (typeClient == TypeClient.B) {
             return denominationSociale;
         }
+        // Type C (personne physique commerçante) is a physical person: nomClient* in PACS.008
+        // carries the personal name. The raisonSociale flows via identificationFiscaleCommercant.
         return nom;
     }
 
@@ -165,6 +167,7 @@ public class ClientSearchResolver {
         String numeroPasseport = str(data, "numeroPasseport");
         String identificationFiscale = str(data, "identificationFiscale");
         String identificationRccm = str(data, "identificationRccm");
+        String raisonSociale = str(data, "raisonSociale");
 
         // Identification routing for pacs.008 / pain.013 (spec §4.3.1.1 p.66-73).
         //

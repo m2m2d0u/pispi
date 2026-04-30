@@ -1,10 +1,14 @@
 package ci.sycapay.pispi.dto.transaction;
 
+import ci.sycapay.pispi.enums.CodeTypeDocument;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
 
 /**
  * {@code action = send_now}. Immediate debit — emits a PACS.008 after confirmation.
@@ -52,6 +56,44 @@ public class TransactionImmediatRequest extends TransactionInitiationRequest {
      * </ul>
      */
     private String txId;
+
+    /**
+     * Référence utilisée pour identifier les transactions d'un virement de masse.
+     * Optionnel — maps to {@code <CdtTrfTxInf>/<PmtId>/<InstrId>}, max 35 chars.
+     */
+    @Size(max = 35)
+    private String referenceBulk;
+
+    /**
+     * Montant de l'achat (optionnel — canaux marchands 500/521/520/400/733).
+     * Maps to {@code <RmtInf>/<Strd>/<LineDtls>/<Amt>/<DuePyblAmt>}.
+     */
+    private BigDecimal montantAchat;
+
+    /**
+     * Montant du retrait cashback (optionnel — canaux marchands).
+     * Maps to {@code <RmtInf>/<Strd>/<LineDtls>/<Amt>/<DuePyblAmt>}.
+     */
+    private BigDecimal montantRetrait;
+
+    /**
+     * Frais de retrait supportés par le client (optionnel).
+     * Maps to {@code <RmtInf>/<Strd>/<LineDtls>/<Amt>/<AdjstmntAmtAndRsn>/<Amt>}.
+     */
+    private BigDecimal fraisRetrait;
+
+    /**
+     * Type du document justificatif (facture, document commercial, etc.).
+     * Optionnel — maps to {@code <RmtInf>/<Strd>/<RfrdDocInf>/<Tp>/<CdOrPrtry>/<Cd>}.
+     */
+    private CodeTypeDocument typeDocumentReference;
+
+    /**
+     * Numéro de référence du document lié au virement.
+     * Optionnel — maps to {@code <RmtInf>/<Strd>/<RfrdDocInf>/<Nb>}.
+     */
+    @Size(max = 35)
+    private String numeroDocumentReference;
 
     /**
      * Exactly one of the three beneficiary-identification modes must be provided.

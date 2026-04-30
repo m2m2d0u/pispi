@@ -63,12 +63,10 @@ public abstract class TransactionInitiationRequest {
     @NotBlank
     private String canal;
 
-    /** GPS latitude du payeur. */
-    @NotBlank
+    /** GPS latitude du payeur. Obligatoire pour tous les canaux sauf 300 et 999. */
     private String latitude;
 
-    /** GPS longitude du payeur. */
-    @NotBlank
+    /** GPS longitude du payeur. Obligatoire pour tous les canaux sauf 300 et 999. */
     private String longitude;
 
     /** Motif libre du transfert. */
