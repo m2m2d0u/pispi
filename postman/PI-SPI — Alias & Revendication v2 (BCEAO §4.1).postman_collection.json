@@ -283,6 +283,40 @@
           "response": []
         },
         {
+          "name": "Créer alias SHID — Tontine (compte virtuel VACC)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"typeAlias\": \"SHID\",\n  \"backOfficeClientId\": \"{{backOfficeClientIdTontineEspoir}}\",\n  \"client\": {\n    \"nom\": \"Diabaté\",\n    \"genre\": \"2\",\n    \"typeClient\": \"P\",\n    \"typeIdentifiant\": \"NIDN\",\n    \"identifiant\": \"CMI998877665\",\n    \"dateNaissance\": \"1978-09-12\",\n    \"paysNaissance\": \"CI\",\n    \"lieuNaissance\": \"Yamoussoukro\",\n    \"nationalite\": \"CI\",\n    \"adresse\": \"Yopougon Niangon Sud, Lot 042\",\n    \"ville\": \"Abidjan\",\n    \"pays\": \"CI\",\n    \"telephone\": \"+2250506060606\",\n    \"email\": \"awa.diabate@mail.ci\"\n  },\n  \"numeroCompte\": \"CI21CI0090000054321987600300\",\n  \"typeCompte\": \"VACC\",\n  \"dateOuvertureCompte\": \"2024-03-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/aliases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "aliases"
+              ]
+            },
+            "description": "Crée un alias SHID adossé à un **compte virtuel de tontine** (`typeCompte: VACC`).\n\n**Contexte métier** : VACC (Virtual ACCount) est le type BCEAO pour les comptes collectifs de tontine — le compte est tenu au nom de la responsable / secrétaire de la tontine (ici Awa Diabaté) qui collecte les cotisations des membres et en redistribue le montant cumulé à chaque tour.\n\n**Spécificités VACC** :\n- Le `numeroCompte` est un **IBAN UEMOA** (le PI-SPI route automatiquement vers `ibanClient` côté AIP, pas `otherClient`).\n- VACC est le **seul type de compte** qui autorise l'utilisation de `MndtRltdInf` (`identifiantMandat` + `signatureNumeriqueMandat`) sur un PAIN.013 — utile pour les RTP de cotisations récurrentes (canal 631 PARTICULIER avec mandat de prélèvement).\n- Sur un transfert PACS.008 ou un RTP PAIN.013, l'AIP cross-check le `typeCompte=VACC` du payé contre la présence du mandat ; un mandat envoyé sur un autre type de compte (CACC, TRAN, etc.) est rejeté avec ADMI.002 *« MndtRltdInf doit être utilisé uniquement dans les demandes de paiement pour les tontines »*.\n\n**typeClient** : P (la responsable est une personne physique titulaire du compte)\n**typeIdentifiant** : NIDN\n\n**Cas d'usage de test** : utiliser cet alias comme `endToEndIdSearchPaye` dans un scénario `Envoyer demande de paiement pour une tontine P2P` (collection RTP) pour exercer le combo VACC + identifiantMandat."
+          },
+          "response": []
+        },
+        {
           "name": "Créer alias SHID — Personne avec passeport (CCPT)",
           "request": {
             "method": "POST",
@@ -1114,6 +1148,11 @@
       "key": "backOfficeClientIdIbanClient",
       "value": "BO-CI-IBAN-0001",
       "description": "Back-office client id pour un client P avec compte bancaire IBAN (CACC)"
+    },
+    {
+      "key": "backOfficeClientIdTontineEspoir",
+      "value": "BO-CI-TONTINE-ESPOIR-0001",
+      "description": "Back-office client id pour la responsable de la tontine Espoir (compte virtuel VACC)"
     },
     {
       "key": "aliasShidPPIban",

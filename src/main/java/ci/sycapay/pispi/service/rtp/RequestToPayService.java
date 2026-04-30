@@ -374,27 +374,54 @@ public class RequestToPayService {
     }
 
     /**
-     * Sur les canaux {@code 520} (E_COMMERCE_LIVRAISON), {@code 521}
-     * (E_COMMERCE_IMMEDIAT) et {@code 401} (FACTURE), le bénéficiaire (payé)
-     * ne peut pas être une personne physique ({@code P}) ni un commerçant
-     * ({@code C}). Ces canaux sont réservés aux entités de type Business ({@code B})
-     * ou Government ({@code G}).
+     * Restrictions sur le type du bénéficiaire (payé) selon le canal :
+     *
+     * <ul>
+     *   <li><b>401 (FACTURE), 520 (E_COMMERCE_LIVRAISON), 521 (E_COMMERCE_IMMEDIAT)</b> :
+     *       payé doit être de type {@code B} (Business) ou {@code G} (Government).
+     *       {@code P} (personne physique) et {@code C} (commerçant individuel)
+     *       sont interdits — ces canaux sont des flows commerciaux structurés
+     *       (facture, e-commerce) qui ne s'appliquent pas à un particulier ni
+     *       à un artisan individuel.</li>
+     *   <li><b>500 (MARCHAND_SUR_SITE)</b> : payé doit être de type {@code B},
+     *       {@code C} ou {@code G}. {@code P} est interdit — ce canal est un
+     *       encaissement marchand, pas une transaction P2P. {@code C} est
+     *       autorisé (l'artisan individuel est un cas d'usage central).</li>
+     * </ul>
+     *
+     * <p>Pour les autres canaux RTP (631 PARTICULIER notamment), aucune
+     * restriction de type n'est imposée ici — les règles métier des autres
+     * canaux sont gérées par leurs gardes respectives.
      */
     private static void validateBeneficiaireTypeForCanal(
             RequestToPayRequest req, ResolvedClient paye) {
         CanalCommunicationRtp canal = req.getCanalCommunication();
-        if (canal != CanalCommunicationRtp.E_COMMERCE_LIVRAISON
-                && canal != CanalCommunicationRtp.E_COMMERCE_IMMEDIAT
-                && canal != CanalCommunicationRtp.FACTURE) return;
-
+        if (canal == null) return;
         TypeClient payeType = paye.clientInfo().getTypeClient();
-        if (payeType == TypeClient.P || payeType == TypeClient.C) {
+        if (payeType == null) return;
+
+        boolean isStrictBusinessCanal =
+                canal == CanalCommunicationRtp.E_COMMERCE_LIVRAISON
+                        || canal == CanalCommunicationRtp.E_COMMERCE_IMMEDIAT
+                        || canal == CanalCommunicationRtp.FACTURE;
+        boolean isMarchandSurSite = canal == CanalCommunicationRtp.MARCHAND_SUR_SITE;
+
+        if (isStrictBusinessCanal && (payeType == TypeClient.P || payeType == TypeClient.C)) {
             throw new IllegalArgumentException(
                     "Le bénéficiaire (payé) de type " + payeType + " ("
                             + payeType.getDescription() + ") n'est pas autorisé sur le canal "
                             + canal.name() + " (LclInstrm " + canal.getCode() + "). "
                             + "Les canaux 401, 520 et 521 sont réservés aux bénéficiaires "
                             + "de type B (Business) ou G (Government).");
+        }
+
+        if (isMarchandSurSite && payeType == TypeClient.P) {
+            throw new IllegalArgumentException(
+                    "Le bénéficiaire (payé) de type P (personne physique) n'est pas "
+                            + "autorisé sur le canal MARCHAND_SUR_SITE (LclInstrm 500). "
+                            + "Ce canal est un encaissement marchand — utiliser un alias "
+                            + "résolvant à un type B (Business), C (commerçant individuel) "
+                            + "ou G (Government).");
         }
     }
 
