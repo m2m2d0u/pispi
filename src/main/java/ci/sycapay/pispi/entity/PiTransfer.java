@@ -152,7 +152,7 @@ public class PiTransfer {
     @Column(name = "type_identifiant_client_paye", length = 4)
     private CodeSystemeIdentification typeIdentifiantClientPaye;
 
-    @Column(name = "alias_paye", length = 50)
+    @Column(name = "alias_paye", length = 2048)
     private String aliasPaye;
 
     @Column(name = "iban_client_paye", length = 34)
@@ -170,6 +170,15 @@ public class PiTransfer {
     @Column(name = "adresse_client_paye", length = 140)
     private String adresseClientPaye;
 
+    @Column(name = "date_naissance_client_paye", length = 10)
+    private String dateNaissanceClientPaye;
+
+    @Column(name = "ville_naissance_client_paye", length = 35)
+    private String villeNaissanceClientPaye;
+
+    @Column(name = "pays_naissance_client_paye", length = 2)
+    private String paysNaissanceClientPaye;
+
     // Payeur identity snapshot
     @Column(name = "pays_client_payeur", length = 2)
     private String paysClientPayeur;
@@ -181,7 +190,7 @@ public class PiTransfer {
     @Column(name = "type_identifiant_client_payeur", length = 4)
     private CodeSystemeIdentification typeIdentifiantClientPayeur;
 
-    @Column(name = "alias_payeur", length = 50)
+    @Column(name = "alias_payeur", length = 2048)
     private String aliasPayeur;
 
     @Column(name = "iban_client_payeur", length = 34)
@@ -198,6 +207,35 @@ public class PiTransfer {
 
     @Column(name = "adresse_client_payeur", length = 140)
     private String adresseClientPayeur;
+
+    @Column(name = "date_naissance_client_payeur", length = 10)
+    private String dateNaissanceClientPayeur;
+
+    @Column(name = "ville_naissance_client_payeur", length = 35)
+    private String villeNaissanceClientPayeur;
+
+    @Column(name = "pays_naissance_client_payeur", length = 2)
+    private String paysNaissanceClientPayeur;
+
+    // Merchant / document fields (Gap 3-5)
+    @Column(name = "reference_bulk", length = 35)
+    private String referenceBulk;
+
+    @Column(name = "montant_achat", precision = 18, scale = 2)
+    private java.math.BigDecimal montantAchat;
+
+    @Column(name = "montant_retrait", precision = 18, scale = 2)
+    private java.math.BigDecimal montantRetrait;
+
+    @Column(name = "frais_retrait", precision = 18, scale = 2)
+    private java.math.BigDecimal fraisRetrait;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type_document_reference", length = 10)
+    private ci.sycapay.pispi.enums.CodeTypeDocument typeDocumentReference;
+
+    @Column(name = "numero_document_reference", length = 35)
+    private String numeroDocumentReference;
 
     // Confirmation metadata (PUT /transferts/{id})
     @Column(name = "confirmation_date")

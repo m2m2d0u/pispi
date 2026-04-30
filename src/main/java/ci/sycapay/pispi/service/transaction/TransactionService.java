@@ -143,11 +143,18 @@ public class TransactionService {
                 .devise("XOF");
         applyPayeurSnapshot(builder, codeMembre, payeur, request.getEndToEndIdSearchPayeur());
         applyPayeSnapshot(builder, paye);
+        validateVilleRules(paye, payeur, canal, request.getLatitude(), request.getLongitude());
         PiTransfer transfer = builder
                 .motif(request.getMotif())
                 .identifiantTransaction(identifiantTransaction)
                 .latitudeClientPayeur(request.getLatitude())
                 .longitudeClientPayeur(request.getLongitude())
+                .referenceBulk(request.getReferenceBulk())
+                .montantAchat(request.getMontantAchat())
+                .montantRetrait(request.getMontantRetrait())
+                .fraisRetrait(request.getFraisRetrait())
+                .typeDocumentReference(request.getTypeDocumentReference())
+                .numeroDocumentReference(request.getNumeroDocumentReference())
                 .dateHeureExecution(LocalDateTime.now())
                 .statut(TransferStatus.INITIE)
                 .build();
@@ -217,6 +224,7 @@ public class TransactionService {
         applyPayeSnapshot(scheduleBuilder, paye);
         PiTransfer schedule = scheduleBuilder
                 .motif(request.getMotif())
+                .referenceBulk(request.getReferenceBulk())
                 .latitudeClientPayeur(request.getLatitude())
                 .longitudeClientPayeur(request.getLongitude())
                 .dateHeureExecution(LocalDateTime.now())
@@ -1001,6 +1009,32 @@ public class TransactionService {
     }
 
     /**
+     * Validate conditional ville rules (spec p.68):
+     * - villeClientPaye is mandatory when typeClientPaye is B or G.
+     * - villeClientPayeur is mandatory when lat/lon are provided OR typeClientPayeur is B or G.
+     */
+    private static void validateVilleRules(ResolvedClient paye, ResolvedClient payeur,
+                                           CanalCommunication canal,
+                                           String latitude, String longitude) {
+        TypeClient payeType = paye.clientInfo().getTypeClient();
+        if ((payeType == TypeClient.B || payeType == TypeClient.G)
+                && (paye.clientInfo().getVille() == null || paye.clientInfo().getVille().isBlank())) {
+            throw new IllegalArgumentException(
+                    "villeClientPaye est obligatoire pour un client payé de type B (personne morale) "
+                            + "ou G (gouvernement)");
+        }
+        TypeClient payeurType = payeur.clientInfo().getTypeClient();
+        boolean latLonPresent = latitude != null && !latitude.isBlank()
+                && longitude != null && !longitude.isBlank();
+        if ((payeurType == TypeClient.B || payeurType == TypeClient.G || latLonPresent)
+                && (payeur.clientInfo().getVille() == null || payeur.clientInfo().getVille().isBlank())) {
+            throw new IllegalArgumentException(
+                    "villeClientPayeur est obligatoire lorsque le client payeur est de type B/G "
+                            + "ou lorsque la localisation GPS est renseignée");
+        }
+    }
+
+    /**
      * Canals for which the BCEAO AIP requires {@code identifiantTransaction}
      * on the PACS.008 payload. Matches the rejection message
      * <em>"TransactionIdentificatiKon est obligatoire lorsqu'il s'agit des
@@ -1122,6 +1156,9 @@ public class TransactionService {
                 .identificationRccmClientPayeur(payeur.identificationRccm())
                 .villeClientPayeur(payeur.clientInfo().getVille())
                 .adresseClientPayeur(payeur.clientInfo().getAdresse())
+                .dateNaissanceClientPayeur(payeur.clientInfo().getDateNaissance())
+                .villeNaissanceClientPayeur(payeur.clientInfo().getLieuNaissance())
+                .paysNaissanceClientPayeur(payeur.clientInfo().getPaysNaissance())
                 .racSearchRefPayeur(racSearchRef);
     }
 
@@ -1141,7 +1178,10 @@ public class TransactionService {
                 .identificationFiscaleCommercantPaye(paye.identificationFiscaleCommercant())
                 .identificationRccmClientPaye(paye.identificationRccm())
                 .villeClientPaye(paye.clientInfo().getVille())
-                .adresseClientPaye(paye.clientInfo().getAdresse());
+                .adresseClientPaye(paye.clientInfo().getAdresse())
+                .dateNaissanceClientPaye(paye.clientInfo().getDateNaissance())
+                .villeNaissanceClientPaye(paye.clientInfo().getLieuNaissance())
+                .paysNaissanceClientPaye(paye.clientInfo().getPaysNaissance());
     }
 
     private static void copyPayeurFromParent(PiTransfer.PiTransferBuilder b, PiTransfer parent) {
@@ -1161,6 +1201,9 @@ public class TransactionService {
                 .identificationRccmClientPayeur(parent.getIdentificationRccmClientPayeur())
                 .villeClientPayeur(parent.getVilleClientPayeur())
                 .adresseClientPayeur(parent.getAdresseClientPayeur())
+                .dateNaissanceClientPayeur(parent.getDateNaissanceClientPayeur())
+                .villeNaissanceClientPayeur(parent.getVilleNaissanceClientPayeur())
+                .paysNaissanceClientPayeur(parent.getPaysNaissanceClientPayeur())
                 .racSearchRefPayeur(parent.getRacSearchRefPayeur());
     }
 
@@ -1181,6 +1224,9 @@ public class TransactionService {
                 .identificationRccmClientPaye(parent.getIdentificationRccmClientPaye())
                 .villeClientPaye(parent.getVilleClientPaye())
                 .adresseClientPaye(parent.getAdresseClientPaye())
+                .dateNaissanceClientPaye(parent.getDateNaissanceClientPaye())
+                .villeNaissanceClientPaye(parent.getVilleNaissanceClientPaye())
+                .paysNaissanceClientPaye(parent.getPaysNaissanceClientPaye())
                 .racSearchRefPaye(parent.getRacSearchRefPaye());
     }
 
@@ -1249,6 +1295,15 @@ public class TransactionService {
             p.put("villeClientPayeur", t.getVilleClientPayeur());
         if (t.getAdresseClientPayeur() != null)
             p.put("adresseClientPayeur", t.getAdresseClientPayeur());
+        // Birth data (spec pp.70-71): required when bank participant, type P, typeCompte != TRAL.
+        // Emitted whenever available — TRAL/EME RAC_SEARCH payloads never carry birth data so
+        // fields will be null for those account types and nothing is emitted.
+        if (t.getDateNaissanceClientPayeur() != null)
+            p.put("dateNaissanceClientPayeur", t.getDateNaissanceClientPayeur());
+        if (t.getVilleNaissanceClientPayeur() != null)
+            p.put("villeNaissanceClientPayeur", t.getVilleNaissanceClientPayeur());
+        if (t.getPaysNaissanceClientPayeur() != null)
+            p.put("paysNaissanceClientPayeur", t.getPaysNaissanceClientPayeur());
 
         // Payé — from snapshot
         p.put("nomClientPaye", t.getNomClientPaye());
@@ -1272,9 +1327,16 @@ public class TransactionService {
             p.put("villeClientPaye", t.getVilleClientPaye());
         if (t.getAdresseClientPaye() != null)
             p.put("adresseClientPaye", t.getAdresseClientPaye());
+        if (t.getDateNaissanceClientPaye() != null)
+            p.put("dateNaissanceClientPaye", t.getDateNaissanceClientPaye());
+        if (t.getVilleNaissanceClientPaye() != null)
+            p.put("villeNaissanceClientPaye", t.getVilleNaissanceClientPaye());
+        if (t.getPaysNaissanceClientPaye() != null)
+            p.put("paysNaissanceClientPaye", t.getPaysNaissanceClientPaye());
 
         // Transaction-level
         if (t.getTypeTransaction() != null) p.put("typeTransaction", t.getTypeTransaction().name());
+        if (t.getReferenceBulk() != null) p.put("referenceBulk", t.getReferenceBulk());
         if (t.getMotif() != null) p.put("motif", t.getMotif());
         if (t.getIdentifiantTransaction() != null)
             p.put("identifiantTransaction", t.getIdentifiantTransaction());
@@ -1282,6 +1344,18 @@ public class TransactionService {
             p.put("latitudeClientPayeur", t.getLatitudeClientPayeur());
         if (t.getLongitudeClientPayeur() != null)
             p.put("longitudeClientPayeur", t.getLongitudeClientPayeur());
+        // Merchant breakdown fields (pp.73-74) — present on send_now merchant canals and
+        // on PACS.008 generated from RTP acceptance (via buildRtpExtra overlay).
+        if (t.getMontantAchat() != null)
+            p.put("montantAchat", t.getMontantAchat().toBigInteger().toString());
+        if (t.getMontantRetrait() != null)
+            p.put("montantRetrait", t.getMontantRetrait().toBigInteger().toString());
+        if (t.getFraisRetrait() != null)
+            p.put("fraisRetrait", t.getFraisRetrait().toBigInteger().toString());
+        if (t.getTypeDocumentReference() != null)
+            p.put("typeDocumentReference", t.getTypeDocumentReference().name());
+        if (t.getNumeroDocumentReference() != null)
+            p.put("numeroDocumentReference", t.getNumeroDocumentReference());
 
         return p;
     }

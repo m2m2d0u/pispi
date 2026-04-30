@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
@@ -47,6 +48,10 @@ public class TransactionScheduleRequest extends TransactionInitiationRequest {
     /** Périodicité (en unités de fréquence), minimum 1. */
     @Min(1)
     private Integer periodicite;
+
+    /** Référence virement de masse (optionnel) — maps to {@code <PmtId>/<InstrId>}. */
+    @Size(max = 35)
+    private String referenceBulk;
 
     /** Alias du bénéficiaire — exclusif avec iban/othr. */
     private String alias;

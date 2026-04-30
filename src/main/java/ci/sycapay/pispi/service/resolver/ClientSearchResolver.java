@@ -71,10 +71,13 @@ public class ClientSearchResolver {
                 .getEndToEndId();
     }
 
-    public String resolveName(String nom, String denominationSociale, TypeClient typeClient){
+    public String resolveName(String nom, String denominationSociale, String raisonSociale, TypeClient typeClient){
         if (typeClient == TypeClient.B) {
             return denominationSociale;
         }
+//        if (typeClient == TypeClient.C) {
+//            return raisonSociale;
+//        }
         return nom;
     }
 
@@ -104,7 +107,8 @@ public class ClientSearchResolver {
         String other = str(data, "other");
         String typeCompteStr = str(data, "typeCompte");
         String denominationSociale = str(data, "denominationSociale");
-        String nom = resolveName(nomExtract, denominationSociale, TypeClient.valueOf(categorie));
+        String raisonSociale = str(data, "raisonSociale");
+        String nom = resolveName(nomExtract, denominationSociale, raisonSociale, TypeClient.valueOf(categorie));
 
         if (nom == null || telephone == null || paysResidence == null || categorie == null
                 || other == null || typeCompteStr == null) {
