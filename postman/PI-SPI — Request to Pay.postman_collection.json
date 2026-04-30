@@ -115,61 +115,6 @@
           "response": []
         },
         {
-          "name": "Envoyer une demande de paiement sur site avec débit différé",
-          "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  "// Canal 401 (FACTURE) avec autorisationModificationMontant=true.",
-                  "// Le service PI-SPI force dateHeureExecution à now+30s côté AIP",
-                  "// (même règle que les autres scénarios FACTURE — on la pré-calcule",
-                  "// ici uniquement pour la lisibilité du log Postman).",
-                  "const now = new Date().toISOString().replace(/\\.\\d{3}Z$/, '.000Z');",
-                  "pm.variables.set('dateHeureExecutionNow', now);",
-                  "// dateHeureLimiteAction = J+30 (expiration de l'autorisation variable)",
-                  "const limite = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);",
-                  "pm.variables.set('dateHeureLimiteActionJ30', limite.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));"
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionNow}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ30}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"RES-HTL-2026-0519\",\n  \"autorisationModificationMontant\": true,\n  \"montantRemisePaiementImmediat\": 5\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/rtp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "rtp"
-              ]
-            },
-            "description": "Demande de paiement **sur site avec débit différé / montant variable** (canal `FACTURE` → `401`).\n\nCas d'usage : réservation hôtel ou location — le commerçant (payé B) émet une facture avec pré-autorisation de débit variable (`autorisationModificationMontant: true`) pour couvrir les extras. Le montant final est ajusté au check-out.\n\n**autorisationModificationMontant: true** — seul le canal 401 est supporté par l'AIP sandbox pour `<GrntedPmtReqd>`. Co-occurrence obligatoire avec `montantRemisePaiementImmediat` ou `tauxRemisePaiementImmediat` pour respecter la séquence XSD `<ImdtPmtRbt>` → `<GrntedPmtReqd>`.\n\n**dateHeureExecution** : forcée à now+30s par PI-SPI (règle AIP : débit différé non supporté pour 401, mais ReqdExctnDt doit être ≥ CreDtTm)."
-          },
-          "response": []
-        },
-        {
           "name": "Envoyer une demande de paiement marchand sur site (immédiat)",
           "request": {
             "method": "POST",
@@ -449,11 +394,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Canal 520 (E_COMMERCE_LIVRAISON): dateHeureExecution exprime la date de",
-                  "// livraison prévue (débit différé). L'AIP rejette GrntedPmtReqd pour ce",
-                  "// canal — ne pas utiliser autorisationModificationMontant. Le caractère",
-                  "// 'différé' est porté par dateHeureExecution (réglée dynamiquement ici",
-                  "// à J+7 pour éviter que la date durcissée devienne périmée).",
+                  "// Canal 520 (E_COMMERCE_LIVRAISON) : dateHeureExecution = date de livraison",
+                  "// prévue (J+7). dateHeureLimiteAction = expiration de la demande (J+37).",
                   "const exec = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);",
                   "pm.variables.set('dateHeureExecutionJ7', exec.toISOString().replace(/\\.\\d{3}Z$/, '.000Z'));",
                   "const limite = new Date(Date.now() + 37 * 24 * 60 * 60 * 1000);",
@@ -472,7 +414,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10,\n  \"dateHeureExecution\": \"{{dateHeureExecutionJ7}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ37}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 1\n}",
+              "raw": "{\n  \"canalCommunication\": \"E_COMMERCE_LIVRAISON\",\n  \"clientDemandeur\": \"X\",\n  \"identifiantDemandePaiement\": \"{{identifiantDemandePaiement}}\",\n  \"montant\": 10000,\n  \"dateHeureExecution\": \"{{dateHeureExecutionJ7}}\",\n  \"dateHeureLimiteAction\": \"{{dateHeureLimiteActionJ37}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurP}}\",\n  \"endToEndIdSearchPaye\": \"{{searchPayeB}}\",\n  \"motif\": \"Précommande smartphone — paiement à la livraison\",\n  \"referenceBulk\": \"CMD-AMZ-20260422-998877\",\n  \"autorisationModificationMontant\": false,\n  \"montantRemisePaiementImmediat\": 100\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -490,7 +432,7 @@
                 "rtp"
               ]
             },
-            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande, paiement à la livraison). Canal `E_COMMERCE_LIVRAISON` → `520`.\n\nPer spec §4.7.1.1 (p.120) : \"Si `montantRemisePaiementImmediat` est défini alors que `autorisationModificationMontant` est à false, il s'agit d'une demande de paiement avec débit différé.\" Le champ `autorisationModificationMontant` est **absent** (= false implicite) ; la présence de `montantRemisePaiementImmediat` (commission du marchand) suffit à signaler le débit différé à l'AIP. `autorisationModificationMontant: true` est rejeté sur canal 520 (\"GrntedPmtReqd not expected\").\n\n`dateHeureExecution` et `dateHeureLimiteAction` sont calculées dynamiquement (J+7 / J+37) par le pré-request script."
+            "description": "Demande de paiement e-commerce avec **débit différé** (pré-commande, paiement à la livraison). Canal `E_COMMERCE_LIVRAISON` → `520`.\n\n**Cas d'usage** : précommande d'un smartphone à 10 000 XOF, livraison sous 7 jours. Le marchand offre 100 XOF de remise au payeur s'il paie immédiatement (avant livraison) ; sinon le débit est différé jusqu'à la livraison.\n\n**Mapping vers le XML BCEAO `<PmtCond>`** :\n```\nautorisationModificationMontant: false   →  <AmtModAllwd>false</AmtModAllwd>\nmontantRemisePaiementImmediat: 100       →  <ImdtPmtRbt><Amt Ccy=\"XOF\">100</Amt></ImdtPmtRbt>\n(implicite côté transformeur AIP)        →  <EarlyPmtAllwd>true</EarlyPmtAllwd>\n(implicite côté transformeur AIP)        →  <GrntedPmtReqd>false</GrntedPmtReqd>\n```\n\n**Pourquoi cette combinaison fonctionne** :\n- `autorisationModificationMontant: false` → `<AmtModAllwd>false</AmtModAllwd>` : le débiteur ne peut pas modifier le montant convenu de la commande.\n- `<ImdtPmtRbt>` matérialise la remise pour paiement anticipé — la commission que le marchand est prêt à céder pour encaisser tôt.\n- L'AIP rejette `autorisationModificationMontant: true` sur canal 520 (\"`<GrntedPmtReqd>` not expected\") — réservé au canal 401.\n\n**Dates** : `dateHeureExecution` (J+7) = livraison/débit prévu. `dateHeureLimiteAction` (J+37) = délai de réponse du payeur. Calculées dynamiquement dans le pré-request script."
           },
           "response": []
         },
