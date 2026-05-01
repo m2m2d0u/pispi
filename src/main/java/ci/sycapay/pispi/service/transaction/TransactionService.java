@@ -934,16 +934,10 @@ public class TransactionService {
                 MessageDirection.OUTBOUND, pacs002, null, null);
         aipClient.post("/transferts/reponses", pacs002);
 
-        // Statut local intermédiaire : ACSP = "Accepted Settlement in Process".
-        // Le statut final ACCC/ACSC arrivera via callback PACS.002 INBOUND une
-        // fois la compensation AIP terminée (cf. TransferCallbackController.
-        // receiveTransferResult qui transitera ACSP → ACCC/ACSC).
-        transfer.setStatut(TransferStatus.ACSP);
-        transfer.setMsgIdReponse(msgId);
-        transfer.setDateHeureIrrevocabilite(LocalDateTime.now(ZoneOffset.UTC));
         transferRepository.save(transfer);
 
-        log.info("PACS.002 ACSP émis pour transfert entrant [endToEndId={}]", endToEndId);
+        log.info("PACS.002 ACSP émis pour transfert entrant — local=ACCC [endToEndId={}]",
+                endToEndId);
         return toResponse(transfer);
     }
 

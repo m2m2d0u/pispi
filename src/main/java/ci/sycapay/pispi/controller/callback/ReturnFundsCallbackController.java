@@ -148,15 +148,11 @@ public class ReturnFundsCallbackController {
                     }
                 });
 
-        // Transitionner le PiTransfer OUTBOUND original vers RTND (terminal).
-        // Le code raisonRetour est stocké dans codeRaison pour traçabilité
-        // (ex. FR01 = fraude, AC03 = erreur destinataire). Si la ligne est
-        // déjà terminale (race avec PACS.002 tardif), on logue et on sort.
+
         transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .ifPresent(transfer -> {
-                    if (transfer.getStatut() != null && transfer.getStatut().isTerminal()
-                            && transfer.getStatut() != TransferStatus.RTND) {
-                        log.warn("PACS.004 ignoré pour transfer en statut terminal "
+                    if (transfer.getStatut() != null  && transfer.getStatut() == TransferStatus.RTND) {
+                        log.warn("PACS.004 ignoré pour transfer en déjà retourner "
                                         + "[endToEndId={}, statut={}] — pas d'écrasement",
                                 endToEndId, transfer.getStatut());
                         return;

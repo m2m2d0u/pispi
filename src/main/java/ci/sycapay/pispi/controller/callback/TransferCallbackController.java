@@ -147,13 +147,19 @@ public class TransferCallbackController {
                 return;
             }
 
-            transfer.setStatut(ts);
+            // Normalisation locale : un PACS.002 INBOUND ACSP (settlement en
+            // cours côté AIP) est stocké comme ACCC. Cf.
+            // {@link TransferStatus#normalizeSuccess} — uniformisation des
+            // transferts réussis sur un seul statut local terminal.
+            TransferStatus localStatut = TransferStatus.normalizeSuccess(ts);
+            transfer.setStatut(localStatut);
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);
             transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
-            log.info("PACS.002 INBOUND appliqué [endToEndId={}, direction={}, statut={} → {}]",
-                    endToEndId, transfer.getDirection(), TransferStatus.PEND, ts);
+            log.info("PACS.002 INBOUND appliqué [endToEndId={}, direction={}, "
+                    + "statut payload={}, statut local={}]",
+                    endToEndId, transfer.getDirection(), ts, localStatut);
 
             // Si ce PACS.002 finalise une acceptation RTP, faire avancer le RTP.
             // V44 : on utilise le lien explicite {@code transfer.rtpEndToEndId}
@@ -173,10 +179,12 @@ public class TransferCallbackController {
                                         rtpE2e, rtp.getStatut());
                                 return;
                             }
-                            // ACSP est intermédiaire — n'arrête pas le RTP en ACCEPTED
-                            // tant que l'AIP n'a pas envoyé ACCC/ACSC.
-                            boolean accepted = ts == TransferStatus.ACCC
-                                    || ts == TransferStatus.ACSC;
+                            // Uniformisation : ACSP|ACCC|ACSC sont tous traités
+                            // comme « accepté ». Cf. {@link TransferStatus#isAccepted}.
+                            // Le RTP transitionne donc dès le premier PACS.002
+                            // d'acceptation, même si l'AIP n'envoie pas la
+                            // finalisation ACCC/ACSC.
+                            boolean accepted = ts.isAccepted();
                             boolean rejected = ts == TransferStatus.RJCT;
                             if (accepted) {
                                 rtp.setStatut(RtpStatus.ACCEPTED);
@@ -184,7 +192,6 @@ public class TransferCallbackController {
                                 rtp.setStatut(RtpStatus.RJCT);
                                 rtp.setCodeRaison((String) payload.get("codeRaison"));
                             }
-                            // ACSP : on laisse le RTP en PREVALIDATION en attendant ACCC/ACSC.
                             if (accepted || rejected) {
                                 rtpRepository.save(rtp);
                                 log.info("RTP {} → {} via PACS.002 [transferStatut={}]",

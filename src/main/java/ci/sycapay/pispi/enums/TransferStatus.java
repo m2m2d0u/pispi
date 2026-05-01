@@ -47,4 +47,40 @@ public enum TransferStatus {
                 || this == RJCT || this == TMOT || this == ECHEC
                 || this == RTND;
     }
+
+    /**
+     * Normalisation pour le stockage local : tout transfer accepté est
+     * collapsé en {@code ACCC}, peu importe la nuance ISO 20022.
+     *
+     * <p>Contexte : la spec BCEAO impose que le PACS.002 OUTBOUND porte
+     * {@code statutTransaction=ACSP} (settlement en cours), et l'AIP est
+     * censée renvoyer un PACS.002 INBOUND ACCC ou ACSC une fois la
+     * compensation finalisée. En pratique, certaines AIP n'envoient jamais
+     * cette finalisation (notamment sur les flux internes participant) —
+     * la ligne resterait alors bloquée en ACSP, ce qui est techniquement
+     * non-terminal mais sémantiquement « réussie » pour le métier.
+     *
+     * <p>Cette méthode est utilisée pour stocker le statut local après
+     * l'envoi/réception d'un PACS.002 d'acceptation. Le payload OUTBOUND
+     * vers l'AIP continue à utiliser {@code ACSP} explicitement (BCEAO
+     * l'impose), seul le miroir local est uniformisé.
+     *
+     * <ul>
+     *   <li>{@code ACSP} → {@code ACCC} (uniformisation des transferts réussis)</li>
+     *   <li>tout autre statut → renvoyé tel quel</li>
+     * </ul>
+     */
+    public static TransferStatus normalizeSuccess(TransferStatus status) {
+        return status == ACSP ? ACCC : status;
+    }
+
+    /**
+     * {@code true} si le statut représente une acceptation côté AIP, qu'elle
+     * soit intermédiaire ({@code ACSP}) ou finalisée ({@code ACCC|ACSC}).
+     * Utilisé pour transitionner les RTP en {@code ACCEPTED} dès qu'on
+     * voit un PACS.002 d'acceptation, sans attendre un éventuel ACCC tardif.
+     */
+    public boolean isAccepted() {
+        return this == ACCC || this == ACSC || this == ACSP;
+    }
 }
