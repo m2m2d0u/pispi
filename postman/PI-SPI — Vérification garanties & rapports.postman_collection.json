@@ -1,0 +1,184 @@
+{
+  "info": {
+    "_postman_id": "5f8e9a4b-2c1d-4e6a-9b8d-1a2b3c4d5e6f",
+    "name": "PI-SPI — Vérification garanties & rapports",
+    "description": "Collection de vérification manuelle des garanties (collateral position) et des rapports de compensation, conforme BCEAO §4.9 (camt.060/052/053/010/086).\n\nEndpoints OUTBOUND vers l'AIP pour déclencher les demandes de rapport et consulter l'état courant en base. Les callbacks INBOUND (camt.053 soldes, camt.010 garantie, réponses camt.060) sont gérés automatiquement par l'AIP — la collection ne les simule plus.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Demandes OUTBOUND vers l'AIP",
+      "description": "Endpoints qu'on appelle pour déclencher une demande de rapport ou consulter l'état local courant.",
+      "item": [
+        {
+          "name": "Envoyer un camt.060 — détails transactions sur période (POST /api/v1/reports/transactions)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Période de référence par défaut : début du jour précédent.",
+                  "// BCEAO §4.9 — heureDebutPeriode pattern strict :",
+                  "//   \\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z  (HH:mm:ss.SSSZ)",
+                  "// Sans millisecondes ni suffixe Z, l'AIP renvoie 400",
+                  "// \"heureDebutPeriode est invalide\".",
+                  "if (!pm.collectionVariables.get('reportDateDebut')) {",
+                  "    const now = new Date();",
+                  "    now.setDate(now.getDate() - 1);",
+                  "    const yyyymmdd = now.toISOString().split('T')[0];",
+                  "    pm.collectionVariables.set('reportDateDebut', yyyymmdd);",
+                  "}",
+                  "if (!pm.collectionVariables.get('reportHeureDebut')) {",
+                  "    pm.collectionVariables.set('reportHeureDebut', '00:00:00.000Z');",
+                  "}",
+                  "console.log('Demande TRANS pour période depuis',",
+                  "    pm.collectionVariables.get('reportDateDebut'),",
+                  "    pm.collectionVariables.get('reportHeureDebut'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('camt.060 TRANS accepté (202)', () => {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "console.log('camt.060 envoyé. La réponse arrive en async via callback /rapports/telechargements/reponses.');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/transactions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "transactions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dateDebutPeriode\": \"{{reportDateDebut}}\",\n  \"heureDebutPeriode\": \"{{reportHeureDebut}}\"\n}"
+            },
+            "description": "**BCEAO §4.9 — camt.060 type=TRANS**\n\nDemande à l'AIP le détail des transactions de notre participant sur la période fournie. PI-SPI émet un camt.060 sur `/rapports/demandes` côté AIP avec `typeRapport=TRANS`.\n\nLa réponse arrive **en asynchrone** via callback `POST /rapports/telechargements/reponses` (camt.052/053 selon BCEAO) qui persiste un `PiTransactionReport` et fire le webhook `TRANSACTION_REPORT`.\n\n**Vérifier après l'envoi** :\n- Status 202 dans la réponse Postman\n- Log applicatif `[OUTBOUND] CAMT_060` avec le msgId généré\n- Une ligne dans `pi_message_log` avec `direction=OUTBOUND, message_type=CAMT_060`\n\n**Variables de collection** :\n- `reportDateDebut` (auto-généré si absent : J-1)\n- `reportHeureDebut` (défaut `00:00:00`)"
+          }
+        },
+        {
+          "name": "Envoyer un camt.060 — solde de compensation (POST /api/v1/reports/compensation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/compensation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "compensation"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dateDebutPeriode\": \"{{reportDateDebut}}\",\n  \"heureDebutPeriode\": \"{{reportHeureDebut}}\"\n}"
+            },
+            "description": "**BCEAO §4.9 — camt.060 type=COMP**\n\nDemande à l'AIP le solde de compensation (clearing/settlement balances) pour la période. La réponse arrive en async via callback `POST /reglements/soldes` (camt.053) qui persiste des lignes `PiCompensation`.\n\n**Distinct de** la demande TRANS (transactions individuelles) ou FACT (facturation)."
+          }
+        },
+        {
+          "name": "Consulter l'état courant des garanties (GET /api/v1/reports/guarantee)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/guarantee",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "guarantee"
+              ]
+            },
+            "description": "Renvoie la dernière mise à jour de garantie reçue de l'AIP — provient soit d'un camt.010 (modification directe) soit d'un reda.017. Permet de connaître la position de collateral courante du participant.\n\nPas d'appel à l'AIP, simple lecture en base."
+          }
+        },
+        {
+          "name": "Lister les soldes de compensation reçus (GET /api/v1/reports/compensation)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/reports/compensation?page=0&size=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reports",
+                "compensation"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Pagination sur l'historique `PiCompensation` triée par date décroissante. Pratique pour vérifier que les callbacks camt.053 ont bien persisté les soldes."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "codeMembre",
+      "value": "CIE002",
+      "description": "Code participant local — doit matcher PISPI_CODE_MEMBRE de l'application.yaml"
+    },
+    {
+      "key": "reportDateDebut",
+      "value": "",
+      "description": "Date de début de période au format YYYY-MM-DD. Auto-généré (J-1) si vide."
+    },
+    {
+      "key": "reportHeureDebut",
+      "value": "00:00:00.000Z",
+      "description": "Heure de début de période au format BCEAO HH:mm:ss.SSSZ (millisecondes + suffixe Z requis, pattern \\\\d{2}:\\\\d{2}:\\\\d{2}\\\\.\\\\d{3}Z). Sans ces deux éléments, l'AIP renvoie 400 'heureDebutPeriode est invalide'."
+    }
+  ]
+}

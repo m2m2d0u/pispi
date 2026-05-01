@@ -49,6 +49,7 @@ public class ReportCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = ReleveCallbackPayload.class)))
     @PostMapping("/rapports/telechargements/reponses")
     public ResponseEntity<Void> receiveTransactionReport(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.052 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
@@ -78,6 +79,7 @@ public class ReportCallbackController {
     @PostMapping("/reglements/soldes")
     @SuppressWarnings("unchecked")
     public ResponseEntity<Void> receiveCompensation(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.053 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
@@ -110,6 +112,7 @@ public class ReportCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = GarantieCallbackPayload.class)))
     @PostMapping("/notifications/garantie")
     public ResponseEntity<Void> receiveGuarantee(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.010 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
@@ -140,6 +143,7 @@ public class ReportCallbackController {
     @PostMapping("/rapports/factures/reponses")
     @SuppressWarnings("unchecked")
     public ResponseEntity<Void> receiveInvoice(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.086 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
