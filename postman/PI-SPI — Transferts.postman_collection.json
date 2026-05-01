@@ -323,7 +323,7 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"CINV/FACT-B2B-2026-0099/15T-CACAO\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"999\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"typeDocumentReference\": \"CINV\",\n  \"numeroDocumentReference\": \"FACT-B2B-2026-0099\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"endToEndIdVerification\": \"{{lastVerificationEndToEndId}}\"\n}"
                 }
               },
               "event": [
