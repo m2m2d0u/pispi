@@ -1,7 +1,6 @@
 package ci.sycapay.pispi.controller.callback;
 
 import ci.sycapay.pispi.config.PiSpiProperties;
-import ci.sycapay.pispi.entity.PiRequestToPay;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
@@ -11,7 +10,6 @@ import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.service.callback.Admi002CallbackService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -151,15 +149,14 @@ public class TransferCallbackController {
             // cours côté AIP) est stocké comme ACCC. Cf.
             // {@link TransferStatus#normalizeSuccess} — uniformisation des
             // transferts réussis sur un seul statut local terminal.
-            TransferStatus localStatut = TransferStatus.normalizeSuccess(ts);
-            transfer.setStatut(localStatut);
+            transfer.setStatut(ts);
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);
             transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
             log.info("PACS.002 INBOUND appliqué [endToEndId={}, direction={}, "
-                    + "statut payload={}, statut local={}]",
-                    endToEndId, transfer.getDirection(), ts, localStatut);
+                    + "statut payload={}]",
+                    endToEndId, transfer.getDirection(), ts);
 
             // Si ce PACS.002 finalise une acceptation RTP, faire avancer le RTP.
             // V44 : on utilise le lien explicite {@code transfer.rtpEndToEndId}
@@ -221,8 +218,7 @@ public class TransferCallbackController {
         try {
             return Enum.valueOf(cls, value);
         } catch (IllegalArgumentException e) {
-            org.slf4j.LoggerFactory.getLogger(TransferCallbackController.class)
-                    .warn("Valeur enum inconnue pour {} : '{}' (enum={}). Champ ignoré.",
+            log.warn("Valeur enum inconnue pour {} : '{}' (enum={}). Champ ignoré.",
                             fieldHint, value, cls.getSimpleName());
             return null;
         }
@@ -234,8 +230,7 @@ public class TransferCallbackController {
         try {
             return CanalCommunication.fromCode(code);
         } catch (IllegalArgumentException e) {
-            org.slf4j.LoggerFactory.getLogger(TransferCallbackController.class)
-                    .warn("Canal inconnu reçu en callback : '{}' — champ ignoré.", code);
+            log.warn("Canal inconnu reçu en callback : '{}' — champ ignoré.", code);
             return null;
         }
     }

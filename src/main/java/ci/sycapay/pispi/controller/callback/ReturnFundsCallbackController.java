@@ -54,11 +54,13 @@ public class ReturnFundsCallbackController {
     private final PiSpiProperties properties;
 
     @Operation(summary = "Receive inbound return-of-funds request (CAMT.056)",
-            description = "Called by the AIP when another participant requests a return of funds for a transfer they sent to this PI.\n\n"
-                    + "Implements BCEAO §4.8 « Traitement du message camt.056 » avec 3 scénarios :\n"
-                    + "1. Transfert déjà retourné (RTND) → auto-rejet camt.029 ARDT, sans notifier le client.\n"
-                    + "2. Compte client clôturé → auto-rejet camt.029 AC04 (à brancher via hook backend).\n"
-                    + "3. Sinon → persiste en PENDING + webhook RETURN_REQUEST_RECEIVED pour décision client.")
+            description = """
+                    Called by the AIP when another participant requests a return of funds for a transfer they sent to this PI.
+                    
+                    Implements BCEAO §4.8 « Traitement du message camt.056 » avec 3 scénarios :
+                    1. Transfert déjà retourné (RTND) → auto-rejet camt.029 ARDT, sans notifier le client.
+                    2. Compte client clôturé → auto-rejet camt.029 AC04 (à brancher via hook backend).
+                    3. Sinon → persiste en PENDING + webhook RETURN_REQUEST_RECEIVED pour décision client.""")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsDemandeCallbackPayload.class)))
     @PostMapping("/retour-fonds/demande")
     @Transactional
@@ -102,9 +104,8 @@ public class ReturnFundsCallbackController {
                 .orElse(false)
                 || returnExecutionRepository.findByEndToEndId(endToEndId).isPresent();
         if (alreadyReturned) {
-            autoRejectInbound(msgId, endToEndId, codeMembrePayeur, raisonOriginale,
-                    CodeRaisonRetourFonds.ARDT,
-                    "transfert déjà retourné (PACS.004 antérieur)");
+            autoRejectInbound(msgId, endToEndId, codeMembrePayeur, raisonOriginale
+            );
             return ResponseEntity.accepted().build();
         }
 
@@ -169,8 +170,7 @@ public class ReturnFundsCallbackController {
      * notifier le client dans ces deux scénarios).
      */
     private void autoRejectInbound(String origMsgId, String endToEndId,
-                                    String codeMembrePayeur, String raisonOriginale,
-                                    CodeRaisonRetourFonds raisonRejet, String motif) {
+                                    String codeMembrePayeur, String raisonOriginale) {
         String codeMembre = properties.getCodeMembre();
         String responseMsgId = IdGenerator.generateMsgId(codeMembre);
 
@@ -180,7 +180,7 @@ public class ReturnFundsCallbackController {
         camt029.put("codeMembreParticipantPayeur", codeMembrePayeur);
         camt029.put("statut", "RJCR");
         camt029.put("endToEndId", endToEndId);
-        camt029.put("raison", raisonRejet.name());
+        camt029.put("raison", CodeRaisonRetourFonds.ARDT.name());
 
         try {
             messageLogService.log(responseMsgId, endToEndId, IsoMessageType.CAMT_029,
@@ -204,18 +204,18 @@ public class ReturnFundsCallbackController {
                     .direction(MessageDirection.INBOUND)
                     .codeMembrePayeur(codeMembrePayeur)
                     .raison(raisonDemandeEnum)
-                    .raisonRejet(raisonRejet)
+                    .raisonRejet(CodeRaisonRetourFonds.ARDT)
                     .msgIdRejet(responseMsgId)
                     .statut(ReturnRequestStatus.RJCR)
                     .build();
             returnRequestRepository.save(req);
 
             log.info("CAMT.056 auto-rejeté [endToEndId={}, raisonRejet={}, motif={}]",
-                    endToEndId, raisonRejet, motif);
+                    endToEndId, CodeRaisonRetourFonds.ARDT, "transfert déjà retourné (PACS.004 antérieur)");
         } catch (Exception ex) {
             log.error("Échec auto-rejet CAMT.029 [endToEndId={}, raisonRejet={}] — "
                     + "callback toujours acquitté en 202 pour éviter la redélivrance AIP",
-                    endToEndId, raisonRejet, ex);
+                    endToEndId, CodeRaisonRetourFonds.ARDT, ex);
         }
     }
 
