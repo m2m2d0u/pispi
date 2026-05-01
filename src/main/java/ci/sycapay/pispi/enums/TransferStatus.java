@@ -15,16 +15,21 @@ public enum TransferStatus {
      * de la transaction.
      *
      * <ul>
-     *   <li>{@code ACCC} — accepté définitivement par le payé</li>
-     *   <li>{@code ACSC} — settlement complet (post-compensation)</li>
-     *   <li>{@code ACSP} — settlement en cours / partiel (final côté flux)</li>
+     *   <li>{@code ACCC} — Accepted, Credit Settlement Completed (post-compensation côté payé)</li>
+     *   <li>{@code ACSC} — Accepted Settlement Completed (post-compensation côté payeur)</li>
      *   <li>{@code RJCT} — rejeté par la contrepartie</li>
      *   <li>{@code TMOT} — timeout AIP</li>
      *   <li>{@code ECHEC} — erreur technique (ADMI.002, network, etc.)</li>
      * </ul>
+     *
+     * <p>{@code ACSP} (Accepted Settlement in Process) est explicitement
+     * <strong>NON-terminal</strong> : c'est un état intermédiaire signifiant
+     * « accepté côté récepteur, settlement à finaliser par l'AIP ». L'AIP
+     * envoie ensuite un PACS.002 INBOUND ACCC/ACSC qui transitionne la ligne
+     * vers le statut terminal final.
      */
     public boolean isTerminal() {
-        return this == ACCC || this == ACSC || this == ACSP
+        return this == ACCC || this == ACSC
                 || this == RJCT || this == TMOT || this == ECHEC;
     }
 }

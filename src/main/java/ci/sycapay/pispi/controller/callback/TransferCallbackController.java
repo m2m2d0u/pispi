@@ -116,13 +116,23 @@ public class TransferCallbackController {
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002, MessageDirection.INBOUND, payload, 202, null);
 
-        transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(transfer -> {
+        // Le PACS.002 INBOUND peut concerner deux cas symétriques :
+        //   1. OUTBOUND : on a émis un PACS.008 ; l'AIP nous renvoie le résultat
+        //      du settlement (ACCC/ACSC/RJCT) côté destination.
+        //   2. INBOUND  : on a reçu un PACS.008 et on a répondu ACSP via
+        //      /accept ; l'AIP nous renvoie ensuite le résultat final
+        //      (ACCC/ACSC après compensation, ou RJCT en cas d'échec).
+        // On essaie OUTBOUND d'abord (cas le plus courant), puis INBOUND.
+        transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+                .or(() -> transferRepository.findByEndToEndIdAndDirection(
+                        endToEndId, MessageDirection.INBOUND))
+                .ifPresent(transfer -> {
             // Garde terminale : un PACS.002 retardataire ne doit pas écraser
             // un statut déjà finalisé. On logue et on sort proprement.
             if (transfer.getStatut() != null && transfer.getStatut().isTerminal()) {
                 log.warn("PACS.002 ignoré sur transfer en statut terminal [endToEndId={}, "
-                        + "statut={}, payload msgId={}]",
-                        endToEndId, transfer.getStatut(), msgId);
+                        + "direction={}, statut={}, payload msgId={}]",
+                        endToEndId, transfer.getDirection(), transfer.getStatut(), msgId);
                 return;
             }
 
@@ -142,6 +152,8 @@ public class TransferCallbackController {
             transfer.setMsgIdReponse(msgId);
             transfer.setDateHeureIrrevocabilite(parseDateTime(payload.get("dateHeureIrrevocabilite")));
             transferRepository.save(transfer);
+            log.info("PACS.002 INBOUND appliqué [endToEndId={}, direction={}, statut={} → {}]",
+                    endToEndId, transfer.getDirection(), TransferStatus.PEND, ts);
 
             // Si ce PACS.002 finalise une acceptation RTP, faire avancer le RTP.
             // V44 : on utilise le lien explicite {@code transfer.rtpEndToEndId}
@@ -161,14 +173,23 @@ public class TransferCallbackController {
                                         rtpE2e, rtp.getStatut());
                                 return;
                             }
+                            // ACSP est intermédiaire — n'arrête pas le RTP en ACCEPTED
+                            // tant que l'AIP n'a pas envoyé ACCC/ACSC.
                             boolean accepted = ts == TransferStatus.ACCC
-                                    || ts == TransferStatus.ACSC
-                                    || ts == TransferStatus.ACSP;
-                            rtp.setStatut(accepted ? RtpStatus.ACCEPTED : RtpStatus.RJCT);
-                            if (!accepted) rtp.setCodeRaison((String) payload.get("codeRaison"));
-                            rtpRepository.save(rtp);
-                            log.info("RTP {} → {} via PACS.002 [transferStatut={}]",
-                                    rtpE2e, rtp.getStatut(), ts);
+                                    || ts == TransferStatus.ACSC;
+                            boolean rejected = ts == TransferStatus.RJCT;
+                            if (accepted) {
+                                rtp.setStatut(RtpStatus.ACCEPTED);
+                            } else if (rejected) {
+                                rtp.setStatut(RtpStatus.RJCT);
+                                rtp.setCodeRaison((String) payload.get("codeRaison"));
+                            }
+                            // ACSP : on laisse le RTP en PREVALIDATION en attendant ACCC/ACSC.
+                            if (accepted || rejected) {
+                                rtpRepository.save(rtp);
+                                log.info("RTP {} → {} via PACS.002 [transferStatut={}]",
+                                        rtpE2e, rtp.getStatut(), ts);
+                            }
                         });
             }
         });

@@ -902,12 +902,20 @@ public class TransactionService {
 
     /**
      * Accepter un PACS.008 reçu (nous sommes le payé). Émet un PACS.002 avec
-     * {@code statutTransaction=ACCC} vers {@code POST /transferts/reponses} et
-     * fait avancer la ligne locale {@code pi_transfer} INBOUND de PEND à ACCC.
+     * {@code statutTransaction=ACSP} vers {@code POST /transferts/reponses}
+     * et fait avancer la ligne locale {@code pi_transfer} INBOUND de PEND à
+     * ACSP. Le statut final ACCC/ACSC arrivera ensuite via callback PACS.002
+     * INBOUND une fois la compensation AIP terminée.
      *
      * <p>BCEAO §4.3 : « Un participant payé reçoit un ordre de transfert de
      * fonds (pacs.008) et doit retourner un pacs.002 qui précisera à PI le
      * traitement à faire pour ce transfert. »
+     *
+     * <p>BCEAO impose que le {@code statutTransaction} soit
+     * {@code ACSP|RJCT} sur le PACS.002 OUTBOUND (cf. spec OpenAPI
+     * {@code interface-participant-openapi.json}, ligne 1230). Envoyer
+     * {@code ACCC}/{@code ACSC} déclenche l'erreur AIP
+     * {@code "statutTransaction est invalide"}.
      *
      * <p>Sémantique « réserver puis débiter » : à l'acceptation (ici), le
      * backend réserve les fonds chez le payé / crédite le compte (selon
@@ -937,19 +945,29 @@ public class TransactionService {
         pacs002.put("msgId", msgId);
         pacs002.put("msgIdDemande", transfer.getMsgId());
         pacs002.put("endToEndId", endToEndId);
-        pacs002.put("statutTransaction", TransferStatus.ACCC.name());
+        // BCEAO restreint statutTransaction sur PACS.002 OUTBOUND à
+        // {@code ACSP|RJCT} (cf. interface-participant-openapi.json).
+        // ACSP = "Accepted Settlement in Process" — la PI lance la compensation
+        // et nous renverra plus tard un PACS.002 INBOUND avec ACCC/ACSC une
+        // fois le settlement finalisé. Envoyer ACCC/ACSC en OUTBOUND déclenche
+        // ADMI.002 "statutTransaction est invalide".
+        pacs002.put("statutTransaction", TransferStatus.ACSP.name());
         pacs002.put("dateHeureIrrevocabilite", dateHeureIrrevocabilite);
 
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_002,
                 MessageDirection.OUTBOUND, pacs002, null, null);
         aipClient.post("/transferts/reponses", pacs002);
 
-        transfer.setStatut(TransferStatus.ACCC);
+        // Statut local intermédiaire : ACSP = "Accepted Settlement in Process".
+        // Le statut final ACCC/ACSC arrivera via callback PACS.002 INBOUND une
+        // fois la compensation AIP terminée (cf. TransferCallbackController.
+        // receiveTransferResult qui transitera ACSP → ACCC/ACSC).
+        transfer.setStatut(TransferStatus.ACSP);
         transfer.setMsgIdReponse(msgId);
         transfer.setDateHeureIrrevocabilite(LocalDateTime.now(ZoneOffset.UTC));
         transferRepository.save(transfer);
 
-        log.info("PACS.002 ACCC émis pour transfert entrant [endToEndId={}]", endToEndId);
+        log.info("PACS.002 ACSP émis pour transfert entrant [endToEndId={}]", endToEndId);
         return toResponse(transfer);
     }
 
