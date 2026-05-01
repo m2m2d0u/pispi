@@ -2007,7 +2007,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"raison\": \"AM09\"\n}"
-            }
+            },
+            "description": "Émet un camt.056 (demande d'annulation) sur un transfer OUTBOUND déjà émis à l'AIP. Le statut local doit être ≥ PEND et non terminal (RJCT/ECHEC).\n\nRaisons valides (BCEAO pattern `AC03|FRAD|DUPL|AM09|SVNR`) :\n- `AC03` — Erreur sur le destinataire (compte/alias incorrect)\n- `FRAD` — Suspicion de fraude\n- `DUPL` — Transaction déjà payée (doublon)\n- `AM09` — Erreur sur le montant\n- `SVNR` — Service non rendu\n\nLa réponse de la contrepartie arrive en async via callback camt.029 (accept/reject)."
           }
         },
         {
@@ -2124,8 +2125,9 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"raison\": \"AM09\"\n}"
-            }
+              "raw": "{\n  \"raison\": \"AC03\"\n}"
+            },
+            "description": "Émet un PAIN.014 RJCT pour rejeter une demande de paiement (PAIN.013) entrante. Le RTP local passe à RJCT.\n\nRaisons valides BCEAO (cf. BCEAO-ANNEXES.md §5.6 « CodeRaison ») :\n- `AB09` — ErrorCreditorAgent : erreur chez le participant payé\n- `AC03` — InvalidCreditorAccountNumber : compte du payé invalide\n- `AC04` — ClosedAccountNumber : compte payeur clôturé\n- `AC06` — BlockedAccount : compte bloqué\n- `AC07` — ClosedCreditorAccountNumber : compte payé clôturé\n- `AG01` — TransactionForbidden : transaction interdite sur ce type de compte\n- `AM21` — LimitExceeded : montant dépasse les limites convenues\n- `FR01` — Fraud : suspicion de fraude"
           }
         },
         {

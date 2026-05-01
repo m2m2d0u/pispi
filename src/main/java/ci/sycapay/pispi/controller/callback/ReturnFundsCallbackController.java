@@ -2,9 +2,11 @@ package ci.sycapay.pispi.controller.callback;
 
 import ci.sycapay.pispi.entity.PiReturnExecution;
 import ci.sycapay.pispi.entity.PiReturnRequest;
+import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiReturnExecutionRepository;
 import ci.sycapay.pispi.repository.PiReturnRequestRepository;
+import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,7 @@ public class ReturnFundsCallbackController {
     private final MessageLogService messageLogService;
     private final PiReturnRequestRepository returnRequestRepository;
     private final PiReturnExecutionRepository returnExecutionRepository;
+    private final PiTransferRepository transferRepository;
     private final WebhookService webhookService;
 
     @Operation(summary = "Receive inbound return-of-funds request (CAMT.056)", description = "Called by the AIP when another participant requests a return of funds for a transfer they sent to this PI. Saves the request locally and fires a RETURN_REQUEST_RECEIVED webhook.")
@@ -91,7 +94,7 @@ public class ReturnFundsCallbackController {
 
         returnRequestRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND).ifPresent(req -> {
             req.setStatut(ReturnRequestStatus.RJCR);
-            req.setRaisonRejet(CodeRaisonRejetDemandeRetourFonds.valueOf((String) payload.get("raison")));
+            req.setRaisonRejet(CodeRaisonRetourFonds.valueOf((String) payload.get("raison")));
             req.setMsgIdRejet(msgId);
             returnRequestRepository.save(req);
         });
@@ -100,25 +103,75 @@ public class ReturnFundsCallbackController {
         return ResponseEntity.accepted().build();
     }
 
-    @Operation(summary = "Receive return execution (PACS.004)", description = "Called by the AIP when the receiving PI accepts a return and transfers funds back. Saves the return execution record locally and fires a RETURN_EXECUTED webhook.")
+    @Operation(summary = "Receive return execution (PACS.004)", description = "Called by the AIP when the receiving PI accepts a return and transfers funds back. Saves the return execution record locally, marks the originating PiReturnRequest as ACCEPTED, transitions the related PiTransfer to RTND (Returned), and fires a RETURN_EXECUTED webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsCallbackPayload.class)))
     @PostMapping("/retour-fonds")
     public ResponseEntity<Void> receiveReturnExecution(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
+        String raisonRetourRaw = (String) payload.get("raisonRetour");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
         messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_004, MessageDirection.INBOUND, payload, 202, null);
 
-        PiReturnExecution execution = PiReturnExecution.builder()
-                .msgId(msgId)
-                .endToEndId(endToEndId)
-                .direction(MessageDirection.INBOUND)
-                .montantRetourne(payload.get("montantRetourne") != null ?
-                        new BigDecimal(String.valueOf(payload.get("montantRetourne"))) : null)
-                .raisonRetour(CodeRaisonRetourFonds.valueOf((String) payload.get("raisonRetour")))
-                .build();
-        returnExecutionRepository.save(execution);
+        // Parse défensif sur raisonRetour : un code inconnu (typo, valeur
+        // future BCEAO) ne doit pas planter le callback. On logue et on
+        // poursuit avec raisonRetour=null sur l'execution row.
+        CodeRaisonRetourFonds raisonRetour = null;
+        if (raisonRetourRaw != null && !raisonRetourRaw.isBlank()) {
+            try {
+                raisonRetour = CodeRaisonRetourFonds.valueOf(raisonRetourRaw);
+            } catch (IllegalArgumentException e) {
+                log.warn("PACS.004 raisonRetour inconnu '{}' [endToEndId={}] — "
+                        + "execution enregistrée sans code", raisonRetourRaw, endToEndId);
+            }
+        }
+
+        BigDecimal montantRetourne = payload.get("montantRetourne") != null
+                ? new BigDecimal(String.valueOf(payload.get("montantRetourne")))
+                : null;
+
+
+        // Finaliser la PiReturnRequest OUTBOUND associée : le PACS.004 INBOUND
+        // signifie que la contrepartie a accepté la demande d'annulation et a
+        // effectivement retourné les fonds. Si une autre direction (callback
+        // racing) a déjà transitionné la ligne en RJCR, on ne touche pas.
+        CodeRaisonRetourFonds finalRaisonRetour = raisonRetour;
+        returnRequestRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+                .ifPresent(req -> {
+                    if (req.getStatut() == ReturnRequestStatus.PENDING) {
+                        req.setStatut(ReturnRequestStatus.ACCEPTED);
+                        req.setMsgIdRejet(msgId);
+                        req.setRaisonRejet(finalRaisonRetour);
+                        returnRequestRepository.save(req);
+                        log.info("Demande de retour {} → ACCEPTED via PACS.004 INBOUND",
+                                endToEndId);
+                    }
+                });
+
+        // Transitionner le PiTransfer OUTBOUND original vers RTND (terminal).
+        // Le code raisonRetour est stocké dans codeRaison pour traçabilité
+        // (ex. FR01 = fraude, AC03 = erreur destinataire). Si la ligne est
+        // déjà terminale (race avec PACS.002 tardif), on logue et on sort.
+        transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+                .ifPresent(transfer -> {
+                    if (transfer.getStatut() != null && transfer.getStatut().isTerminal()
+                            && transfer.getStatut() != TransferStatus.RTND) {
+                        log.warn("PACS.004 ignoré pour transfer en statut terminal "
+                                + "[endToEndId={}, statut={}] — pas d'écrasement",
+                                endToEndId, transfer.getStatut());
+                        return;
+                    }
+                    TransferStatus previous = transfer.getStatut();
+                    transfer.setStatut(TransferStatus.RTND);
+                    if (raisonRetourRaw != null && !raisonRetourRaw.isBlank()) {
+                        transfer.setCodeRaison(raisonRetourRaw);
+                    }
+                    transferRepository.save(transfer);
+                    log.info("Transfer {} → RTND via PACS.004 INBOUND "
+                            + "[précédent={}, raisonRetour={}, montantRetourne={}]",
+                            endToEndId, previous, raisonRetourRaw, montantRetourne);
+                });
 
         webhookService.notify(WebhookEventType.RETURN_EXECUTED, endToEndId, msgId, payload);
         return ResponseEntity.accepted().build();

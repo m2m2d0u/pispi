@@ -1,9 +1,6 @@
 package ci.sycapay.pispi.entity;
 
-import ci.sycapay.pispi.enums.CodeRaisonDemandeRetourFonds;
-import ci.sycapay.pispi.enums.CodeRaisonRejetDemandeRetourFonds;
-import ci.sycapay.pispi.enums.MessageDirection;
-import ci.sycapay.pispi.enums.ReturnRequestStatus;
+import ci.sycapay.pispi.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -49,7 +46,7 @@ public class PiReturnRequest {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "raison_rejet", length = 10)
-    private CodeRaisonRejetDemandeRetourFonds raisonRejet;
+    private CodeRaisonRetourFonds raisonRejet;
 
     @Column(name = "msg_id_rejet", length = 35)
     private String msgIdRejet;

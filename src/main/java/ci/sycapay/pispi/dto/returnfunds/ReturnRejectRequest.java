@@ -1,6 +1,6 @@
 package ci.sycapay.pispi.dto.returnfunds;
 
-import ci.sycapay.pispi.enums.CodeRaisonRejetDemandeRetourFonds;
+import ci.sycapay.pispi.enums.CodeRaisonRetourFonds;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,5 +14,5 @@ import lombok.NoArgsConstructor;
 public class ReturnRejectRequest {
 
     @NotNull
-    private CodeRaisonRejetDemandeRetourFonds raison;
+    private CodeRaisonRetourFonds raison;
 }

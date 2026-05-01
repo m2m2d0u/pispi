@@ -6,7 +6,19 @@ public enum TransferStatus {
      *  has been emitted to the AIP yet; the PACS.008 / PAIN.013 send happens
      *  only on confirm. Maps to remote-spec {@code statut=initie}. */
     INITIE,
-    PEND, ACCC, ACSC, ACSP, RJCT, TMOT, ECHEC;
+    PEND, ACCC, ACSC, ACSP, RJCT, TMOT, ECHEC,
+    /**
+     * {@code Returned} — terminal. Posé après réception d'un PACS.004 INBOUND
+     * sur {@code POST /retour-fonds} suite à une demande d'annulation acceptée
+     * par la contrepartie : les fonds ont été effectivement retournés. Le
+     * code {@code raisonRetour} de la PACS.004 est stocké dans
+     * {@code codeRaison} pour traçabilité.
+     *
+     * <p>Statut distinct de {@code RJCT} : {@code RJCT} = transfer rejeté
+     * par l'AIP au settlement (jamais abouti) ; {@code RTND} = transfer
+     * abouti puis retourné suite à une annulation acceptée.
+     */
+    RTND;
 
     /**
      * Statuts terminaux : une fois atteints, aucune transition n'est plus
@@ -20,6 +32,8 @@ public enum TransferStatus {
      *   <li>{@code RJCT} — rejeté par la contrepartie</li>
      *   <li>{@code TMOT} — timeout AIP</li>
      *   <li>{@code ECHEC} — erreur technique (ADMI.002, network, etc.)</li>
+     *   <li>{@code RTND} — Returned, fonds retournés via PACS.004 INBOUND
+     *       suite à une annulation acceptée</li>
      * </ul>
      *
      * <p>{@code ACSP} (Accepted Settlement in Process) est explicitement
@@ -30,6 +44,7 @@ public enum TransferStatus {
      */
     public boolean isTerminal() {
         return this == ACCC || this == ACSC
-                || this == RJCT || this == TMOT || this == ECHEC;
+                || this == RJCT || this == TMOT || this == ECHEC
+                || this == RTND;
     }
 }

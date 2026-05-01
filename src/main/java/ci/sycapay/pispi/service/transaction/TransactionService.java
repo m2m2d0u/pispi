@@ -3,18 +3,15 @@ package ci.sycapay.pispi.service.transaction;
 import ci.sycapay.pispi.client.AipClient;
 import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.returnfunds.ReturnFundsRequest;
-import ci.sycapay.pispi.dto.returnfunds.ReturnRejectRequest;
 import ci.sycapay.pispi.dto.rtp.RequestToPayRequest;
 import ci.sycapay.pispi.dto.rtp.RequestToPayResponse;
 import ci.sycapay.pispi.dto.transaction.*;
 import ci.sycapay.pispi.entity.PiRequestToPay;
-import ci.sycapay.pispi.entity.PiReturnRequest;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
-import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.resolver.ClientSearchResolver;
@@ -79,7 +76,6 @@ public class TransactionService {
 
     private final PiTransferRepository transferRepository;
     private final PiRequestToPayRepository rtpRepository;
-    private final PiReturnRequestRepository returnRequestRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
@@ -777,23 +773,24 @@ public class TransactionService {
                             + transfer.getStatut() + " — rien à annuler.");
         }
 
-        String codeMembre = properties.getCodeMembre();
-        String msgId = IdGenerator.generateMsgId(codeMembre);
-        String identifiantDemande = IdGenerator.generateReturnRequestId(codeMembre);
-
-        Map<String, Object> camt056 = new HashMap<>();
-        camt056.put("msgId", msgId);
-        camt056.put("identifiantDemande", identifiantDemande);
-        camt056.put("endToEndId", endToEndId);
-        camt056.put("msgIdOriginal", transfer.getMsgId());
-        camt056.put("raison", cmd.getRaison().name());
-        camt056.put("codeMembreParticipantPayeur", codeMembre);
-        camt056.put("codeMembreParticipantPaye", transfer.getCodeMembrePaye());
-
-        messageLogService.log(msgId, endToEndId, IsoMessageType.CAMT_056,
-                MessageDirection.OUTBOUND, camt056, null, null);
-        log.debug("CAMT.056 payload: {}", camt056);
-        aipClient.post("/transferts/annulations", camt056);
+        // BCEAO unifie « demande d'annulation » et « demande de retour de fonds »
+        // dans le même camt.056 envoyé sur {@code POST /retour-fonds/demande}
+        // (schéma {@code DemandeRetourFonds}). Il n'existe pas d'endpoint
+        // {@code /transferts/annulations} côté AIP — l'appeler retourne 404.
+        // On délègue donc à {@code ReturnFundsService.requestReturn} qui
+        // possède déjà la logique camt.056 + persistance {@code PiReturnRequest}
+        // + tracking via {@code identifiantDemande}.
+        //
+        // Mapping de la raison : les deux énumérations
+        // {@link TransactionCancelReason} et {@link CodeRaisonDemandeRetourFonds}
+        // partagent les 5 mêmes codes BCEAO ({@code AC03|FRAD|DUPL|AM09|SVNR}),
+        // un valueOf direct est sûr.
+        ReturnFundsRequest req = ReturnFundsRequest.builder()
+                .endToEndId(endToEndId)
+                .codeMembreParticipantPaye(transfer.getCodeMembrePaye())
+                .raison(CodeRaisonDemandeRetourFonds.valueOf(cmd.getRaison().name()))
+                .build();
+        returnFundsService.requestReturn(req);
 
         log.info("Demande d'annulation émise [endToEndId={}, raison={}]",
                 endToEndId, cmd.getRaison());
@@ -822,42 +819,21 @@ public class TransactionService {
     }
 
     // ------------------------------------------------------------------------
-    // Reject — pain.014 (RTP) or camt.029 (cancellation) based on raison
+    // Reject — pain.014 (rejet d'une demande de paiement entrante)
     // ------------------------------------------------------------------------
 
     /**
-     * Reject an inbound demande.
+     * Rejeter une demande de paiement entrante (PAIN.013 reçu en INBOUND).
+     * Émet un PAIN.014 vers l'AIP avec le {@code codeRaison} fourni.
      *
-     * <ul>
-     *   <li>{@code raison = CUST} → we're rejecting a {@code demande d'annulation}
-     *       that a counter-party sent us. Route to the ReturnFunds flow which
-     *       emits a camt.029.</li>
-     *   <li>all other codes (BE05 / AM09 / APAR / RR07 / FR01) → we're rejecting
-     *       an inbound RTP (pain.013) — emit a pain.014 via the existing
-     *       RequestToPayService.</li>
-     * </ul>
+     * <p>Codes raison BCEAO autorisés (cf. {@link TransactionRejectReason}) :
+     * {@code AB09|AC03|AC04|AC06|AC07|AG01|AM21|FR01}.
+     *
+     * <p>Le rejet d'une demande d'annulation entrante (camt.029) passe par
+     * un flux séparé via {@code ReturnFundsController} — pas par cet endpoint.
      */
     @Transactional
     public TransactionResponse reject(String endToEndId, TransactionRejectCommand cmd) {
-        if (cmd.getRaison() == TransactionRejectReason.CUST) {
-            PiReturnRequest ret = returnRequestRepository.findByEndToEndId(endToEndId)
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Demande d'annulation", endToEndId));
-            ReturnRejectRequest rejectReq = ReturnRejectRequest.builder()
-                    .raison(CodeRaisonRejetDemandeRetourFonds.CUST)
-                    .build();
-            returnFundsService.rejectReturn(ret.getIdentifiantDemande(), rejectReq);
-            log.info("Demande d'annulation rejetée [endToEndId={}, raison=CUST]", endToEndId);
-            // Return the shadow Transaction view of the related transfer (if any)
-            return transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
-                    .map(this::toResponse)
-                    .orElseGet(() -> transferRepository
-                            .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
-                            .map(this::toResponse)
-                            .orElse(null));
-        }
-
-        // Non-CUST → treat as rejecting an inbound RTP (pain.013)
         requestToPayService.rejectRtp(endToEndId, cmd.getRaison().name());
         log.info("Demande de paiement rejetée [endToEndId={}, raison={}]", endToEndId, cmd.getRaison());
         return transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.INBOUND)
