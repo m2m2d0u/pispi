@@ -37,12 +37,19 @@ public class MiscCallbackController {
     // MESSAGE_REJECTED webhook.
     // ------------------------------------------------------------------
 
-    @Operation(summary = "Receive admi.004 / notification failure (ADMI.002)")
+    @Operation(summary = "Receive notification/report-request failure (ADMI.002)",
+            description = "Endpoint AIP générique pour les rejets touchant des messages "
+                    + "envoyés sur le domaine notifications/rapports : CAMT.060 (demande "
+                    + "de rapport), ADMI.011 (accusé), etc. Le type réel du message rejeté "
+                    + "est résolu via lookup msgId dans pi_message_log — on passe donc "
+                    + "{@code hint=null} pour laisser Admi002CallbackService faire son "
+                    + "travail. Hardcoder ADMI_004 ici masquait la vraie nature du message "
+                    + "rejeté (cf. CAMT.060 TransactionNotFound vu en prod).")
     @PostMapping("/notifications/echecs")
     public ResponseEntity<ApiResponse<Void>> receiveNotificationFailure(
             @RequestBody Map<String, Object> payload) {
-        log.debug("ADMI.004 notification failure raw payload: {}", payload);
-        admi002CallbackService.handleRejection(payload, IsoMessageType.ADMI_004);
+        log.debug("Notification/report ADMI.002 raw payload: {}", payload);
+        admi002CallbackService.handleRejection(payload, null);
         return ResponseEntity.accepted().build();
     }
 

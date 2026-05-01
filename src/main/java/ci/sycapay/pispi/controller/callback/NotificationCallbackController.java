@@ -9,6 +9,7 @@ import ci.sycapay.pispi.repository.PiNotificationRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
 import ci.sycapay.pispi.service.alias.RevendicationService;
+import ci.sycapay.pispi.service.report.ReportService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import ci.sycapay.pispi.dto.callback.AccuseCallbackPayload;
 import ci.sycapay.pispi.dto.callback.NotificationCallbackPayload;
@@ -41,7 +43,24 @@ public class NotificationCallbackController {
     private final PiGuaranteeRepository guaranteeRepository;
     private final RevendicationService revendicationService;
     private final WebhookService webhookService;
+    private final ReportService reportService;
     private final ObjectMapper objectMapper;
+
+    /**
+     * Pattern BCEAO §4.11.1.1 pour l'identifiant de relevé de transactions :
+     * {@code RECO + CodeMembre(6) + DateCompens(14)}.
+     * <p>{@code CodeMembre = (BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\d{3}} (6 chars).
+     * <p>{@code DateCompens = yyyyMMddHHmmss} (14 chars).
+     * <p>Total : {@code RECO} + 6 + 14 = 24 chars.
+     *
+     * <p>Quand une ADMI.004 INFO arrive avec {@code evenementDescription}
+     * matchant ce pattern, le rapport est prêt côté AIP : on déclenche
+     * automatiquement le téléchargement via {@code POST /rapports/telechargements}.
+     * Sans cet auto-déclenchement, le camt.052 reste côté AIP et n'arrive
+     * jamais en backend.
+     */
+    private static final Pattern RECO_ID_PATTERN =
+            Pattern.compile("^RECO(BJ|BF|CI|GW|ML|NE|SN|TG)[BCDEF]\\d{3}\\d{14}$");
 
     @Operation(summary = "Receive connectivity PING (ADMI.004)", description = "Called by the AIP to test connectivity. Saves the PING notification locally and fires a PI_NOTIFICATION webhook.")
     @PostMapping("/notifications/test-connectivite")
@@ -66,7 +85,7 @@ public class NotificationCallbackController {
         return ResponseEntity.accepted().build();
     }
 
-    @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice). Saves the notification locally, updates alias lock state when applicable, and fires a webhook.")
+    @Operation(summary = "Receive system notification (ADMI.004)", description = "Called by the AIP to push a system event (e.g. connectivity test, maintenance notice, report-ready). Saves the notification locally, updates alias lock state when applicable, auto-triggers the report download when the description carries a BCEAO RECO id, and fires a webhook.")
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = NotificationCallbackPayload.class)))
     @PostMapping("/notifications/info-warn")
     public ResponseEntity<ApiResponse<Void>> receiveNotification(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
@@ -87,6 +106,27 @@ public class NotificationCallbackController {
                 .messageType(IsoMessageType.ADMI_004)
                 .build();
         notificationRepository.save(notification);
+
+        // Auto-trigger report download per BCEAO §4.11.1.1 :
+        // L'ADMI.004 INFO avec evenementDescription=RECO{codeMembre}{date}
+        // signale qu'un rapport de transactions est prêt côté AIP. On émet
+        // immédiatement le POST /rapports/telechargements pour récupérer
+        // le camt.052 — sans cet auto-déclenchement, le rapport reste côté
+        // AIP et n'arrive jamais en backend.
+        if ("INFO".equalsIgnoreCase(evenement) && description != null
+                && RECO_ID_PATTERN.matcher(description).matches()) {
+            try {
+                reportService.downloadReport(description);
+                log.info("ADMI.004 RECO id détecté → /rapports/telechargements émis "
+                        + "[reportId={}]", description);
+            } catch (Exception ex) {
+                // Ne pas planter le callback si le download AIP échoue —
+                // l'opérateur peut retenter via POST /api/v1/reports/download.
+                log.error("Échec du téléchargement automatique du rapport [reportId={}] — "
+                                + "l'opérateur peut retenter manuellement",
+                        description, ex);
+            }
+        }
 
         WebhookEventType webhookEvent = revendicationService.processInfoWarn(msgId, payload);
 

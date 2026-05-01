@@ -142,6 +142,8 @@ public class Admi002CallbackService {
                         applyToReturnRequest(effectiveE2e, codeRaison, fullDetail);
                 case RAC_CREATE, RAC_MODIFY, RAC_DELETE ->
                         applyToAlias(effectiveE2e, fullDetail);
+                case CAMT_060 ->
+                        applyToReport(msgId, codeRaison, fullDetail);
                 default -> {
                     log.info("ADMI.002 for {} has no dedicated handler — logged only",
                             originalType);
@@ -303,6 +305,42 @@ public class Admi002CallbackService {
                 }).orElseGet(() -> {
                     log.warn("ADMI.002 for return request: no local row found (endToEndId={})",
                             endToEndId);
+                    return false;
+                });
+    }
+
+    /**
+     * Marque la ligne {@code pi_message_log} de la CAMT.060 OUTBOUND comme
+     * « rejetée par l'AIP » avec le code raison + détail. Pas d'entité
+     * dédiée pour les rapports demandés — la trace métier vit dans
+     * {@code pi_message_log}, et le webhook {@code MESSAGE_REJECTED} qui suit
+     * laisse le backend afficher le rejet à l'utilisateur (typiquement
+     * « Aucune opération de compensation pour la période » sur un compte
+     * sans flux le jour J).
+     *
+     * <p>Le flow normal CAMT.060 → ADMI.004 RECO... → camt.052 ne déclenche
+     * jamais cette voie : c'est uniquement le chemin d'erreur (e.g.
+     * {@code TransactionNotFound}, période invalide, etc.).
+     */
+    private boolean applyToReport(String msgId, String codeRaison, String detail) {
+        if (msgId == null) {
+            log.warn("ADMI.002 for CAMT.060 sans msgId — pas de mise à jour du log");
+            return false;
+        }
+        return messageLogRepository
+                .findPiMessageLogByMsgIdAndDirectionIs(msgId, MessageDirection.OUTBOUND)
+                .map(entry -> {
+                    entry.setErrorMessage(codeRaison != null && detail != null
+                            ? codeRaison + " — " + detail
+                            : firstNonNull(detail, codeRaison, "AIP_ERR"));
+                    messageLogRepository.save(entry);
+                    log.info("CAMT.060 OUTBOUND marquée en erreur "
+                                    + "[msgId={}, codeRaison={}, detail={}]",
+                            msgId, codeRaison, detail);
+                    return true;
+                }).orElseGet(() -> {
+                    log.warn("ADMI.002 for CAMT.060: ligne OUTBOUND introuvable "
+                            + "[msgId={}]", msgId);
                     return false;
                 });
     }
