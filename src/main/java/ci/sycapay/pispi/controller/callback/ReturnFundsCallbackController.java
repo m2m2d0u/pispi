@@ -5,6 +5,7 @@ import ci.sycapay.pispi.config.PiSpiProperties;
 import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RetourFondsDemandeCallbackPayload;
 import ci.sycapay.pispi.dto.callback.RetourFondsRejetCallbackPayload;
+import ci.sycapay.pispi.entity.PiReturnExecution;
 import ci.sycapay.pispi.entity.PiReturnRequest;
 import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
@@ -293,14 +294,15 @@ public class ReturnFundsCallbackController {
                 ? new BigDecimal(String.valueOf(payload.get("montantRetourne")))
                 : null;
 
-
         // Finaliser la PiReturnRequest OUTBOUND associée : le PACS.004 INBOUND
         // signifie que la contrepartie a accepté la demande d'annulation et a
         // effectivement retourné les fonds. Si une autre direction (callback
         // racing) a déjà transitionné la ligne en RJCR, on ne touche pas.
+        // On capture aussi son id pour lier le PiReturnExecution ci-dessous.
         CodeRaisonRetourFonds finalRaisonRetour = raisonRetour;
-        returnRequestRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
-                .ifPresent(req -> {
+        Long returnRequestLocalId = returnRequestRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+                .map(req -> {
                     if (req.getStatut() == ReturnRequestStatus.PENDING) {
                         req.setStatut(ReturnRequestStatus.ACCEPTED);
                         req.setMsgIdRejet(msgId);
@@ -309,7 +311,26 @@ public class ReturnFundsCallbackController {
                         log.info("Demande de retour {} → ACCEPTED via PACS.004 INBOUND",
                                 endToEndId);
                     }
-                });
+                    return req.getId();
+                })
+                .orElse(null);
+
+        // Audit trail : persister la PiReturnExecution INBOUND. Cette ligne
+        // matérialise le retour effectif côté payeur (fonds re-crédités).
+        // C'est aussi elle que le scénario B1 (auto-rejet ARDT) consulte via
+        // findByEndToEndId pour détecter qu'un retour a déjà été exécuté —
+        // cf. ReturnFundsCallbackController.receiveReturnRequest.
+        // Le returnRequestId capturé ci-dessus garantit qu'on peut tracer
+        // de la PiReturnRequest OUTBOUND vers le PACS.004 INBOUND final.
+        PiReturnExecution execution = PiReturnExecution.builder()
+                .msgId(msgId)
+                .endToEndId(endToEndId)
+                .direction(MessageDirection.INBOUND)
+                .montantRetourne(montantRetourne)
+                .raisonRetour(raisonRetour)
+                .returnRequestId(returnRequestLocalId)
+                .build();
+        returnExecutionRepository.save(execution);
 
 
         transferRepository.findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
