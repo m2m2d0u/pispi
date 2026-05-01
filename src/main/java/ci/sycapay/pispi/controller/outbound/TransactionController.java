@@ -97,6 +97,20 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());
     }
 
+    @Operation(summary = "Interroger le statut d'un transfert auprès de l'AIP (PACS.028)",
+            description = "Émet un PACS.028 vers /transferts/statut pour demander à l'AIP "
+                    + "le statut courant de la transaction. L'AIP répond ensuite par un "
+                    + "PACS.002 INBOUND (ACCC|ACSC|RJCT|ACSP) qui transitionnera la ligne "
+                    + "locale via le callback. Utile notamment pour les transferts bloqués "
+                    + "en ACSP ou pour vérifier qu'un PACS.002 INBOUND attendu n'a pas été "
+                    + "perdu en transit. Refuse les lignes déjà en statut terminal. BCEAO §4.3.3.")
+    @PostMapping("/{id}/statut")
+    public ResponseEntity<ApiResponse<Void>> interrogerStatut(
+            @Parameter(description = "endToEndId de la transaction") @PathVariable("id") String id) {
+        transactionService.queryTransferStatus(id);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ApiResponse.accepted());
+    }
+
     @Operation(summary = "Retourner les fonds d'un transfert reçu",
             description = "Émet un pacs.004 pour retourner les fonds d'une transaction créditée.")
     @PutMapping("/{id}/retours")

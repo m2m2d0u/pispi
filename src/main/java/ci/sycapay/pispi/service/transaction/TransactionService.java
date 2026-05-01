@@ -816,6 +816,57 @@ public class TransactionService {
     }
 
     // ------------------------------------------------------------------------
+    // Status query — emits a PACS.028 to ask the AIP for the current status
+    // ------------------------------------------------------------------------
+
+    /**
+     * Interroger le statut d'un transfert auprès de l'AIP via PACS.028
+     * (BCEAO §4.3.3, schéma {@code StatutVirement}). Utile pour les lignes
+     * bloquées en {@code PEND} ou {@code ACSP} : l'AIP renvoie ensuite un
+     * PACS.002 INBOUND avec le statut courant ({@code ACCC|ACSC|RJCT|ACSP})
+     * qui transitionnera la ligne via le callback
+     * {@link ci.sycapay.pispi.controller.callback.TransferCallbackController#receiveTransferResult}.
+     *
+     * <p>Comportement asynchrone : l'endpoint retourne dès l'ack AIP (202),
+     * la mise à jour du statut local arrive ensuite via callback.
+     *
+     * <p>Garde : on refuse de querier une ligne déjà terminale (statut final
+     * connu localement, l'AIP ne pourra que confirmer). On accepte par contre
+     * de querier en INITIE (pas encore émis) — l'AIP répondra que la transaction
+     * n'existe pas (ce qui est aussi une info utile pour le client).
+     */
+    @Transactional
+    public void queryTransferStatus(String endToEndId) {
+        PiTransfer transfer = transferRepository
+                .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
+                .or(() -> transferRepository.findByEndToEndIdAndDirection(
+                        endToEndId, MessageDirection.INBOUND))
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction", endToEndId));
+
+        if (transfer.getStatut() != null && transfer.getStatut().isTerminal()) {
+            throw new InvalidStateException(
+                    "La transaction " + endToEndId + " est déjà en statut terminal "
+                            + transfer.getStatut() + " — pas la peine de querier l'AIP.");
+        }
+
+        String codeMembre = properties.getCodeMembre();
+        String msgId = IdGenerator.generateMsgId(codeMembre);
+
+        // BCEAO §4.3.3 PACS.028 : msgId + endToEndId requis, c'est tout.
+        Map<String, Object> pacs028 = new HashMap<>();
+        pacs028.put("msgId", msgId);
+        pacs028.put("endToEndId", endToEndId);
+
+        messageLogService.log(msgId, endToEndId, IsoMessageType.PACS_028,
+                MessageDirection.OUTBOUND, pacs028, null, null);
+        aipClient.post("/transferts/statut", pacs028);
+
+        log.info("PACS.028 status query émis [endToEndId={}, statut local={}, "
+                        + "direction={}]",
+                endToEndId, transfer.getStatut(), transfer.getDirection());
+    }
+
+    // ------------------------------------------------------------------------
     // Return funds — emits a camt.056 demande de retour-de-fonds for an
     // inbound transfer (delegates to the existing ReturnFundsService)
     // ------------------------------------------------------------------------

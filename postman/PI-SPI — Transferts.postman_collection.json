@@ -2012,6 +2012,46 @@
           }
         },
         {
+          "name": "Interroger le statut d'un transfert (POST /transferts/{id}/statut — PACS.028)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('PACS.028 status query accepted (202)', () => {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "console.log('PACS.028 émis pour endToEndId =', pm.collectionVariables.get('lastEndToEndId'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transferts/{{lastEndToEndId}}/statut",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transferts",
+                "{{lastEndToEndId}}",
+                "statut"
+              ]
+            },
+            "description": "Émet un **PACS.028** (status query) vers `/transferts/statut` pour demander à l'AIP le statut courant d'une transaction (BCEAO §4.3.3).\n\n**Quand utiliser** :\n- Transfert bloqué en `ACSP` au-delà du délai de compensation attendu\n- Suspicion qu'un PACS.002 INBOUND a été perdu en transit\n- Vérification proactive avant de présenter le statut au client mobile\n\n**Comportement** : asynchrone — le serveur retourne 202 Accepted dès l'ack AIP. La réponse de l'AIP arrive ensuite via callback PACS.002 INBOUND sur `/transferts/reponses` qui transitionnera la ligne locale (`ACCC|ACSC|RJCT|ACSP`).\n\n**Garde** : refuse les lignes déjà en statut terminal (`ACCC|ACSC|RJCT|TMOT|ECHEC|RTND`) — pas la peine de querier."
+          }
+        },
+        {
           "name": "Accepter un PACS.008 entrant (POST /transferts/incoming/{id}/accept)",
           "request": {
             "method": "POST",
