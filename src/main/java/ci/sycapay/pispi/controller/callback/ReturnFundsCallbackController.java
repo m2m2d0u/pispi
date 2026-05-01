@@ -1,29 +1,27 @@
 package ci.sycapay.pispi.controller.callback;
 
-import ci.sycapay.pispi.entity.PiReturnExecution;
+import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RetourFondsDemandeCallbackPayload;
+import ci.sycapay.pispi.dto.callback.RetourFondsRejetCallbackPayload;
 import ci.sycapay.pispi.entity.PiReturnRequest;
-import ci.sycapay.pispi.entity.PiTransfer;
 import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.repository.PiReturnExecutionRepository;
 import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.WebhookService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import ci.sycapay.pispi.dto.callback.RetourFondsCallbackPayload;
-import ci.sycapay.pispi.dto.callback.RetourFondsDemandeCallbackPayload;
-import ci.sycapay.pispi.dto.callback.RetourFondsRejetCallbackPayload;
 import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -49,6 +47,7 @@ public class ReturnFundsCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsDemandeCallbackPayload.class)))
     @PostMapping("/retour-fonds/demande")
     public ResponseEntity<Void> receiveReturnRequest(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.056 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
         String codeMembrePayeur = (String) payload.get("codeMembreParticipantPayeur");
@@ -83,10 +82,9 @@ public class ReturnFundsCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsRejetCallbackPayload.class)))
     @PostMapping("/retour-fonds/reponses")
     public ResponseEntity<Void> receiveReturnRejection(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("CAMT.029 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
-        // Spec §4.8.2 inbound fields: msgId, codeMembreParticipantPaye, statut, endToEndId, raison.
-        // identifiantDemandeRetourFonds is not sent by the AIP on inbound CAMT.029;
-        // look up the return request by endToEndId + OUTBOUND direction.
+
         String endToEndId = (String) payload.get("endToEndId");
 
         if (messageLogService.isDuplicate(msgId)) return ResponseEntity.accepted().build();
@@ -107,6 +105,7 @@ public class ReturnFundsCallbackController {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = RetourFondsCallbackPayload.class)))
     @PostMapping("/retour-fonds")
     public ResponseEntity<Void> receiveReturnExecution(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        log.debug("PACS.004 raw payload: {}", payload);
         String msgId = (String) payload.get("msgId");
         String endToEndId = (String) payload.get("endToEndId");
         String raisonRetourRaw = (String) payload.get("raisonRetour");
@@ -158,7 +157,7 @@ public class ReturnFundsCallbackController {
                     if (transfer.getStatut() != null && transfer.getStatut().isTerminal()
                             && transfer.getStatut() != TransferStatus.RTND) {
                         log.warn("PACS.004 ignoré pour transfer en statut terminal "
-                                + "[endToEndId={}, statut={}] — pas d'écrasement",
+                                        + "[endToEndId={}, statut={}] — pas d'écrasement",
                                 endToEndId, transfer.getStatut());
                         return;
                     }
@@ -169,7 +168,7 @@ public class ReturnFundsCallbackController {
                     }
                     transferRepository.save(transfer);
                     log.info("Transfer {} → RTND via PACS.004 INBOUND "
-                            + "[précédent={}, raisonRetour={}, montantRetourne={}]",
+                                    + "[précédent={}, raisonRetour={}, montantRetourne={}]",
                             endToEndId, previous, raisonRetourRaw, montantRetourne);
                 });
 

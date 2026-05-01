@@ -94,7 +94,7 @@ public class TransactionService {
             case SEND_NOW -> initiateSendNow((TransactionImmediatRequest) request);
             case SEND_SCHEDULE -> initiateSendSchedule((TransactionScheduleRequest) request);
             case RECEIVE_NOW -> initiateReceiveNow(
-                    (ci.sycapay.pispi.dto.transaction.TransactionDemandePaiementRequest) request);
+                    (TransactionDemandePaiementRequest) request);
         };
     }
 
@@ -280,7 +280,7 @@ public class TransactionService {
      */
     @Transactional
     public TransactionResponse initiateReceiveNow(
-            ci.sycapay.pispi.dto.transaction.TransactionDemandePaiementRequest request) {
+            TransactionDemandePaiementRequest request) {
 
         // Resolve the requester (our client = paye) and the counterparty
         // (the person being asked = payeur).
@@ -1172,10 +1172,10 @@ public class TransactionService {
         // Dates de la PAIN.013
         if (rtp.getDateHeureExecution() != null)
             extra.put("dateHeureExecution", normaliseIsoInstantMillis(
-                    rtp.getDateHeureExecution().toInstant(java.time.ZoneOffset.UTC).toString()));
+                    rtp.getDateHeureExecution().toInstant(ZoneOffset.UTC).toString()));
         if (rtp.getDateHeureLimiteAction() != null)
             extra.put("dateHeureLimiteAction", normaliseIsoInstantMillis(
-                    rtp.getDateHeureLimiteAction().toInstant(java.time.ZoneOffset.UTC).toString()));
+                    rtp.getDateHeureLimiteAction().toInstant(ZoneOffset.UTC).toString()));
 
         // Reference bulk (mappée en <InstrId> côté XML)
         if (notBlank(rtp.getReferenceBulk()))
@@ -1479,10 +1479,10 @@ public class TransactionService {
     private TransactionStatut mapStatut(TransferStatus s) {
         if (s == null) return null;
         return switch (s) {
-            case INITIE -> TransactionStatut.INITIE;
+            case INITIE, PEND, ACSP -> TransactionStatut.INITIE;
             case ACCC, ACSC -> TransactionStatut.IRREVOCABLE;
             case RJCT, TMOT, ECHEC -> TransactionStatut.REJETE;
-            case PEND, ACSP -> TransactionStatut.INITIE;
+            case RTND -> TransactionStatut.RETOURNER;
         };
     }
 
