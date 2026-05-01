@@ -12,6 +12,7 @@ import ci.sycapay.pispi.enums.*;
 import ci.sycapay.pispi.exception.InvalidStateException;
 import ci.sycapay.pispi.exception.ResourceNotFoundException;
 import ci.sycapay.pispi.repository.PiRequestToPayRepository;
+import ci.sycapay.pispi.repository.PiReturnRequestRepository;
 import ci.sycapay.pispi.repository.PiTransferRepository;
 import ci.sycapay.pispi.service.MessageLogService;
 import ci.sycapay.pispi.service.resolver.ClientSearchResolver;
@@ -76,6 +77,7 @@ public class TransactionService {
 
     private final PiTransferRepository transferRepository;
     private final PiRequestToPayRepository rtpRepository;
+    private final PiReturnRequestRepository returnRequestRepository;
     private final AipClient aipClient;
     private final PiSpiProperties properties;
     private final MessageLogService messageLogService;
@@ -760,26 +762,43 @@ public class TransactionService {
                 .findByEndToEndIdAndDirection(endToEndId, MessageDirection.OUTBOUND)
                 .orElseThrow(() -> new ResourceNotFoundException("Transaction", endToEndId));
 
-        if (transfer.getStatut() == TransferStatus.INITIE) {
+        // Garde BCEAO §4.8 : « L'annulation d'un transfert ou d'un paiement
+        // permet à un client payeur de demander le retour de fonds d'une
+        // transaction marquée Irrévocable. » Côté local on uniformise tout
+        // succès en ACCC (cf. TransferStatus.normalizeSuccess), donc seul
+        // ACCC est valide ici. Tout autre statut produit un AG01 côté AIP
+        // (« annulation pour transaction non irrévocable ») — on échoue
+        // proprement en local pour éviter l'aller-retour ADMI.002.
+        if (transfer.getStatut() != TransferStatus.ACCC
+                && transfer.getStatut() != TransferStatus.ACSC) {
             throw new InvalidStateException(
-                    "La transaction " + endToEndId + " est encore en statut INITIE — "
-                            + "rien n'a été émis à l'AIP. Supprimez-la plutôt que de la "
-                            + "demander en annulation.");
+                    "La transaction " + endToEndId + " est en statut "
+                            + transfer.getStatut() + " — seules les transactions "
+                            + "irrévocables (ACCC/ACSC) peuvent être annulées (BCEAO §4.8).");
         }
-        if (transfer.getStatut() == TransferStatus.RJCT
-                || transfer.getStatut() == TransferStatus.ECHEC) {
-            throw new InvalidStateException(
-                    "La transaction " + endToEndId + " est déjà en statut terminal "
-                            + transfer.getStatut() + " — rien à annuler.");
-        }
+
+        // Garde idempotence : BCEAO autorise les retries du camt.056 « tant
+        // qu'elle n'a pas été acceptée », mais on bloque le doublon côté
+        // applicatif si une demande PENDING est déjà en cours pour cet e2e
+        // — l'AIP n'aime pas les msgIds successifs sur la même transaction
+        // tant que la précédente n'a pas été tranchée par camt.029 ou pacs.004.
+        returnRequestRepository.findFirstByEndToEndIdAndDirectionAndStatut(
+                        endToEndId, MessageDirection.OUTBOUND, ReturnRequestStatus.PENDING)
+                .ifPresent(existing -> {
+                    throw new InvalidStateException(
+                            "Une demande d'annulation est déjà en cours pour la "
+                                    + "transaction " + endToEndId
+                                    + " [identifiantDemande=" + existing.getIdentifiantDemande()
+                                    + ", raison=" + existing.getRaison() + "]. "
+                                    + "Attendre la réponse (camt.029/pacs.004) avant de retenter.");
+                });
 
         // BCEAO unifie « demande d'annulation » et « demande de retour de fonds »
         // dans le même camt.056 envoyé sur {@code POST /retour-fonds/demande}
-        // (schéma {@code DemandeRetourFonds}). Il n'existe pas d'endpoint
-        // {@code /transferts/annulations} côté AIP — l'appeler retourne 404.
-        // On délègue donc à {@code ReturnFundsService.requestReturn} qui
-        // possède déjà la logique camt.056 + persistance {@code PiReturnRequest}
-        // + tracking via {@code identifiantDemande}.
+        // (schéma {@code DemandeRetourFonds}). On délègue à
+        // {@code ReturnFundsService.requestReturn} qui possède déjà la logique
+        // camt.056 + persistance {@code PiReturnRequest} + tracking via
+        // {@code identifiantDemande}.
         //
         // Mapping de la raison : les deux énumérations
         // {@link TransactionCancelReason} et {@link CodeRaisonDemandeRetourFonds}
