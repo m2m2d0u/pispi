@@ -145,10 +145,10 @@ public class TransferCallbackController {
                 return;
             }
 
-            // Normalisation locale : un PACS.002 INBOUND ACSP (settlement en
-            // cours côté AIP) est stocké comme ACCC. Cf.
-            // {@link TransferStatus#normalizeSuccess} — uniformisation des
-            // transferts réussis sur un seul statut local terminal.
+            // ACSP = "Accepted Settlement in Process" — état intermédiaire
+            // strictement non-terminal. La transition vers le statut final
+            // (ACCC|ACSC|RJCT) arrivera via un PACS.002 INBOUND ultérieur
+            // une fois la compensation AIP achevée.
             transfer.setStatut(ts);
             transfer.setCodeRaison((String) payload.get("codeRaison"));
             transfer.setMsgIdReponse(msgId);

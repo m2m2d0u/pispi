@@ -764,11 +764,11 @@ public class TransactionService {
 
         // Garde BCEAO §4.8 : « L'annulation d'un transfert ou d'un paiement
         // permet à un client payeur de demander le retour de fonds d'une
-        // transaction marquée Irrévocable. » Côté local on uniformise tout
-        // succès en ACCC (cf. TransferStatus.normalizeSuccess), donc seul
-        // ACCC est valide ici. Tout autre statut produit un AG01 côté AIP
-        // (« annulation pour transaction non irrévocable ») — on échoue
-        // proprement en local pour éviter l'aller-retour ADMI.002.
+        // transaction marquée Irrévocable. » Seuls ACCC et ACSC représentent
+        // un settlement finalisé (irrévocable) — ACSP est intermédiaire et
+        // ne peut pas encore être annulé. Tout autre statut produit un AG01
+        // côté AIP (« annulation pour transaction non irrévocable ») — on
+        // échoue proprement en local pour éviter l'aller-retour ADMI.002.
         if (transfer.getStatut() != TransferStatus.ACCC
                 && transfer.getStatut() != TransferStatus.ACSC) {
             throw new InvalidStateException(
@@ -953,9 +953,16 @@ public class TransactionService {
                 MessageDirection.OUTBOUND, pacs002, null, null);
         aipClient.post("/transferts/reponses", pacs002);
 
+        // ACSP en local : on a accepté la réception et émis le PACS.002,
+        // mais le settlement reste à finaliser par l'AIP. La transition
+        // vers ACCC|ACSC arrivera via le PACS.002 INBOUND post-compensation
+        // (cf. TransferCallbackController.receiveTransferResult).
+        transfer.setStatut(TransferStatus.ACSP);
+        transfer.setMsgIdReponse(msgId);
+        transfer.setDateHeureIrrevocabilite(LocalDateTime.now(ZoneOffset.UTC));
         transferRepository.save(transfer);
 
-        log.info("PACS.002 ACSP émis pour transfert entrant — local=ACCC [endToEndId={}]",
+        log.info("PACS.002 ACSP émis pour transfert entrant — local=ACSP [endToEndId={}]",
                 endToEndId);
         return toResponse(transfer);
     }
