@@ -673,6 +673,84 @@
                   }
                 }
               ]
+            },
+            {
+              "name": "Effectuer un bulk transfert — pacs.008 'B2P' canal 733",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Réutilise le même referenceBulk pour toutes les exécutions",
+                      "// successives de ce scénario dans une même session — l'AIP",
+                      "// regroupe ainsi les PACS.008 portant cette ref dans un seul",
+                      "// virement de masse côté reporting/compensation.",
+                      "// Pour démarrer un nouveau bulk : effacer la variable",
+                      "// `currentBulkRef` ou changer la formule ci-dessous.",
+                      "let bulkRef = pm.collectionVariables.get('currentBulkRef');",
+                      "if (!bulkRef) {",
+                      "    const yyyymmdd = new Date().toISOString().slice(0, 10).replace(/-/g, '');",
+                      "    const suffix = Math.floor(Math.random() * 1e6).toString().padStart(6, '0');",
+                      "    bulkRef = `BULK-SAL-${yyyymmdd}-${suffix}`;",
+                      "    pm.collectionVariables.set('currentBulkRef', bulkRef);",
+                      "    console.log('Nouveau bulk démarré :', bulkRef);",
+                      "} else {",
+                      "    console.log('Bulk en cours :', bulkRef);",
+                      "}"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id, 'in bulk', pm.collectionVariables.get('currentBulkRef'));",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transferts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transferts"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"733\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Versement salaire — mois d'avril 2026\",\n  \"referenceBulk\": \"{{currentBulkRef}}\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasP}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Bulk transfert **B2P** canal 733 — versement de masse depuis un compte business vers plusieurs particuliers (cas d'usage typique : paie de salaires, indemnités, bourses).\n\n**Mécanique BCEAO** : tous les PACS.008 d'un même bulk partagent un `referenceBulk` (max 35 chars) qui les groupe côté AIP pour le reporting et la compensation. Chaque PACS.008 garde son propre `endToEndId` et `identifiantTransaction`.\n\n**Exécution Postman** :\n1. Premier run : le pré-request génère un `currentBulkRef` au format `BULK-SAL-YYYYMMDD-NNNNNN` et le mémorise dans les variables collection.\n2. Runs suivants (avec un alias `aliasP` différent à chaque tour, ou en lançant via Runner sur une liste d'aliases) : tous réutilisent le même `currentBulkRef` → les transferts sont vus comme un seul bulk côté AIP.\n3. Pour démarrer un NOUVEAU bulk : effacer la variable `currentBulkRef` dans le panneau Variables, ou ouvrir la console et taper `pm.collectionVariables.unset('currentBulkRef')`.\n\n**Pré-requis** : RAC_SEARCH effectuée au préalable pour chaque alias bénéficiaire (sinon le service refuse avec 'Aucun résultat de recherche d'alias'). En self-loop, lancer le scénario `Recherche d'alias` (collection Alias) sur chaque `aliasP` avant le bulk.\n\n**Pour exécuter en lot** : Postman Runner sur ce scénario, avec un fichier CSV à 1 colonne `aliasP` listant les aliases bénéficiaires — le runner injecte la valeur à chaque itération."
+              }
             }
           ]
         },
