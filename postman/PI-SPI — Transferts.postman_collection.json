@@ -62,6 +62,49 @@
             },
             {
               "name": "Envoyer un pacs.008 'B2B' avec le canal 400 sans pacs.008 préalable au payé",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Déclenche une RAC_SEARCH fraîche sur l'alias avant le PACS.008,",
+                      "// pour garantir une nouvelle entrée pi_message_log avec un e2e neuf",
+                      "// (sinon le service refuse 'le endToEndIdSearch existe déjà' si un",
+                      "// transfer OUTBOUND a déjà consommé la dernière RAC_SEARCH).",
+                      "// La réponse AIP arrive via callback async — on attend brièvement.",
+                      "const baseUrl = pm.collectionVariables.get('baseUrl');",
+                      "const alias = pm.collectionVariables.get('aliasBFirst');",
+                      "pm.sendRequest({",
+                      "  url: `${baseUrl}/api/v1/aliases/search?alias=${encodeURIComponent(alias)}`,",
+                      "  method: 'GET'",
+                      "}, function (err, res) {",
+                      "  if (err) { console.warn('RAC_SEARCH pre-request failed:', err); return; }",
+                      "  console.log('RAC_SEARCH on', alias, 'status', res.code);",
+                      "});"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Statut 202 Accepted', function () {",
+                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
+                      "});",
+                      "try {",
+                      "    const body = pm.response.json();",
+                      "    const id = body && body.data && body.data.endToEndId;",
+                      "    if (id) {",
+                      "        pm.collectionVariables.set('lastEndToEndId', id);",
+                      "        console.log('Captured lastEndToEndId =', id);",
+                      "    }",
+                      "} catch (e) { console.log('No JSON body'); }"
+                    ]
+                  }
+                }
+              ],
               "request": {
                 "method": "POST",
                 "header": [
@@ -83,30 +126,15 @@
                 },
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasBFirst}}\"\n}"
-                }
-              },
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "pm.test('Statut 202 Accepted', function () {",
-                      "    pm.expect(pm.response.code).to.be.oneOf([200, 202]);",
-                      "});",
-                      "try {",
-                      "    const body = pm.response.json();",
-                      "    const id = body && body.data && body.data.endToEndId;",
-                      "    if (id) {",
-                      "        pm.collectionVariables.set('lastEndToEndId', id);",
-                      "        console.log('Captured lastEndToEndId =', id);",
-                      "    }",
-                      "} catch (e) { console.log('No JSON body'); }"
-                    ]
+                  "raw": "{\n  \"action\": \"send_now\",\n  \"compte\": \"{{compteB}}\",\n  \"montant\": 1,\n  \"canal\": \"400\",\n  \"latitude\": \"5.3600\",\n  \"longitude\": \"-4.0083\",\n  \"motif\": \"Premier règlement B2B à ce fournisseur\",\n  \"endToEndIdSearchPayeur\": \"{{searchPayeurB}}\",\n  \"alias\": \"{{aliasBFirst}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
                   }
-                }
-              ]
+                },
+                "description": "Premier PACS.008 B2B canal 400 (QR Code dynamique) vers ce bénéficiaire — un pré-request script déclenche d'abord une RAC_SEARCH sur `aliasBFirst` pour garantir une entrée RAC fraîche dans `pi_message_log` (sinon le service refuse avec `le endToEndIdSearch existe déjà` quand on rejoue le scénario).\n\n**Pré-requis** : l'alias `aliasBFirst` (`+22500000021`) doit être enregistré dans PI-RAC. Sinon la RAC_SEARCH retourne aucun résultat et le PACS.008 échoue avec 404.\n\n**Cause possible si BE01** : le payé doit être de type B (cf. nom du scénario). Si l'alias résout sur P/C/G, ajuster la fixture côté PI-RAC."
+              }
             },
             {
               "name": "Envoyer un pacs.008 'B2B' avec le canal 500 (rejeté avec le code FF05 par l'AIP)",
